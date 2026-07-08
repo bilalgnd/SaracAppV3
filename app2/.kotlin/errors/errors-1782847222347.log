@@ -1,0 +1,841 @@
+kotlin version: 2.2.10
+error message: java.lang.RuntimeException: Exception while generating code for:
+FUN name:SiparisBottomSheet visibility:public modality:FINAL returnType:kotlin.Unit
+  VALUE_PARAMETER kind:Regular name:urun index:0 type:com.bilalgnd.saracapp.Urun
+  VALUE_PARAMETER kind:Regular name:guncelMasaAdi index:1 type:kotlin.String?
+  VALUE_PARAMETER kind:Regular name:icecekMenusu index:2 type:kotlin.collections.List<com.bilalgnd.saracapp.Urun>
+  VALUE_PARAMETER kind:Regular name:ucretliEkstralar index:3 type:kotlin.collections.Map<kotlin.String, kotlin.Int>
+  VALUE_PARAMETER kind:Regular name:kapat index:4 type:kotlin.Function0<kotlin.Unit>
+  VALUE_PARAMETER kind:Regular name:onSiparisEkle index:5 type:kotlin.Function2<kotlin.String, kotlin.collections.List<com.bilalgnd.saracapp.SiparisKalemi>, kotlin.Unit>
+  VALUE_PARAMETER kind:Regular name:$composer index:6 type:androidx.compose.runtime.Composer? [assignable]
+  VALUE_PARAMETER kind:Regular name:$changed index:7 type:kotlin.Int
+  annotations:
+    OptIn(markerClass = [CLASS_REFERENCE 'CLASS IR_EXTERNAL_DECLARATION_STUB ANNOTATION_CLASS name:ExperimentalMaterial3Api modality:OPEN visibility:public superTypes:[kotlin.Annotation]' type=kotlin.reflect.KClass<androidx.compose.material3.ExperimentalMaterial3Api>, CLASS_REFERENCE 'CLASS IR_EXTERNAL_DECLARATION_STUB ANNOTATION_CLASS name:ExperimentalLayoutApi modality:OPEN visibility:public superTypes:[kotlin.Annotation]' type=kotlin.reflect.KClass<androidx.compose.foundation.layout.ExperimentalLayoutApi>, CLASS_REFERENCE 'CLASS IR_EXTERNAL_DECLARATION_STUB ANNOTATION_CLASS name:ExperimentalFoundationApi modality:OPEN visibility:public superTypes:[kotlin.Annotation]' type=kotlin.reflect.KClass<androidx.compose.foundation.ExperimentalFoundationApi>] type=kotlin.Array<out kotlin.reflect.KClass<out kotlin.Annotation>> varargElementType=kotlin.reflect.KClass<out kotlin.Annotation>)
+    Composable
+    ComposableTarget(applier = "androidx.compose.ui.UiComposable")
+  BLOCK_BODY
+    BLOCK type=kotlin.Unit origin=null
+      SET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Unit origin=null
+        CALL 'public abstract fun startRestartGroup (key: kotlin.Int): androidx.compose.runtime.Composer declared in androidx.compose.runtime.Composer' type=androidx.compose.runtime.Composer origin=null
+          ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+          ARG key: CONST Int type=kotlin.Int value=1340114422
+      CALL 'public final fun sourceInformation (composer: androidx.compose.runtime.Composer, sourceInformation: kotlin.String): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+        ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+        ARG sourceInformation: CONST String type=kotlin.String value="C(SiparisBottomSheet)N(urun,guncelMasaAdi,icecekMenusu,ucretliEkstralar,kapat,onSiparisEkle)797@47789L59,798@47886L7,799@47917L31,800@47971L31,801@48019L33,812@48574L47,813@48644L33,816@48777L49,817@48853L49,818@48928L45,819@48999L54,819@48978L75,827@49575L241,835@49926L16464,835@49822L16568:saracapp.kt#nuwwwf"
+    VAR name:$dirty type:kotlin.Int [val]
+      GET_VAR '$changed: kotlin.Int declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+    WHEN type=kotlin.Unit origin=IF
+      BRANCH
+        if: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+          ARG arg0: CALL 'public final fun and (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR '$changed: kotlin.Int declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: CONST Int type=kotlin.Int value=6
+          ARG arg1: CONST Int type=kotlin.Int value=0
+        then: SET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Unit origin=null
+          CALL 'public final fun or (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: WHEN type=kotlin.Int origin=IF
+              BRANCH
+                if: CALL 'public open fun changedInstance (value: kotlin.Any?): kotlin.Boolean declared in androidx.compose.runtime.Composer' type=kotlin.Boolean origin=null
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG value: GET_VAR 'urun: com.bilalgnd.saracapp.Urun declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=com.bilalgnd.saracapp.Urun origin=null
+                then: CONST Int type=kotlin.Int value=4
+              BRANCH
+                if: CONST Boolean type=kotlin.Boolean value=true
+                then: CONST Int type=kotlin.Int value=2
+    WHEN type=kotlin.Unit origin=IF
+      BRANCH
+        if: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+          ARG arg0: CALL 'public final fun and (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR '$changed: kotlin.Int declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: CONST Int type=kotlin.Int value=48
+          ARG arg1: CONST Int type=kotlin.Int value=0
+        then: SET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Unit origin=null
+          CALL 'public final fun or (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: WHEN type=kotlin.Int origin=IF
+              BRANCH
+                if: CALL 'public abstract fun changed (value: kotlin.Any?): kotlin.Boolean declared in androidx.compose.runtime.Composer' type=kotlin.Boolean origin=null
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG value: GET_VAR 'guncelMasaAdi: kotlin.String? declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.String? origin=null
+                then: CONST Int type=kotlin.Int value=32
+              BRANCH
+                if: CONST Boolean type=kotlin.Boolean value=true
+                then: CONST Int type=kotlin.Int value=16
+    WHEN type=kotlin.Unit origin=IF
+      BRANCH
+        if: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+          ARG arg0: CALL 'public final fun and (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR '$changed: kotlin.Int declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: CONST Int type=kotlin.Int value=384
+          ARG arg1: CONST Int type=kotlin.Int value=0
+        then: SET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Unit origin=null
+          CALL 'public final fun or (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: WHEN type=kotlin.Int origin=IF
+              BRANCH
+                if: CALL 'public open fun changedInstance (value: kotlin.Any?): kotlin.Boolean declared in androidx.compose.runtime.Composer' type=kotlin.Boolean origin=null
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG value: GET_VAR 'icecekMenusu: kotlin.collections.List<com.bilalgnd.saracapp.Urun> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.collections.List<com.bilalgnd.saracapp.Urun> origin=null
+                then: CONST Int type=kotlin.Int value=256
+              BRANCH
+                if: CONST Boolean type=kotlin.Boolean value=true
+                then: CONST Int type=kotlin.Int value=128
+    WHEN type=kotlin.Unit origin=IF
+      BRANCH
+        if: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+          ARG arg0: CALL 'public final fun and (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR '$changed: kotlin.Int declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: CONST Int type=kotlin.Int value=3072
+          ARG arg1: CONST Int type=kotlin.Int value=0
+        then: SET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Unit origin=null
+          CALL 'public final fun or (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: WHEN type=kotlin.Int origin=IF
+              BRANCH
+                if: CALL 'public open fun changedInstance (value: kotlin.Any?): kotlin.Boolean declared in androidx.compose.runtime.Composer' type=kotlin.Boolean origin=null
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG value: GET_VAR 'ucretliEkstralar: kotlin.collections.Map<kotlin.String, kotlin.Int> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.collections.Map<kotlin.String, kotlin.Int> origin=null
+                then: CONST Int type=kotlin.Int value=2048
+              BRANCH
+                if: CONST Boolean type=kotlin.Boolean value=true
+                then: CONST Int type=kotlin.Int value=1024
+    WHEN type=kotlin.Unit origin=IF
+      BRANCH
+        if: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+          ARG arg0: CALL 'public final fun and (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR '$changed: kotlin.Int declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: CONST Int type=kotlin.Int value=24576
+          ARG arg1: CONST Int type=kotlin.Int value=0
+        then: SET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Unit origin=null
+          CALL 'public final fun or (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: WHEN type=kotlin.Int origin=IF
+              BRANCH
+                if: CALL 'public open fun changedInstance (value: kotlin.Any?): kotlin.Boolean declared in androidx.compose.runtime.Composer' type=kotlin.Boolean origin=null
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG value: GET_VAR 'kapat: kotlin.Function0<kotlin.Unit> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Function0<kotlin.Unit> origin=null
+                then: CONST Int type=kotlin.Int value=16384
+              BRANCH
+                if: CONST Boolean type=kotlin.Boolean value=true
+                then: CONST Int type=kotlin.Int value=8192
+    WHEN type=kotlin.Unit origin=IF
+      BRANCH
+        if: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+          ARG arg0: CALL 'public final fun and (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR '$changed: kotlin.Int declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: CONST Int type=kotlin.Int value=196608
+          ARG arg1: CONST Int type=kotlin.Int value=0
+        then: SET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Unit origin=null
+          CALL 'public final fun or (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: WHEN type=kotlin.Int origin=IF
+              BRANCH
+                if: CALL 'public open fun changedInstance (value: kotlin.Any?): kotlin.Boolean declared in androidx.compose.runtime.Composer' type=kotlin.Boolean origin=null
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG value: GET_VAR 'onSiparisEkle: kotlin.Function2<kotlin.String, kotlin.collections.List<com.bilalgnd.saracapp.SiparisKalemi>, kotlin.Unit> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Function2<kotlin.String, kotlin.collections.List<com.bilalgnd.saracapp.SiparisKalemi>, kotlin.Unit> origin=null
+                then: CONST Int type=kotlin.Int value=131072
+              BRANCH
+                if: CONST Boolean type=kotlin.Boolean value=true
+                then: CONST Int type=kotlin.Int value=65536
+    WHEN type=kotlin.Unit origin=IF
+      BRANCH
+        if: CALL 'public abstract fun shouldExecute (parametersChanged: kotlin.Boolean, flags: kotlin.Int): kotlin.Boolean declared in androidx.compose.runtime.Composer' type=kotlin.Boolean origin=null
+          ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+          ARG parametersChanged: CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+            ARG <this>: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+              ARG arg0: CALL 'public final fun and (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+                ARG <this>: GET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+                ARG other: CONST Int type=kotlin.Int value=74899
+              ARG arg1: CONST Int type=kotlin.Int value=74898
+          ARG flags: CALL 'public final fun and (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+            ARG <this>: GET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+            ARG other: CONST Int type=kotlin.Int value=1
+        then: BLOCK type=kotlin.Unit origin=null
+          WHEN type=kotlin.Unit origin=IF
+            BRANCH
+              if: CALL 'public final fun isTraceInProgress (): kotlin.Boolean declared in androidx.compose.runtime.ComposerKt' type=kotlin.Boolean origin=null
+              then: CALL 'public final fun traceEventStart (key: kotlin.Int, dirty1: kotlin.Int, dirty2: kotlin.Int, info: kotlin.String): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG key: CONST Int type=kotlin.Int value=1340114422
+                ARG dirty1: GET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+                ARG dirty2: CONST Int type=kotlin.Int value=-1
+                ARG info: CONST String type=kotlin.String value="com.bilalgnd.saracapp.SiparisBottomSheet (saracapp.kt:796)"
+          VAR name:sheetState type:androidx.compose.material3.SheetState [val]
+            CALL 'public final fun rememberModalBottomSheetState (skipPartiallyExpanded: kotlin.Boolean, confirmValueChange: kotlin.Function1<androidx.compose.material3.SheetValue, kotlin.Boolean>?, $composer: androidx.compose.runtime.Composer?, $changed: kotlin.Int, $default: kotlin.Int): androidx.compose.material3.SheetState declared in androidx.compose.material3.ModalBottomSheetKt' type=androidx.compose.material3.SheetState origin=null
+              ARG skipPartiallyExpanded: CONST Boolean type=kotlin.Boolean value=true
+              ARG confirmValueChange: COMPOSITE type=kotlin.Nothing? origin=DEFAULT_VALUE
+                CONST Null type=kotlin.Nothing? value=null
+              ARG $composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              ARG $changed: CONST Int type=kotlin.Int value=6
+              ARG $default: CONST Int type=kotlin.Int value=2
+          VAR name:haptic type:androidx.compose.ui.hapticfeedback.HapticFeedback [val]
+            CALL 'public final fun <get-current> ($composer: androidx.compose.runtime.Composer?, $changed: kotlin.Int): T of androidx.compose.runtime.CompositionLocal [inline] declared in androidx.compose.runtime.CompositionLocal' type=androidx.compose.ui.hapticfeedback.HapticFeedback origin=GET_PROPERTY
+              ARG <this>: TYPE_OP type=androidx.compose.runtime.CompositionLocal<T of androidx.compose.runtime.CompositionLocal> origin=IMPLICIT_CAST typeOperand=androidx.compose.runtime.CompositionLocal<T of androidx.compose.runtime.CompositionLocal>
+                CALL 'public final fun <get-LocalHapticFeedback> (): androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.ui.hapticfeedback.HapticFeedback> declared in androidx.compose.ui.platform.CompositionLocalsKt' type=androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.ui.hapticfeedback.HapticFeedback> origin=GET_PROPERTY
+              ARG $composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              ARG $changed: CONST Int type=kotlin.Int value=0
+          VAR PROPERTY_DELEGATE name:siparisNotu$delegate type:androidx.compose.runtime.MutableState<kotlin.String> [val]
+            BLOCK type=androidx.compose.runtime.MutableState<kotlin.String> origin=null
+              CALL 'public final fun sourceInformationMarkerStart (composer: androidx.compose.runtime.Composer, key: kotlin.Int, sourceInformation: kotlin.String): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                ARG key: CONST Int type=kotlin.Int value=-640214475
+                ARG sourceInformation: CONST String type=kotlin.String value="CC(remember):saracapp.kt#9igjgp"
+              VAR IR_TEMPORARY_VARIABLE name:tmp0_group type:androidx.compose.runtime.MutableState<kotlin.String> [val]
+                CALL 'public final fun cache <T> (<this>: androidx.compose.runtime.Composer, invalid: kotlin.Boolean, block: @[DisallowComposableCalls] kotlin.Function0<T of androidx.compose.runtime.ComposerKt.cache>): T of androidx.compose.runtime.ComposerKt.cache [inline] declared in androidx.compose.runtime.ComposerKt' type=androidx.compose.runtime.MutableState<kotlin.String> origin=null
+                  TYPE_ARG T: androidx.compose.runtime.MutableState<kotlin.String>
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG invalid: CONST Boolean type=kotlin.Boolean value=false
+                  ARG block: BLOCK type=kotlin.Function0<androidx.compose.runtime.MutableState<kotlin.String>> origin=LAMBDA
+                    COMPOSITE type=kotlin.Unit origin=null
+                    FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$194 (): androidx.compose.runtime.MutableState<kotlin.String> declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function0<androidx.compose.runtime.MutableState<kotlin.String>> origin=INLINE_LAMBDA reflectionTarget=null
+              CALL 'public final fun sourceInformationMarkerEnd (composer: androidx.compose.runtime.Composer): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              GET_VAR 'val tmp0_group: androidx.compose.runtime.MutableState<kotlin.String> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.MutableState<kotlin.String> origin=null
+          VAR PROPERTY_DELEGATE name:musteriAdi$delegate type:androidx.compose.runtime.MutableState<kotlin.String> [val]
+            BLOCK type=androidx.compose.runtime.MutableState<kotlin.String> origin=null
+              CALL 'public final fun sourceInformationMarkerStart (composer: androidx.compose.runtime.Composer, key: kotlin.Int, sourceInformation: kotlin.String): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                ARG key: CONST Int type=kotlin.Int value=-640212747
+                ARG sourceInformation: CONST String type=kotlin.String value="CC(remember):saracapp.kt#9igjgp"
+              VAR IR_TEMPORARY_VARIABLE name:tmp1_group type:androidx.compose.runtime.MutableState<kotlin.String> [val]
+                CALL 'public final fun cache <T> (<this>: androidx.compose.runtime.Composer, invalid: kotlin.Boolean, block: @[DisallowComposableCalls] kotlin.Function0<T of androidx.compose.runtime.ComposerKt.cache>): T of androidx.compose.runtime.ComposerKt.cache [inline] declared in androidx.compose.runtime.ComposerKt' type=androidx.compose.runtime.MutableState<kotlin.String> origin=null
+                  TYPE_ARG T: androidx.compose.runtime.MutableState<kotlin.String>
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG invalid: CONST Boolean type=kotlin.Boolean value=false
+                  ARG block: BLOCK type=kotlin.Function0<androidx.compose.runtime.MutableState<kotlin.String>> origin=LAMBDA
+                    COMPOSITE type=kotlin.Unit origin=null
+                    FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$197 (): androidx.compose.runtime.MutableState<kotlin.String> declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function0<androidx.compose.runtime.MutableState<kotlin.String>> origin=INLINE_LAMBDA reflectionTarget=null
+              CALL 'public final fun sourceInformationMarkerEnd (composer: androidx.compose.runtime.Composer): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              GET_VAR 'val tmp1_group: androidx.compose.runtime.MutableState<kotlin.String> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.MutableState<kotlin.String> origin=null
+          VAR PROPERTY_DELEGATE name:adet$delegate type:androidx.compose.runtime.MutableIntState [val]
+            BLOCK type=androidx.compose.runtime.MutableIntState origin=null
+              CALL 'public final fun sourceInformationMarkerStart (composer: androidx.compose.runtime.Composer, key: kotlin.Int, sourceInformation: kotlin.String): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                ARG key: CONST Int type=kotlin.Int value=-640211209
+                ARG sourceInformation: CONST String type=kotlin.String value="CC(remember):saracapp.kt#9igjgp"
+              VAR IR_TEMPORARY_VARIABLE name:tmp2_group type:androidx.compose.runtime.MutableIntState [val]
+                CALL 'public final fun cache <T> (<this>: androidx.compose.runtime.Composer, invalid: kotlin.Boolean, block: @[DisallowComposableCalls] kotlin.Function0<T of androidx.compose.runtime.ComposerKt.cache>): T of androidx.compose.runtime.ComposerKt.cache [inline] declared in androidx.compose.runtime.ComposerKt' type=androidx.compose.runtime.MutableIntState origin=null
+                  TYPE_ARG T: androidx.compose.runtime.MutableIntState
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG invalid: CONST Boolean type=kotlin.Boolean value=false
+                  ARG block: BLOCK type=kotlin.Function0<androidx.compose.runtime.MutableIntState> origin=LAMBDA
+                    COMPOSITE type=kotlin.Unit origin=null
+                    FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$200 (): androidx.compose.runtime.MutableIntState declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function0<androidx.compose.runtime.MutableIntState> origin=INLINE_LAMBDA reflectionTarget=null
+              CALL 'public final fun sourceInformationMarkerEnd (composer: androidx.compose.runtime.Composer): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              GET_VAR 'val tmp2_group: androidx.compose.runtime.MutableIntState [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.MutableIntState origin=null
+          VAR name:isIcecek type:kotlin.Boolean [val]
+            CALL 'public final fun any <T> (<this>: kotlin.collections.Iterable<T of kotlin.collections.CollectionsKt.any>, predicate: kotlin.Function1<T of kotlin.collections.CollectionsKt.any, kotlin.Boolean>): kotlin.Boolean [inline] declared in kotlin.collections.CollectionsKt' type=kotlin.Boolean origin=null
+              TYPE_ARG T: com.bilalgnd.saracapp.Urun
+              ARG <this>: GET_VAR 'icecekMenusu: kotlin.collections.List<com.bilalgnd.saracapp.Urun> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.collections.List<com.bilalgnd.saracapp.Urun> origin=null
+              ARG predicate: BLOCK type=kotlin.Function1<com.bilalgnd.saracapp.Urun, kotlin.Boolean> origin=LAMBDA
+                COMPOSITE type=kotlin.Unit origin=null
+                FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$203 ($urun: com.bilalgnd.saracapp.Urun, it: com.bilalgnd.saracapp.Urun): kotlin.Boolean declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function1<com.bilalgnd.saracapp.Urun, kotlin.Boolean> origin=INLINE_LAMBDA reflectionTarget=null
+                  ARG $urun: GET_VAR 'urun: com.bilalgnd.saracapp.Urun declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=com.bilalgnd.saracapp.Urun origin=null
+          CLASS CLASS name:UrunAyar modality:FINAL visibility:local superTypes:[kotlin.Any]
+            thisReceiver: VALUE_PARAMETER INSTANCE_RECEIVER kind:DispatchReceiver name:<this> type:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar
+            CONSTRUCTOR visibility:public returnType:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar [primary]
+              VALUE_PARAMETER kind:Regular name:urun index:0 type:com.bilalgnd.saracapp.Urun
+              BLOCK_BODY
+                DELEGATING_CONSTRUCTOR_CALL 'public constructor <init> () [primary] declared in kotlin.Any'
+                BLOCK type=kotlin.Unit origin=null
+                  SET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:seciliNotlar type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> visibility:private [final]' type=kotlin.Unit origin=INITIALIZE_FIELD
+                    receiver: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+                    value: CALL 'public final fun mutableStateMapOf <K, V> (): androidx.compose.runtime.snapshots.SnapshotStateMap<K of androidx.compose.runtime.SnapshotStateKt.mutableStateMapOf, V of androidx.compose.runtime.SnapshotStateKt.mutableStateMapOf> declared in androidx.compose.runtime.SnapshotStateKt' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+                      TYPE_ARG K: kotlin.String
+                      TYPE_ARG V: kotlin.Boolean
+                  SET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:seciliUcretsizEkstralar type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> visibility:private [final]' type=kotlin.Unit origin=INITIALIZE_FIELD
+                    receiver: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+                    value: CALL 'public final fun mutableStateMapOf <K, V> (): androidx.compose.runtime.snapshots.SnapshotStateMap<K of androidx.compose.runtime.SnapshotStateKt.mutableStateMapOf, V of androidx.compose.runtime.SnapshotStateKt.mutableStateMapOf> declared in androidx.compose.runtime.SnapshotStateKt' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+                      TYPE_ARG K: kotlin.String
+                      TYPE_ARG V: kotlin.Boolean
+                  SET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:seciliUcretliEkstralar type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> visibility:private [final]' type=kotlin.Unit origin=INITIALIZE_FIELD
+                    receiver: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+                    value: CALL 'public final fun mutableStateMapOf <K, V> (): androidx.compose.runtime.snapshots.SnapshotStateMap<K of androidx.compose.runtime.SnapshotStateKt.mutableStateMapOf, V of androidx.compose.runtime.SnapshotStateKt.mutableStateMapOf> declared in androidx.compose.runtime.SnapshotStateKt' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+                      TYPE_ARG K: kotlin.String
+                      TYPE_ARG V: kotlin.Boolean
+                  SET_FIELD 'FIELD PROPERTY_DELEGATE name:siparisNotu$delegate type:androidx.compose.runtime.MutableState<kotlin.String> visibility:private [final] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=kotlin.Unit origin=INITIALIZE_FIELD
+                    receiver: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+                    value: TYPE_OP type=androidx.compose.runtime.MutableState<kotlin.String> origin=IMPLICIT_CAST typeOperand=androidx.compose.runtime.MutableState<kotlin.String>
+                      CALL 'public final fun mutableStateOf$default <T> (value: T of androidx.compose.runtime.SnapshotStateKt.mutableStateOf$default, policy: androidx.compose.runtime.SnapshotMutationPolicy<T of androidx.compose.runtime.SnapshotStateKt.mutableStateOf$default>?, $mask0: kotlin.Int, $handler: kotlin.Any?): androidx.compose.runtime.MutableState<T of androidx.compose.runtime.SnapshotStateKt.mutableStateOf$default> declared in androidx.compose.runtime.SnapshotStateKt' type=androidx.compose.runtime.MutableState<T of androidx.compose.runtime.SnapshotStateKt.mutableStateOf$default> origin=DEFAULT_DISPATCH_CALL
+                        TYPE_ARG T: kotlin.String
+                        ARG value: CONST String type=kotlin.String value=""
+                        ARG policy: COMPOSITE type=androidx.compose.runtime.SnapshotMutationPolicy<T of androidx.compose.runtime.SnapshotStateKt.mutableStateOf$default>? origin=DEFAULT_VALUE
+                          CONST Null type=androidx.compose.runtime.SnapshotMutationPolicy<T of androidx.compose.runtime.SnapshotStateKt.mutableStateOf$default>? value=null
+                        ARG $mask0: CONST Int type=kotlin.Int value=2
+                        ARG $handler: CONST Null type=kotlin.Any? value=null
+                  SET_FIELD 'FIELD PROPERTY_DELEGATE name:seciliGramaj$delegate type:androidx.compose.runtime.MutableState<com.bilalgnd.saracapp.Secenek?> visibility:private [final] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=kotlin.Unit origin=INITIALIZE_FIELD
+                    receiver: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+                    value: TYPE_OP type=androidx.compose.runtime.MutableState<com.bilalgnd.saracapp.Secenek?> origin=IMPLICIT_CAST typeOperand=androidx.compose.runtime.MutableState<com.bilalgnd.saracapp.Secenek?>
+                      CALL 'public final fun mutableStateOf$default <T> (value: T of androidx.compose.runtime.SnapshotStateKt.mutableStateOf$default, policy: androidx.compose.runtime.SnapshotMutationPolicy<T of androidx.compose.runtime.SnapshotStateKt.mutableStateOf$default>?, $mask0: kotlin.Int, $handler: kotlin.Any?): androidx.compose.runtime.MutableState<T of androidx.compose.runtime.SnapshotStateKt.mutableStateOf$default> declared in androidx.compose.runtime.SnapshotStateKt' type=androidx.compose.runtime.MutableState<T of androidx.compose.runtime.SnapshotStateKt.mutableStateOf$default> origin=DEFAULT_DISPATCH_CALL
+                        TYPE_ARG T: com.bilalgnd.saracapp.Secenek?
+                        ARG value: BLOCK type=com.bilalgnd.saracapp.Secenek? origin=FOLDED_ELVIS
+                          WHEN type=com.bilalgnd.saracapp.Secenek? origin=FOLDED_ELVIS
+                            BRANCH
+                              if: COMPOSITE type=kotlin.Boolean origin=null
+                                VAR IR_TEMPORARY_VARIABLE name:tmp1_elvis_lhs type:com.bilalgnd.saracapp.Secenek? [val]
+                                  CALL 'public final fun find <T> (<this>: kotlin.collections.Iterable<T of kotlin.collections.CollectionsKt.find>, predicate: kotlin.Function1<T of kotlin.collections.CollectionsKt.find, kotlin.Boolean>): T of kotlin.collections.CollectionsKt.find? [inline] declared in kotlin.collections.CollectionsKt' type=com.bilalgnd.saracapp.Secenek? origin=null
+                                    TYPE_ARG T: com.bilalgnd.saracapp.Secenek
+                                    ARG <this>: BLOCK type=kotlin.collections.List<com.bilalgnd.saracapp.Secenek> origin=FOLDED_ELVIS
+                                      WHEN type=kotlin.collections.List<com.bilalgnd.saracapp.Secenek> origin=FOLDED_ELVIS
+                                        BRANCH
+                                          if: COMPOSITE type=kotlin.Boolean origin=null
+                                            VAR IR_TEMPORARY_VARIABLE name:tmp0_elvis_lhs type:kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? [val]
+                                              CALL 'public final fun <get-secenekler> (): kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? declared in com.bilalgnd.saracapp.Urun' type=kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? origin=GET_PROPERTY
+                                                ARG <this>: GET_VAR 'urun: com.bilalgnd.saracapp.Urun declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<init>' type=com.bilalgnd.saracapp.Urun origin=null
+                                            CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                                              ARG <this>: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                                                ARG arg0: GET_VAR 'val tmp0_elvis_lhs: kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<init>' type=kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? origin=null
+                                                ARG arg1: CONST Null type=kotlin.Nothing? value=null
+                                          then: GET_VAR 'val tmp0_elvis_lhs: kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<init>' type=kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? origin=null
+                                        BRANCH
+                                          if: CONST Boolean type=kotlin.Boolean value=true
+                                          then: CALL 'public final fun emptyList <T> (): kotlin.collections.List<T of kotlin.collections.CollectionsKt.emptyList> declared in kotlin.collections.CollectionsKt' type=kotlin.collections.List<com.bilalgnd.saracapp.Secenek> origin=null
+                                            TYPE_ARG T: com.bilalgnd.saracapp.Secenek
+                                    ARG predicate: BLOCK type=kotlin.Function1<com.bilalgnd.saracapp.Secenek, kotlin.Boolean> origin=LAMBDA
+                                      COMPOSITE type=kotlin.Unit origin=null
+                                      FUNCTION_REFERENCE 'private final fun seciliGramaj_delegate$lambda$0 (it: com.bilalgnd.saracapp.Secenek): kotlin.Boolean declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=kotlin.Function1<com.bilalgnd.saracapp.Secenek, kotlin.Boolean> origin=INLINE_LAMBDA reflectionTarget=null
+                                CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                                  ARG <this>: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                                    ARG arg0: GET_VAR 'val tmp1_elvis_lhs: com.bilalgnd.saracapp.Secenek? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<init>' type=com.bilalgnd.saracapp.Secenek? origin=null
+                                    ARG arg1: CONST Null type=kotlin.Nothing? value=null
+                              then: GET_VAR 'val tmp1_elvis_lhs: com.bilalgnd.saracapp.Secenek? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<init>' type=com.bilalgnd.saracapp.Secenek? origin=null
+                            BRANCH
+                              if: CONST Boolean type=kotlin.Boolean value=true
+                              then: BLOCK type=com.bilalgnd.saracapp.Secenek? origin=FOLDED_SAFE_CALL
+                                WHEN type=com.bilalgnd.saracapp.Secenek? origin=FOLDED_SAFE_CALL
+                                  BRANCH
+                                    if: COMPOSITE type=kotlin.Boolean origin=null
+                                      VAR IR_TEMPORARY_VARIABLE name:tmp2_safe_receiver type:kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? [val]
+                                        CALL 'public final fun <get-secenekler> (): kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? declared in com.bilalgnd.saracapp.Urun' type=kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? origin=GET_PROPERTY
+                                          ARG <this>: GET_VAR 'urun: com.bilalgnd.saracapp.Urun declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<init>' type=com.bilalgnd.saracapp.Urun origin=null
+                                      CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                                        ARG <this>: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                                          ARG arg0: GET_VAR 'val tmp2_safe_receiver: kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<init>' type=kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? origin=null
+                                          ARG arg1: CONST Null type=kotlin.Nothing? value=null
+                                    then: CALL 'public final fun firstOrNull <T> (<this>: kotlin.collections.List<T of kotlin.collections.CollectionsKt.firstOrNull>): T of kotlin.collections.CollectionsKt.firstOrNull? declared in kotlin.collections.CollectionsKt' type=com.bilalgnd.saracapp.Secenek? origin=null
+                                      TYPE_ARG T: com.bilalgnd.saracapp.Secenek
+                                      ARG <this>: GET_VAR 'val tmp2_safe_receiver: kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<init>' type=kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? origin=null
+                                  BRANCH
+                                    if: CONST Boolean type=kotlin.Boolean value=true
+                                    then: CONST Null type=kotlin.Nothing? value=null
+                        ARG policy: COMPOSITE type=androidx.compose.runtime.SnapshotMutationPolicy<T of androidx.compose.runtime.SnapshotStateKt.mutableStateOf$default>? origin=DEFAULT_VALUE
+                          CONST Null type=androidx.compose.runtime.SnapshotMutationPolicy<T of androidx.compose.runtime.SnapshotStateKt.mutableStateOf$default>? value=null
+                        ARG $mask0: CONST Int type=kotlin.Int value=2
+                        ARG $handler: CONST Null type=kotlin.Any? value=null
+            FIELD PROPERTY_BACKING_FIELD name:seciliNotlar type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> visibility:private [final]
+            FUN DEFAULT_PROPERTY_ACCESSOR name:<get-seciliNotlar> visibility:public modality:FINAL returnType:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>
+              VALUE_PARAMETER kind:DispatchReceiver name:<this> index:0 type:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar
+              correspondingProperty: PROPERTY name:seciliNotlar visibility:public modality:FINAL [val]
+              BLOCK_BODY
+                RETURN type=kotlin.Nothing from='public final fun <get-seciliNotlar> (): androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar'
+                  GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:seciliNotlar type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> visibility:private [final]' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+                    receiver: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<get-seciliNotlar>' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+            FIELD PROPERTY_BACKING_FIELD name:seciliUcretsizEkstralar type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> visibility:private [final]
+            FUN DEFAULT_PROPERTY_ACCESSOR name:<get-seciliUcretsizEkstralar> visibility:public modality:FINAL returnType:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>
+              VALUE_PARAMETER kind:DispatchReceiver name:<this> index:0 type:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar
+              correspondingProperty: PROPERTY name:seciliUcretsizEkstralar visibility:public modality:FINAL [val]
+              BLOCK_BODY
+                RETURN type=kotlin.Nothing from='public final fun <get-seciliUcretsizEkstralar> (): androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar'
+                  GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:seciliUcretsizEkstralar type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> visibility:private [final]' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+                    receiver: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<get-seciliUcretsizEkstralar>' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+            FIELD PROPERTY_BACKING_FIELD name:seciliUcretliEkstralar type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> visibility:private [final]
+            FUN DEFAULT_PROPERTY_ACCESSOR name:<get-seciliUcretliEkstralar> visibility:public modality:FINAL returnType:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>
+              VALUE_PARAMETER kind:DispatchReceiver name:<this> index:0 type:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar
+              correspondingProperty: PROPERTY name:seciliUcretliEkstralar visibility:public modality:FINAL [val]
+              BLOCK_BODY
+                RETURN type=kotlin.Nothing from='public final fun <get-seciliUcretliEkstralar> (): androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar'
+                  GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:seciliUcretliEkstralar type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> visibility:private [final]' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+                    receiver: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<get-seciliUcretliEkstralar>' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+            FIELD PROPERTY_DELEGATE name:siparisNotu$delegate type:androidx.compose.runtime.MutableState<kotlin.String> visibility:private [final]
+            FUN DELEGATED_PROPERTY_ACCESSOR name:<get-siparisNotu> visibility:public modality:FINAL returnType:kotlin.String
+              VALUE_PARAMETER kind:DispatchReceiver name:<this> index:0 type:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar
+              correspondingProperty: PROPERTY name:siparisNotu visibility:public modality:FINAL [delegated,var]
+              BLOCK_BODY
+                RETURN type=kotlin.Nothing from='public final fun <get-siparisNotu> (): kotlin.String declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar'
+                  CALL 'public final fun getValue <T> (<this>: androidx.compose.runtime.State<T of androidx.compose.runtime.SnapshotStateKt.getValue>, thisObj: kotlin.Any?, property: kotlin.reflect.KProperty<*>): T of androidx.compose.runtime.SnapshotStateKt.getValue [inline,operator] declared in androidx.compose.runtime.SnapshotStateKt' type=kotlin.String origin=null
+                    TYPE_ARG T: kotlin.String
+                    ARG <this>: GET_FIELD 'FIELD PROPERTY_DELEGATE name:siparisNotu$delegate type:androidx.compose.runtime.MutableState<kotlin.String> visibility:private [final] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=androidx.compose.runtime.MutableState<kotlin.String> origin=null
+                      receiver: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<get-siparisNotu>' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=IMPLICIT_ARGUMENT
+                    ARG thisObj: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<get-siparisNotu>' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+                    ARG property: CONST Null type=kotlin.reflect.KMutableProperty1<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar, kotlin.String> value=null
+            FUN DELEGATED_PROPERTY_ACCESSOR name:<set-siparisNotu> visibility:public modality:FINAL returnType:kotlin.Unit
+              VALUE_PARAMETER kind:DispatchReceiver name:<this> index:0 type:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar
+              VALUE_PARAMETER kind:Regular name:<set-?> index:1 type:kotlin.String
+              correspondingProperty: PROPERTY name:siparisNotu visibility:public modality:FINAL [delegated,var]
+              BLOCK_BODY
+                RETURN type=kotlin.Nothing from='public final fun <set-siparisNotu> (<set-?>: kotlin.String): kotlin.Unit declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar'
+                  CALL 'public final fun setValue <T> (<this>: androidx.compose.runtime.MutableState<T of androidx.compose.runtime.SnapshotStateKt.setValue>, thisObj: kotlin.Any?, property: kotlin.reflect.KProperty<*>, value: T of androidx.compose.runtime.SnapshotStateKt.setValue): kotlin.Unit [inline,operator] declared in androidx.compose.runtime.SnapshotStateKt' type=kotlin.Unit origin=null
+                    TYPE_ARG T: kotlin.String
+                    ARG <this>: GET_FIELD 'FIELD PROPERTY_DELEGATE name:siparisNotu$delegate type:androidx.compose.runtime.MutableState<kotlin.String> visibility:private [final] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=androidx.compose.runtime.MutableState<kotlin.String> origin=null
+                      receiver: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<set-siparisNotu>' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=IMPLICIT_ARGUMENT
+                    ARG thisObj: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<set-siparisNotu>' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+                    ARG property: CONST Null type=kotlin.reflect.KMutableProperty1<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar, kotlin.String> value=null
+                    ARG value: GET_VAR '<set-?>: kotlin.String declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<set-siparisNotu>' type=kotlin.String origin=null
+            FIELD PROPERTY_DELEGATE name:seciliGramaj$delegate type:androidx.compose.runtime.MutableState<com.bilalgnd.saracapp.Secenek?> visibility:private [final]
+            FUN DELEGATED_PROPERTY_ACCESSOR name:<get-seciliGramaj> visibility:public modality:FINAL returnType:com.bilalgnd.saracapp.Secenek?
+              VALUE_PARAMETER kind:DispatchReceiver name:<this> index:0 type:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar
+              correspondingProperty: PROPERTY name:seciliGramaj visibility:public modality:FINAL [delegated,var]
+              BLOCK_BODY
+                RETURN type=kotlin.Nothing from='public final fun <get-seciliGramaj> (): com.bilalgnd.saracapp.Secenek? declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar'
+                  CALL 'public final fun getValue <T> (<this>: androidx.compose.runtime.State<T of androidx.compose.runtime.SnapshotStateKt.getValue>, thisObj: kotlin.Any?, property: kotlin.reflect.KProperty<*>): T of androidx.compose.runtime.SnapshotStateKt.getValue [inline,operator] declared in androidx.compose.runtime.SnapshotStateKt' type=com.bilalgnd.saracapp.Secenek? origin=null
+                    TYPE_ARG T: com.bilalgnd.saracapp.Secenek?
+                    ARG <this>: GET_FIELD 'FIELD PROPERTY_DELEGATE name:seciliGramaj$delegate type:androidx.compose.runtime.MutableState<com.bilalgnd.saracapp.Secenek?> visibility:private [final] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=androidx.compose.runtime.MutableState<com.bilalgnd.saracapp.Secenek?> origin=null
+                      receiver: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<get-seciliGramaj>' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=IMPLICIT_ARGUMENT
+                    ARG thisObj: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<get-seciliGramaj>' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+                    ARG property: CONST Null type=kotlin.reflect.KMutableProperty1<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar, com.bilalgnd.saracapp.Secenek?> value=null
+            FUN DELEGATED_PROPERTY_ACCESSOR name:<set-seciliGramaj> visibility:public modality:FINAL returnType:kotlin.Unit
+              VALUE_PARAMETER kind:DispatchReceiver name:<this> index:0 type:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar
+              VALUE_PARAMETER kind:Regular name:<set-?> index:1 type:com.bilalgnd.saracapp.Secenek?
+              correspondingProperty: PROPERTY name:seciliGramaj visibility:public modality:FINAL [delegated,var]
+              BLOCK_BODY
+                RETURN type=kotlin.Nothing from='public final fun <set-seciliGramaj> (<set-?>: com.bilalgnd.saracapp.Secenek?): kotlin.Unit declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar'
+                  CALL 'public final fun setValue <T> (<this>: androidx.compose.runtime.MutableState<T of androidx.compose.runtime.SnapshotStateKt.setValue>, thisObj: kotlin.Any?, property: kotlin.reflect.KProperty<*>, value: T of androidx.compose.runtime.SnapshotStateKt.setValue): kotlin.Unit [inline,operator] declared in androidx.compose.runtime.SnapshotStateKt' type=kotlin.Unit origin=null
+                    TYPE_ARG T: com.bilalgnd.saracapp.Secenek?
+                    ARG <this>: GET_FIELD 'FIELD PROPERTY_DELEGATE name:seciliGramaj$delegate type:androidx.compose.runtime.MutableState<com.bilalgnd.saracapp.Secenek?> visibility:private [final] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=androidx.compose.runtime.MutableState<com.bilalgnd.saracapp.Secenek?> origin=null
+                      receiver: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<set-seciliGramaj>' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=IMPLICIT_ARGUMENT
+                    ARG thisObj: GET_VAR '<this>: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<set-seciliGramaj>' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+                    ARG property: CONST Null type=kotlin.reflect.KMutableProperty1<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar, com.bilalgnd.saracapp.Secenek?> value=null
+                    ARG value: GET_VAR '<set-?>: com.bilalgnd.saracapp.Secenek? declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.<set-seciliGramaj>' type=com.bilalgnd.saracapp.Secenek? origin=null
+            FUN FAKE_OVERRIDE name:equals visibility:public modality:OPEN returnType:kotlin.Boolean [fake_override,operator]
+              VALUE_PARAMETER kind:DispatchReceiver name:<this> index:0 type:kotlin.Any
+              VALUE_PARAMETER kind:Regular name:other index:1 type:kotlin.Any?
+              overridden:
+                public open fun equals (other: kotlin.Any?): kotlin.Boolean [operator] declared in kotlin.Any
+            FUN FAKE_OVERRIDE name:hashCode visibility:public modality:OPEN returnType:kotlin.Int [fake_override]
+              VALUE_PARAMETER kind:DispatchReceiver name:<this> index:0 type:kotlin.Any
+              overridden:
+                public open fun hashCode (): kotlin.Int declared in kotlin.Any
+            FUN FAKE_OVERRIDE name:toString visibility:public modality:OPEN returnType:kotlin.String [fake_override]
+              VALUE_PARAMETER kind:DispatchReceiver name:<this> index:0 type:kotlin.Any
+              overridden:
+                public open fun toString (): kotlin.String declared in kotlin.Any
+            FUN INLINE_LAMBDA name:seciliGramaj_delegate$lambda$0 visibility:private modality:FINAL returnType:kotlin.Boolean
+              VALUE_PARAMETER kind:Regular name:it index:0 type:com.bilalgnd.saracapp.Secenek
+              BLOCK_BODY
+                VAR name:$i$a$-find-SaracappKt$SiparisBottomSheet$UrunAyar$seciliGramaj$2 type:kotlin.Int [val]
+                  CONST Int type=kotlin.Int value=0
+                RETURN type=kotlin.Nothing from='private final fun seciliGramaj_delegate$lambda$0 (it: com.bilalgnd.saracapp.Secenek): kotlin.Boolean declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar'
+                  CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=EQEQ
+                    ARG arg0: CALL 'public final fun <get-gramaj> (): kotlin.String declared in com.bilalgnd.saracapp.Secenek' type=kotlin.String origin=GET_PROPERTY
+                      ARG <this>: GET_VAR 'it: com.bilalgnd.saracapp.Secenek declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.seciliGramaj_delegate$lambda$0' type=com.bilalgnd.saracapp.Secenek origin=null
+                    ARG arg1: CONST String type=kotlin.String value="100gr"
+          VAR name:urunAyarlari type:androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> [val]
+            BLOCK type=androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> origin=null
+              CALL 'public final fun sourceInformationMarkerStart (composer: androidx.compose.runtime.Composer, key: kotlin.Int, sourceInformation: kotlin.String): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                ARG key: CONST Int type=kotlin.Int value=-640193435
+                ARG sourceInformation: CONST String type=kotlin.String value="CC(remember):saracapp.kt#9igjgp"
+              VAR IR_TEMPORARY_VARIABLE name:tmp3_group type:androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> [val]
+                CALL 'public final fun cache <T> (<this>: androidx.compose.runtime.Composer, invalid: kotlin.Boolean, block: @[DisallowComposableCalls] kotlin.Function0<T of androidx.compose.runtime.ComposerKt.cache>): T of androidx.compose.runtime.ComposerKt.cache [inline] declared in androidx.compose.runtime.ComposerKt' type=androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> origin=null
+                  TYPE_ARG T: androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar>
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG invalid: CONST Boolean type=kotlin.Boolean value=false
+                  ARG block: BLOCK type=kotlin.Function0<androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar>> origin=LAMBDA
+                    COMPOSITE type=kotlin.Unit origin=null
+                    FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$204 ($urun: com.bilalgnd.saracapp.Urun): androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function0<androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar>> origin=INLINE_LAMBDA reflectionTarget=null
+                      ARG $urun: GET_VAR 'urun: com.bilalgnd.saracapp.Urun declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=com.bilalgnd.saracapp.Urun origin=null
+              CALL 'public final fun sourceInformationMarkerEnd (composer: androidx.compose.runtime.Composer): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              GET_VAR 'val tmp3_group: androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> origin=null
+          VAR PROPERTY_DELEGATE name:aktifIndex$delegate type:androidx.compose.runtime.MutableIntState [val]
+            BLOCK type=androidx.compose.runtime.MutableIntState origin=null
+              CALL 'public final fun sourceInformationMarkerStart (composer: androidx.compose.runtime.Composer, key: kotlin.Int, sourceInformation: kotlin.String): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                ARG key: CONST Int type=kotlin.Int value=-640191209
+                ARG sourceInformation: CONST String type=kotlin.String value="CC(remember):saracapp.kt#9igjgp"
+              VAR IR_TEMPORARY_VARIABLE name:tmp4_group type:androidx.compose.runtime.MutableIntState [val]
+                CALL 'public final fun cache <T> (<this>: androidx.compose.runtime.Composer, invalid: kotlin.Boolean, block: @[DisallowComposableCalls] kotlin.Function0<T of androidx.compose.runtime.ComposerKt.cache>): T of androidx.compose.runtime.ComposerKt.cache [inline] declared in androidx.compose.runtime.ComposerKt' type=androidx.compose.runtime.MutableIntState origin=null
+                  TYPE_ARG T: androidx.compose.runtime.MutableIntState
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG invalid: CONST Boolean type=kotlin.Boolean value=false
+                  ARG block: BLOCK type=kotlin.Function0<androidx.compose.runtime.MutableIntState> origin=LAMBDA
+                    COMPOSITE type=kotlin.Unit origin=null
+                    FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$205 (): androidx.compose.runtime.MutableIntState declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function0<androidx.compose.runtime.MutableIntState> origin=INLINE_LAMBDA reflectionTarget=null
+              CALL 'public final fun sourceInformationMarkerEnd (composer: androidx.compose.runtime.Composer): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              GET_VAR 'val tmp4_group: androidx.compose.runtime.MutableIntState [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.MutableIntState origin=null
+          VAR name:aktifAyar type:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar [val]
+            BLOCK type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=FOLDED_ELVIS
+              WHEN type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=FOLDED_ELVIS
+                BRANCH
+                  if: COMPOSITE type=kotlin.Boolean origin=null
+                    VAR IR_TEMPORARY_VARIABLE name:tmp0_elvis_lhs type:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar? [val]
+                      CALL 'public final fun getOrNull <T> (<this>: kotlin.collections.List<T of kotlin.collections.CollectionsKt.getOrNull>, index: kotlin.Int): T of kotlin.collections.CollectionsKt.getOrNull? declared in kotlin.collections.CollectionsKt' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar? origin=null
+                        TYPE_ARG T: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar
+                        ARG <this>: GET_VAR 'val urunAyarlari: androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> origin=null
+                        ARG index: CALL 'private final fun SiparisBottomSheet$lambda$206 ($aktifIndex$delegate: androidx.compose.runtime.MutableIntState): kotlin.Int declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Int origin=GET_LOCAL_PROPERTY
+                          ARG $aktifIndex$delegate: GET_VAR 'val aktifIndex$delegate: androidx.compose.runtime.MutableIntState [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.MutableIntState origin=null
+                    CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                      ARG <this>: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                        ARG arg0: GET_VAR 'val tmp0_elvis_lhs: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar? origin=null
+                        ARG arg1: CONST Null type=kotlin.Nothing? value=null
+                  then: GET_VAR 'val tmp0_elvis_lhs: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar? origin=null
+                BRANCH
+                  if: CONST Boolean type=kotlin.Boolean value=true
+                  then: CONSTRUCTOR_CALL 'public constructor <init> (urun: com.bilalgnd.saracapp.Urun) [primary] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+                    ARG urun: GET_VAR 'urun: com.bilalgnd.saracapp.Urun declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=com.bilalgnd.saracapp.Urun origin=null
+          VAR name:seciliOdemeler type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> [val]
+            BLOCK type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+              CALL 'public final fun sourceInformationMarkerStart (composer: androidx.compose.runtime.Composer, key: kotlin.Int, sourceInformation: kotlin.String): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                ARG key: CONST Int type=kotlin.Int value=-640186937
+                ARG sourceInformation: CONST String type=kotlin.String value="CC(remember):saracapp.kt#9igjgp"
+              VAR IR_TEMPORARY_VARIABLE name:tmp5_group type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> [val]
+                CALL 'public final fun cache <T> (<this>: androidx.compose.runtime.Composer, invalid: kotlin.Boolean, block: @[DisallowComposableCalls] kotlin.Function0<T of androidx.compose.runtime.ComposerKt.cache>): T of androidx.compose.runtime.ComposerKt.cache [inline] declared in androidx.compose.runtime.ComposerKt' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+                  TYPE_ARG T: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG invalid: CONST Boolean type=kotlin.Boolean value=false
+                  ARG block: BLOCK type=kotlin.Function0<androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>> origin=LAMBDA
+                    COMPOSITE type=kotlin.Unit origin=null
+                    FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$208 (): androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function0<androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>> origin=INLINE_LAMBDA reflectionTarget=null
+              CALL 'public final fun sourceInformationMarkerEnd (composer: androidx.compose.runtime.Composer): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              GET_VAR 'val tmp5_group: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+          VAR name:seciliIcecekler type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> [val]
+            BLOCK type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+              CALL 'public final fun sourceInformationMarkerStart (composer: androidx.compose.runtime.Composer, key: kotlin.Int, sourceInformation: kotlin.String): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                ARG key: CONST Int type=kotlin.Int value=-640184505
+                ARG sourceInformation: CONST String type=kotlin.String value="CC(remember):saracapp.kt#9igjgp"
+              VAR IR_TEMPORARY_VARIABLE name:tmp6_group type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> [val]
+                CALL 'public final fun cache <T> (<this>: androidx.compose.runtime.Composer, invalid: kotlin.Boolean, block: @[DisallowComposableCalls] kotlin.Function0<T of androidx.compose.runtime.ComposerKt.cache>): T of androidx.compose.runtime.ComposerKt.cache [inline] declared in androidx.compose.runtime.ComposerKt' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+                  TYPE_ARG T: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG invalid: CONST Boolean type=kotlin.Boolean value=false
+                  ARG block: BLOCK type=kotlin.Function0<androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>> origin=LAMBDA
+                    COMPOSITE type=kotlin.Unit origin=null
+                    FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$209 (): androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function0<androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>> origin=INLINE_LAMBDA reflectionTarget=null
+              CALL 'public final fun sourceInformationMarkerEnd (composer: androidx.compose.runtime.Composer): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              GET_VAR 'val tmp6_group: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+          VAR name:icecekAdetleri type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> [val]
+            BLOCK type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> origin=null
+              CALL 'public final fun sourceInformationMarkerStart (composer: androidx.compose.runtime.Composer, key: kotlin.Int, sourceInformation: kotlin.String): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                ARG key: CONST Int type=kotlin.Int value=-640182109
+                ARG sourceInformation: CONST String type=kotlin.String value="CC(remember):saracapp.kt#9igjgp"
+              VAR IR_TEMPORARY_VARIABLE name:tmp7_group type:androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> [val]
+                CALL 'public final fun cache <T> (<this>: androidx.compose.runtime.Composer, invalid: kotlin.Boolean, block: @[DisallowComposableCalls] kotlin.Function0<T of androidx.compose.runtime.ComposerKt.cache>): T of androidx.compose.runtime.ComposerKt.cache [inline] declared in androidx.compose.runtime.ComposerKt' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> origin=null
+                  TYPE_ARG T: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int>
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG invalid: CONST Boolean type=kotlin.Boolean value=false
+                  ARG block: BLOCK type=kotlin.Function0<androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int>> origin=LAMBDA
+                    COMPOSITE type=kotlin.Unit origin=null
+                    FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$210 (): androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function0<androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int>> origin=INLINE_LAMBDA reflectionTarget=null
+              CALL 'public final fun sourceInformationMarkerEnd (composer: androidx.compose.runtime.Composer): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              GET_VAR 'val tmp7_group: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> origin=null
+          CALL 'public final fun LaunchedEffect (key1: kotlin.Any?, block: @[ExtensionFunctionType] kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope, kotlin.Unit>, $composer: androidx.compose.runtime.Composer?, $changed: kotlin.Int): kotlin.Unit declared in androidx.compose.runtime.EffectsKt' type=kotlin.Unit origin=null
+            ARG key1: GET_VAR 'urun: com.bilalgnd.saracapp.Urun declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=com.bilalgnd.saracapp.Urun origin=null
+            ARG block: BLOCK type=@[ExtensionFunctionType] kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope, kotlin.Unit> origin=null
+              CALL 'public final fun sourceInformationMarkerStart (composer: androidx.compose.runtime.Composer, key: kotlin.Int, sourceInformation: kotlin.String): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                ARG key: CONST Int type=kotlin.Int value=-640179828
+                ARG sourceInformation: CONST String type=kotlin.String value="CC(remember):saracapp.kt#9igjgp"
+              VAR IR_TEMPORARY_VARIABLE name:tmp8_group type:@[ExtensionFunctionType] kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope, kotlin.Unit> [val]
+                CALL 'public final fun cache <T> (<this>: androidx.compose.runtime.Composer, invalid: kotlin.Boolean, block: @[DisallowComposableCalls] kotlin.Function0<T of androidx.compose.runtime.ComposerKt.cache>): T of androidx.compose.runtime.ComposerKt.cache [inline] declared in androidx.compose.runtime.ComposerKt' type=@[ExtensionFunctionType] kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope, kotlin.Unit> origin=null
+                  TYPE_ARG T: @[ExtensionFunctionType] kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope, kotlin.Unit>
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG invalid: CALL 'public open fun changedInstance (value: kotlin.Any?): kotlin.Boolean declared in androidx.compose.runtime.Composer' type=kotlin.Boolean origin=null
+                    ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                    ARG value: GET_VAR 'icecekMenusu: kotlin.collections.List<com.bilalgnd.saracapp.Urun> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.collections.List<com.bilalgnd.saracapp.Urun> origin=null
+                  ARG block: BLOCK type=kotlin.Function0<@[ExtensionFunctionType] kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope, kotlin.Unit>> origin=LAMBDA
+                    COMPOSITE type=kotlin.Unit origin=null
+                    FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$211 ($icecekMenusu: kotlin.collections.List<com.bilalgnd.saracapp.Urun>, $icecekAdetleri: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int>): @[ExtensionFunctionType] kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope, kotlin.Unit> declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function0<@[ExtensionFunctionType] kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope, kotlin.Unit>> origin=INLINE_LAMBDA reflectionTarget=null
+                      ARG $icecekMenusu: GET_VAR 'icecekMenusu: kotlin.collections.List<com.bilalgnd.saracapp.Urun> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.collections.List<com.bilalgnd.saracapp.Urun> origin=null
+                      ARG $icecekAdetleri: GET_VAR 'val icecekAdetleri: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> origin=null
+              CALL 'public final fun sourceInformationMarkerEnd (composer: androidx.compose.runtime.Composer): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              GET_VAR 'val tmp8_group: @[ExtensionFunctionType] kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope, kotlin.Unit> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=@[ExtensionFunctionType] kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope, kotlin.Unit> origin=null
+            ARG $composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+            ARG $changed: CALL 'public final fun and (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+              ARG <this>: CONST Int type=kotlin.Int value=14
+              ARG other: GET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+          VAR name:ekstralarFiyati type:kotlin.Int [val]
+            CALL 'public final fun sumOf <T> (<this>: kotlin.collections.Iterable<T of kotlin.collections.CollectionsKt.sumOf>, selector: kotlin.Function1<T of kotlin.collections.CollectionsKt.sumOf, kotlin.Int>): kotlin.Int [inline] declared in kotlin.collections.CollectionsKt' type=kotlin.Int origin=null
+              TYPE_ARG T: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar
+              ARG <this>: GET_VAR 'val urunAyarlari: androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> origin=null
+              ARG selector: BLOCK type=kotlin.Function1<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar, kotlin.Int> origin=LAMBDA
+                COMPOSITE type=kotlin.Unit origin=null
+                FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$214 ($ucretliEkstralar: kotlin.collections.Map<kotlin.String, kotlin.Int>, ayar: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar): kotlin.Int declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function1<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar, kotlin.Int> origin=INLINE_LAMBDA reflectionTarget=null
+                  ARG $ucretliEkstralar: GET_VAR 'ucretliEkstralar: kotlin.collections.Map<kotlin.String, kotlin.Int> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.collections.Map<kotlin.String, kotlin.Int> origin=null
+          VAR name:anlikBirimFiyat type:kotlin.Int [val]
+            CALL 'public final fun sumOf <T> (<this>: kotlin.collections.Iterable<T of kotlin.collections.CollectionsKt.sumOf>, selector: kotlin.Function1<T of kotlin.collections.CollectionsKt.sumOf, kotlin.Int>): kotlin.Int [inline] declared in kotlin.collections.CollectionsKt' type=kotlin.Int origin=null
+              TYPE_ARG T: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar
+              ARG <this>: GET_VAR 'val urunAyarlari: androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> origin=null
+              ARG selector: BLOCK type=kotlin.Function1<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar, kotlin.Int> origin=LAMBDA
+                COMPOSITE type=kotlin.Unit origin=null
+                FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$215 (it: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar): kotlin.Int declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function1<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar, kotlin.Int> origin=INLINE_LAMBDA reflectionTarget=null
+          VAR name:toplamTutar type:kotlin.Int [val]
+            CALL 'public final fun plus (other: kotlin.Int): kotlin.Int [operator] declared in kotlin.Int' type=kotlin.Int origin=PLUS
+              ARG <this>: CALL 'public final fun plus (other: kotlin.Int): kotlin.Int [operator] declared in kotlin.Int' type=kotlin.Int origin=PLUS
+                ARG <this>: GET_VAR 'val anlikBirimFiyat: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+                ARG other: GET_VAR 'val ekstralarFiyati: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+              ARG other: CALL 'public final fun sumOf <T> (<this>: kotlin.collections.Iterable<T of kotlin.collections.CollectionsKt.sumOf>, selector: kotlin.Function1<T of kotlin.collections.CollectionsKt.sumOf, kotlin.Int>): kotlin.Int [inline] declared in kotlin.collections.CollectionsKt' type=kotlin.Int origin=null
+                TYPE_ARG T: com.bilalgnd.saracapp.Urun
+                ARG <this>: CALL 'public final fun filter <T> (<this>: kotlin.collections.Iterable<T of kotlin.collections.CollectionsKt.filter>, predicate: kotlin.Function1<T of kotlin.collections.CollectionsKt.filter, kotlin.Boolean>): kotlin.collections.List<T of kotlin.collections.CollectionsKt.filter> [inline] declared in kotlin.collections.CollectionsKt' type=kotlin.collections.List<com.bilalgnd.saracapp.Urun> origin=null
+                  TYPE_ARG T: com.bilalgnd.saracapp.Urun
+                  ARG <this>: GET_VAR 'icecekMenusu: kotlin.collections.List<com.bilalgnd.saracapp.Urun> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.collections.List<com.bilalgnd.saracapp.Urun> origin=null
+                  ARG predicate: BLOCK type=kotlin.Function1<com.bilalgnd.saracapp.Urun, kotlin.Boolean> origin=LAMBDA
+                    COMPOSITE type=kotlin.Unit origin=null
+                    FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$216 ($seciliIcecekler: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>, it: com.bilalgnd.saracapp.Urun): kotlin.Boolean declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function1<com.bilalgnd.saracapp.Urun, kotlin.Boolean> origin=INLINE_LAMBDA reflectionTarget=null
+                      ARG $seciliIcecekler: GET_VAR 'val seciliIcecekler: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+                ARG selector: BLOCK type=kotlin.Function1<com.bilalgnd.saracapp.Urun, kotlin.Int> origin=LAMBDA
+                  COMPOSITE type=kotlin.Unit origin=null
+                  FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$217 ($icecekAdetleri: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int>, it: com.bilalgnd.saracapp.Urun): kotlin.Int declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function1<com.bilalgnd.saracapp.Urun, kotlin.Int> origin=INLINE_LAMBDA reflectionTarget=null
+                    ARG $icecekAdetleri: GET_VAR 'val icecekAdetleri: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> origin=null
+          VAR name:nestedScrollConnection type:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided> [val]
+            BLOCK type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided> origin=null
+              CALL 'public final fun sourceInformationMarkerStart (composer: androidx.compose.runtime.Composer, key: kotlin.Int, sourceInformation: kotlin.String): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                ARG key: CONST Int type=kotlin.Int value=-640161209
+                ARG sourceInformation: CONST String type=kotlin.String value="CC(remember):saracapp.kt#9igjgp"
+              VAR IR_TEMPORARY_VARIABLE name:tmp9_group type:com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided> [val]
+                CALL 'public final fun cache <T> (<this>: androidx.compose.runtime.Composer, invalid: kotlin.Boolean, block: @[DisallowComposableCalls] kotlin.Function0<T of androidx.compose.runtime.ComposerKt.cache>): T of androidx.compose.runtime.ComposerKt.cache [inline] declared in androidx.compose.runtime.ComposerKt' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided> origin=null
+                  TYPE_ARG T: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided>
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+                  ARG invalid: CONST Boolean type=kotlin.Boolean value=false
+                  ARG block: BLOCK type=kotlin.Function0<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided>> origin=LAMBDA
+                    COMPOSITE type=kotlin.Unit origin=null
+                    FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$218 (): com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided> declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Function0<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided>> origin=INLINE_LAMBDA reflectionTarget=null
+              CALL 'public final fun sourceInformationMarkerEnd (composer: androidx.compose.runtime.Composer): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+                ARG composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              GET_VAR 'val tmp9_group: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided> origin=null
+          CALL 'public final fun ModalBottomSheet-YbuCTN8 (onDismissRequest: kotlin.Function0<kotlin.Unit>, modifier: androidx.compose.ui.Modifier?, sheetState: androidx.compose.material3.SheetState?, sheetMaxWidth: androidx.compose.ui.unit.Dp, sheetGesturesEnabled: kotlin.Boolean, shape: androidx.compose.ui.graphics.Shape?, containerColor: androidx.compose.ui.graphics.Color, contentColor: androidx.compose.ui.graphics.Color, tonalElevation: androidx.compose.ui.unit.Dp, scrimColor: androidx.compose.ui.graphics.Color, dragHandle: kotlin.Function2<androidx.compose.runtime.Composer, kotlin.Int, kotlin.Unit>?, contentWindowInsets: kotlin.Function2<androidx.compose.runtime.Composer, kotlin.Int, androidx.compose.foundation.layout.WindowInsets>?, properties: androidx.compose.material3.ModalBottomSheetProperties?, content: @[ExtensionFunctionType] kotlin.Function3<androidx.compose.foundation.layout.ColumnScope, androidx.compose.runtime.Composer, kotlin.Int, kotlin.Unit>, $composer: androidx.compose.runtime.Composer?, $changed: kotlin.Int, $changed1: kotlin.Int, $default: kotlin.Int): kotlin.Unit declared in androidx.compose.material3.ModalBottomSheetKt' type=kotlin.Unit origin=null
+            ARG onDismissRequest: GET_VAR 'kapat: kotlin.Function0<kotlin.Unit> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Function0<kotlin.Unit> origin=null
+            ARG modifier: COMPOSITE type=kotlin.Nothing? origin=DEFAULT_VALUE
+              CONST Null type=kotlin.Nothing? value=null
+            ARG sheetState: GET_VAR 'val sheetState: androidx.compose.material3.SheetState [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.material3.SheetState origin=null
+            ARG sheetMaxWidth: COMPOSITE type=androidx.compose.ui.unit.Dp origin=DEFAULT_VALUE
+              CALL 'public final fun <unsafe-coerce> <T, R> (v: T of kotlin.jvm.internal.<unsafe-coerce>): R of kotlin.jvm.internal.<unsafe-coerce> declared in kotlin.jvm.internal' type=androidx.compose.ui.unit.Dp origin=null
+                TYPE_ARG T: kotlin.Float
+                TYPE_ARG R: androidx.compose.ui.unit.Dp
+                ARG v: CONST Float type=kotlin.Float value=0.0
+            ARG sheetGesturesEnabled: COMPOSITE type=kotlin.Boolean origin=DEFAULT_VALUE
+              CONST Boolean type=kotlin.Boolean value=false
+            ARG shape: COMPOSITE type=kotlin.Nothing? origin=DEFAULT_VALUE
+              CONST Null type=kotlin.Nothing? value=null
+            ARG containerColor: CALL 'public final fun Color (color: kotlin.Long): androidx.compose.ui.graphics.Color declared in androidx.compose.ui.graphics.ColorKt' type=androidx.compose.ui.graphics.Color origin=null
+              ARG color: CONST Long type=kotlin.Long value=4280163870
+            ARG contentColor: COMPOSITE type=androidx.compose.ui.graphics.Color origin=DEFAULT_VALUE
+              CALL 'public final fun <unsafe-coerce> <T, R> (v: T of kotlin.jvm.internal.<unsafe-coerce>): R of kotlin.jvm.internal.<unsafe-coerce> declared in kotlin.jvm.internal' type=androidx.compose.ui.graphics.Color origin=null
+                TYPE_ARG T: kotlin.Long
+                TYPE_ARG R: androidx.compose.ui.graphics.Color
+                ARG v: CONST Long type=kotlin.Long value=0
+            ARG tonalElevation: COMPOSITE type=androidx.compose.ui.unit.Dp origin=DEFAULT_VALUE
+              CALL 'public final fun <unsafe-coerce> <T, R> (v: T of kotlin.jvm.internal.<unsafe-coerce>): R of kotlin.jvm.internal.<unsafe-coerce> declared in kotlin.jvm.internal' type=androidx.compose.ui.unit.Dp origin=null
+                TYPE_ARG T: kotlin.Float
+                TYPE_ARG R: androidx.compose.ui.unit.Dp
+                ARG v: CONST Float type=kotlin.Float value=0.0
+            ARG scrimColor: COMPOSITE type=androidx.compose.ui.graphics.Color origin=DEFAULT_VALUE
+              CALL 'public final fun <unsafe-coerce> <T, R> (v: T of kotlin.jvm.internal.<unsafe-coerce>): R of kotlin.jvm.internal.<unsafe-coerce> declared in kotlin.jvm.internal' type=androidx.compose.ui.graphics.Color origin=null
+                TYPE_ARG T: kotlin.Long
+                TYPE_ARG R: androidx.compose.ui.graphics.Color
+                ARG v: CONST Long type=kotlin.Long value=0
+            ARG dragHandle: COMPOSITE type=kotlin.Nothing? origin=DEFAULT_VALUE
+              CONST Null type=kotlin.Nothing? value=null
+            ARG contentWindowInsets: COMPOSITE type=kotlin.Nothing? origin=DEFAULT_VALUE
+              CONST Null type=kotlin.Nothing? value=null
+            ARG properties: COMPOSITE type=kotlin.Nothing? origin=DEFAULT_VALUE
+              CONST Null type=kotlin.Nothing? value=null
+            ARG content: CALL 'public final fun rememberComposableLambda (key: kotlin.Int, tracked: kotlin.Boolean, block: kotlin.Any, $composer: androidx.compose.runtime.Composer?, $changed: kotlin.Int): androidx.compose.runtime.internal.ComposableLambda declared in androidx.compose.runtime.internal.ComposableLambdaKt' type=androidx.compose.runtime.internal.ComposableLambda origin=null
+              ARG key: CONST Int type=kotlin.Int value=4089300
+              ARG tracked: CONST Boolean type=kotlin.Boolean value=true
+              ARG block: BLOCK type=@[ExtensionFunctionType] kotlin.Function3<androidx.compose.foundation.layout.ColumnScope, androidx.compose.runtime.Composer, kotlin.Int, kotlin.Unit> origin=LAMBDA
+                COMPOSITE type=kotlin.Unit origin=null
+                CALL 'public final fun <jvm-indy> <T> (dynamicCall: T of kotlin.jvm.internal.<jvm-indy>, bootstrapMethodHandle: kotlin.Any, vararg bootstrapMethodArguments: kotlin.Any): T of kotlin.jvm.internal.<jvm-indy> declared in kotlin.jvm.internal' type=@[ExtensionFunctionType] kotlin.Function3<androidx.compose.foundation.layout.ColumnScope, androidx.compose.runtime.Composer, kotlin.Int, kotlin.Unit> origin=null
+                  TYPE_ARG T: @[ExtensionFunctionType] kotlin.Function3<androidx.compose.foundation.layout.ColumnScope, androidx.compose.runtime.Composer, kotlin.Int, kotlin.Unit>
+                  ARG dynamicCall: CALL 'public final fun invoke (p0: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided>, p1: kotlin.Boolean, p2: kotlin.collections.Map<kotlin.String, kotlin.Int>, p3: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar, p4: kotlin.String?, p5: com.bilalgnd.saracapp.Urun, p6: kotlin.collections.List<com.bilalgnd.saracapp.Urun>, p7: kotlin.Function2<kotlin.String, kotlin.collections.List<com.bilalgnd.saracapp.SiparisKalemi>, kotlin.Unit>, p8: androidx.compose.ui.hapticfeedback.HapticFeedback, p9: kotlin.collections.List<com.bilalgnd.saracapp.Secenek>?, p10: com.bilalgnd.saracapp.Secenek?, p11: kotlin.collections.List<com.bilalgnd.saracapp.Secenek>?, p12: androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar>, p13: androidx.compose.runtime.MutableIntState, p14: androidx.compose.runtime.MutableIntState, p15: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>, p16: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>, p17: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int>, p18: androidx.compose.runtime.MutableState<kotlin.String>, p19: kotlin.Int): @[ExtensionFunctionType] kotlin.Function3<androidx.compose.foundation.layout.ColumnScope, androidx.compose.runtime.Composer, kotlin.Int, kotlin.Unit> declared in kotlin.jvm.internal.invokeDynamic' type=@[ExtensionFunctionType] kotlin.Function3<androidx.compose.foundation.layout.ColumnScope, androidx.compose.runtime.Composer, kotlin.Int, kotlin.Unit> origin=null
+                    ARG p0: GET_VAR 'val nestedScrollConnection: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided> origin=null
+                    ARG p1: GET_VAR 'val isIcecek: kotlin.Boolean [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Boolean origin=null
+                    ARG p2: GET_VAR 'ucretliEkstralar: kotlin.collections.Map<kotlin.String, kotlin.Int> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.collections.Map<kotlin.String, kotlin.Int> origin=null
+                    ARG p3: GET_VAR 'val aktifAyar: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar origin=null
+                    ARG p4: GET_VAR 'guncelMasaAdi: kotlin.String? declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.String? origin=null
+                    ARG p5: GET_VAR 'urun: com.bilalgnd.saracapp.Urun declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=com.bilalgnd.saracapp.Urun origin=null
+                    ARG p6: GET_VAR 'icecekMenusu: kotlin.collections.List<com.bilalgnd.saracapp.Urun> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.collections.List<com.bilalgnd.saracapp.Urun> origin=null
+                    ARG p7: GET_VAR 'onSiparisEkle: kotlin.Function2<kotlin.String, kotlin.collections.List<com.bilalgnd.saracapp.SiparisKalemi>, kotlin.Unit> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Function2<kotlin.String, kotlin.collections.List<com.bilalgnd.saracapp.SiparisKalemi>, kotlin.Unit> origin=null
+                    ARG p8: GET_VAR 'val haptic: androidx.compose.ui.hapticfeedback.HapticFeedback [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.ui.hapticfeedback.HapticFeedback origin=null
+                    ARG p9: GET_VAR 'val tmp0_elvis_lhs: kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.seciliGramaj$delegate' type=kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? origin=null
+                    ARG p10: GET_VAR 'val tmp1_elvis_lhs: com.bilalgnd.saracapp.Secenek? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.seciliGramaj$delegate' type=com.bilalgnd.saracapp.Secenek? origin=null
+                    ARG p11: GET_VAR 'val tmp2_safe_receiver: kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar.seciliGramaj$delegate' type=kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? origin=null
+                    ARG p12: GET_VAR 'val urunAyarlari: androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar> origin=null
+                    ARG p13: GET_VAR 'val adet$delegate: androidx.compose.runtime.MutableIntState [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.MutableIntState origin=null
+                    ARG p14: GET_VAR 'val aktifIndex$delegate: androidx.compose.runtime.MutableIntState [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.MutableIntState origin=null
+                    ARG p15: GET_VAR 'val seciliOdemeler: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+                    ARG p16: GET_VAR 'val seciliIcecekler: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean> origin=null
+                    ARG p17: GET_VAR 'val icecekAdetleri: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int> origin=null
+                    ARG p18: GET_VAR 'val musteriAdi$delegate: androidx.compose.runtime.MutableState<kotlin.String> [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.MutableState<kotlin.String> origin=null
+                    ARG p19: GET_VAR 'val toplamTutar: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+                  ARG bootstrapMethodHandle: CALL 'public final fun <jvm-method-handle> (tag: kotlin.Int, owner: kotlin.String, name: kotlin.String, descriptor: kotlin.String, isInterface: kotlin.Boolean): kotlin.Any declared in kotlin.jvm.internal' type=kotlin.Any origin=null
+                    ARG tag: CONST Int type=kotlin.Int value=6
+                    ARG owner: CONST String type=kotlin.String value="java/lang/invoke/LambdaMetafactory"
+                    ARG name: CONST String type=kotlin.String value="metafactory"
+                    ARG descriptor: CONST String type=kotlin.String value="(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"
+                    ARG isInterface: CONST Boolean type=kotlin.Boolean value=false
+                  ARG bootstrapMethodArguments: VARARG type=kotlin.Array<kotlin.Any> varargElementType=kotlin.Any
+                    CALL 'public final fun <jvm-original-method-type> (method: kotlin.Any): kotlin.Any declared in kotlin.jvm.internal' type=kotlin.Any origin=null
+                      ARG method: RAW_FUNCTION_REFERENCE 'public abstract fun invoke (p1: P1 of kotlin.Function3, p2: P2 of kotlin.Function3, p3: P3 of kotlin.Function3): R of kotlin.Function3 [operator] declared in kotlin.Function3' type=kotlin.Any
+                    RAW_FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$298 ($nestedScrollConnection: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet$lambda$218.<no name provided>, $isIcecek: kotlin.Boolean, $ucretliEkstralar: kotlin.collections.Map<kotlin.String, kotlin.Int>, $aktifAyar: com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar, $guncelMasaAdi: kotlin.String?, $urun: com.bilalgnd.saracapp.Urun, $icecekMenusu: kotlin.collections.List<com.bilalgnd.saracapp.Urun>, $onSiparisEkle: kotlin.Function2<kotlin.String, kotlin.collections.List<com.bilalgnd.saracapp.SiparisKalemi>, kotlin.Unit>, $haptic: androidx.compose.ui.hapticfeedback.HapticFeedback, $tmp0_elvis_lhs: kotlin.collections.List<com.bilalgnd.saracapp.Secenek>?, $tmp1_elvis_lhs: com.bilalgnd.saracapp.Secenek?, $tmp2_safe_receiver: kotlin.collections.List<com.bilalgnd.saracapp.Secenek>?, $urunAyarlari: androidx.compose.runtime.snapshots.SnapshotStateList<com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet.UrunAyar>, $adet$delegate: androidx.compose.runtime.MutableIntState, $aktifIndex$delegate: androidx.compose.runtime.MutableIntState, $seciliOdemeler: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>, $seciliIcecekler: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Boolean>, $icecekAdetleri: androidx.compose.runtime.snapshots.SnapshotStateMap<kotlin.String, kotlin.Int>, $musteriAdi$delegate: androidx.compose.runtime.MutableState<kotlin.String>, $toplamTutar: kotlin.Int, $this$ModalBottomSheet: androidx.compose.foundation.layout.ColumnScope, $composer: androidx.compose.runtime.Composer?, $changed: kotlin.Int): kotlin.Unit? declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Any
+                    CALL 'public final fun <jvm-original-method-type> (method: kotlin.Any): kotlin.Any declared in kotlin.jvm.internal' type=kotlin.Any origin=null
+                      ARG method: RAW_FUNCTION_REFERENCE 'public abstract fun invoke (p1: androidx.compose.foundation.layout.ColumnScope, p2: androidx.compose.runtime.Composer, p3: kotlin.Int?): kotlin.Unit? [fake_override,operator] declared in kotlin.jvm.internal.invokeDynamic.<fake>' type=kotlin.Any
+              ARG $composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              ARG $changed: CONST Int type=kotlin.Int value=54
+            ARG $composer: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+            ARG $changed: CALL 'public final fun or (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+              ARG <this>: CONST Int type=kotlin.Int value=1572864
+              ARG other: CALL 'public final fun and (other: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+                ARG <this>: CONST Int type=kotlin.Int value=14
+                ARG other: CALL 'public final fun shr (bitCount: kotlin.Int): kotlin.Int [infix] declared in kotlin.Int' type=kotlin.Int origin=null
+                  ARG <this>: GET_VAR 'val $dirty: kotlin.Int [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+                  ARG bitCount: CONST Int type=kotlin.Int value=12
+            ARG $changed1: CONST Int type=kotlin.Int value=3072
+            ARG $default: CONST Int type=kotlin.Int value=8122
+          WHEN type=kotlin.Unit origin=IF
+            BRANCH
+              if: CALL 'public final fun isTraceInProgress (): kotlin.Boolean declared in androidx.compose.runtime.ComposerKt' type=kotlin.Boolean origin=null
+              then: CALL 'public final fun traceEventEnd (): kotlin.Unit declared in androidx.compose.runtime.ComposerKt' type=kotlin.Unit origin=null
+      BRANCH
+        if: CONST Boolean type=kotlin.Boolean value=true
+        then: CALL 'public abstract fun skipToGroupEnd (): kotlin.Unit declared in androidx.compose.runtime.Composer' type=kotlin.Unit origin=null
+          ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+    BLOCK type=kotlin.Unit origin=null
+      BLOCK type=kotlin.Unit origin=FOLDED_SAFE_CALL
+        WHEN type=kotlin.Unit origin=FOLDED_SAFE_CALL
+          BRANCH
+            if: COMPOSITE type=kotlin.Boolean origin=null
+              VAR IR_TEMPORARY_VARIABLE name:tmp10_safe_receiver type:androidx.compose.runtime.ScopeUpdateScope? [val]
+                CALL 'public abstract fun endRestartGroup (): androidx.compose.runtime.ScopeUpdateScope? declared in androidx.compose.runtime.Composer' type=androidx.compose.runtime.ScopeUpdateScope? origin=null
+                  ARG <this>: GET_VAR '$composer: androidx.compose.runtime.Composer? [assignable] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.Composer? origin=null
+              CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                ARG <this>: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                  ARG arg0: GET_VAR 'val tmp10_safe_receiver: androidx.compose.runtime.ScopeUpdateScope? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.ScopeUpdateScope? origin=null
+                  ARG arg1: CONST Null type=kotlin.Nothing? value=null
+            then: CALL 'public abstract fun updateScope (block: kotlin.Function2<androidx.compose.runtime.Composer, kotlin.Int, kotlin.Unit>): kotlin.Unit declared in androidx.compose.runtime.ScopeUpdateScope' type=kotlin.Unit origin=null
+              ARG <this>: GET_VAR 'val tmp10_safe_receiver: androidx.compose.runtime.ScopeUpdateScope? [val] declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=androidx.compose.runtime.ScopeUpdateScope? origin=null
+              ARG block: BLOCK type=kotlin.Function2<androidx.compose.runtime.Composer?, kotlin.Int, kotlin.Unit> origin=LAMBDA
+                COMPOSITE type=kotlin.Unit origin=null
+                CALL 'public final fun <jvm-indy> <T> (dynamicCall: T of kotlin.jvm.internal.<jvm-indy>, bootstrapMethodHandle: kotlin.Any, vararg bootstrapMethodArguments: kotlin.Any): T of kotlin.jvm.internal.<jvm-indy> declared in kotlin.jvm.internal' type=kotlin.Function2<androidx.compose.runtime.Composer?, kotlin.Int, kotlin.Unit> origin=null
+                  TYPE_ARG T: kotlin.Function2<androidx.compose.runtime.Composer?, kotlin.Int, kotlin.Unit>
+                  ARG dynamicCall: CALL 'public final fun invoke (p0: com.bilalgnd.saracapp.Urun, p1: kotlin.String?, p2: kotlin.collections.List<com.bilalgnd.saracapp.Urun>, p3: kotlin.collections.Map<kotlin.String, kotlin.Int>, p4: kotlin.Function0<kotlin.Unit>, p5: kotlin.Function2<kotlin.String, kotlin.collections.List<com.bilalgnd.saracapp.SiparisKalemi>, kotlin.Unit>, p6: kotlin.Int): kotlin.Function2<androidx.compose.runtime.Composer?, kotlin.Int, kotlin.Unit> declared in kotlin.jvm.internal.invokeDynamic' type=kotlin.Function2<androidx.compose.runtime.Composer?, kotlin.Int, kotlin.Unit> origin=null
+                    ARG p0: GET_VAR 'urun: com.bilalgnd.saracapp.Urun declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=com.bilalgnd.saracapp.Urun origin=null
+                    ARG p1: GET_VAR 'guncelMasaAdi: kotlin.String? declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.String? origin=null
+                    ARG p2: GET_VAR 'icecekMenusu: kotlin.collections.List<com.bilalgnd.saracapp.Urun> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.collections.List<com.bilalgnd.saracapp.Urun> origin=null
+                    ARG p3: GET_VAR 'ucretliEkstralar: kotlin.collections.Map<kotlin.String, kotlin.Int> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.collections.Map<kotlin.String, kotlin.Int> origin=null
+                    ARG p4: GET_VAR 'kapat: kotlin.Function0<kotlin.Unit> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Function0<kotlin.Unit> origin=null
+                    ARG p5: GET_VAR 'onSiparisEkle: kotlin.Function2<kotlin.String, kotlin.collections.List<com.bilalgnd.saracapp.SiparisKalemi>, kotlin.Unit> declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Function2<kotlin.String, kotlin.collections.List<com.bilalgnd.saracapp.SiparisKalemi>, kotlin.Unit> origin=null
+                    ARG p6: GET_VAR '$changed: kotlin.Int declared in com.bilalgnd.saracapp.SaracappKt.SiparisBottomSheet' type=kotlin.Int origin=null
+                  ARG bootstrapMethodHandle: CALL 'public final fun <jvm-method-handle> (tag: kotlin.Int, owner: kotlin.String, name: kotlin.String, descriptor: kotlin.String, isInterface: kotlin.Boolean): kotlin.Any declared in kotlin.jvm.internal' type=kotlin.Any origin=null
+                    ARG tag: CONST Int type=kotlin.Int value=6
+                    ARG owner: CONST String type=kotlin.String value="java/lang/invoke/LambdaMetafactory"
+                    ARG name: CONST String type=kotlin.String value="metafactory"
+                    ARG descriptor: CONST String type=kotlin.String value="(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"
+                    ARG isInterface: CONST Boolean type=kotlin.Boolean value=false
+                  ARG bootstrapMethodArguments: VARARG type=kotlin.Array<kotlin.Any> varargElementType=kotlin.Any
+                    CALL 'public final fun <jvm-original-method-type> (method: kotlin.Any): kotlin.Any declared in kotlin.jvm.internal' type=kotlin.Any origin=null
+                      ARG method: RAW_FUNCTION_REFERENCE 'public abstract fun invoke (p1: P1 of kotlin.Function2, p2: P2 of kotlin.Function2): R of kotlin.Function2 [operator] declared in kotlin.Function2' type=kotlin.Any
+                    RAW_FUNCTION_REFERENCE 'private final fun SiparisBottomSheet$lambda$299 ($urun: com.bilalgnd.saracapp.Urun, $guncelMasaAdi: kotlin.String?, $icecekMenusu: kotlin.collections.List<com.bilalgnd.saracapp.Urun>, $ucretliEkstralar: kotlin.collections.Map<kotlin.String, kotlin.Int>, $kapat: kotlin.Function0<kotlin.Unit>, $onSiparisEkle: kotlin.Function2<kotlin.String, kotlin.collections.List<com.bilalgnd.saracapp.SiparisKalemi>, kotlin.Unit>, $$changed: kotlin.Int, $composer: androidx.compose.runtime.Composer?, $force: kotlin.Int): kotlin.Unit? declared in com.bilalgnd.saracapp.SaracappKt' type=kotlin.Any
+                    CALL 'public final fun <jvm-original-method-type> (method: kotlin.Any): kotlin.Any declared in kotlin.jvm.internal' type=kotlin.Any origin=null
+                      ARG method: RAW_FUNCTION_REFERENCE 'public abstract fun invoke (p1: androidx.compose.runtime.Composer?, p2: kotlin.Int?): kotlin.Unit? [fake_override,operator] declared in kotlin.jvm.internal.invokeDynamic.<fake>' type=kotlin.Any
+          BRANCH
+            if: CONST Boolean type=kotlin.Boolean value=true
+            then: CONST Null type=kotlin.Any? value=null
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:50)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate$default(FunctionCodegen.kt:43)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethodNode(ClassCodegen.kt:422)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethod(ClassCodegen.kt:439)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generate(ClassCodegen.kt:164)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.generateFile(JvmIrCodegenFactory.kt:419)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.invokeCodegen(JvmIrCodegenFactory.kt:388)
+	at org.jetbrains.kotlin.cli.jvm.compiler.KotlinToJVMBytecodeCompiler.runCodegen$cli(KotlinToJVMBytecodeCompiler.kt:431)
+	at org.jetbrains.kotlin.cli.pipeline.jvm.JvmBackendPipelinePhase.executePhase(JvmBackendPipelinePhase.kt:95)
+	at org.jetbrains.kotlin.cli.pipeline.jvm.JvmBackendPipelinePhase.executePhase(JvmBackendPipelinePhase.kt:36)
+	at org.jetbrains.kotlin.cli.pipeline.jvm.JvmBackendPipelinePhase.executePhase(JvmBackendPipelinePhase.kt:29)
+	at org.jetbrains.kotlin.cli.pipeline.PipelinePhase.phaseBody(PipelinePhase.kt:68)
+	at org.jetbrains.kotlin.cli.pipeline.PipelinePhase.phaseBody(PipelinePhase.kt:58)
+	at org.jetbrains.kotlin.config.phaser.NamedCompilerPhase.invoke(CompilerPhase.kt:102)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:22)
+	at org.jetbrains.kotlin.config.phaser.CompilerPhaseKt.invokeToplevel(CompilerPhase.kt:53)
+	at org.jetbrains.kotlin.cli.pipeline.AbstractCliPipeline.runPhasedPipeline(AbstractCliPipeline.kt:109)
+	at org.jetbrains.kotlin.cli.pipeline.AbstractCliPipeline.execute(AbstractCliPipeline.kt:68)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecutePhased(K2JVMCompiler.kt:78)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecutePhased(K2JVMCompiler.kt:44)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:90)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.exec(CLICompiler.kt:352)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunnerBase.runCompiler(IncrementalJvmCompilerRunnerBase.kt:175)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunnerBase.runCompiler(IncrementalJvmCompilerRunnerBase.kt:38)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.doCompile(IncrementalCompilerRunner.kt:504)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileImpl(IncrementalCompilerRunner.kt:421)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.tryCompileIncrementally$lambda$10$compile(IncrementalCompilerRunner.kt:254)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.tryCompileIncrementally(IncrementalCompilerRunner.kt:272)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compile(IncrementalCompilerRunner.kt:124)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.execIncrementalCompiler(CompileServiceImpl.kt:679)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.access$execIncrementalCompiler(CompileServiceImpl.kt:93)
+	at org.jetbrains.kotlin.daemon.CompileServiceImpl.compile(CompileServiceImpl.kt:1806)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source)
+	at java.base/java.lang.reflect.Method.invoke(Unknown Source)
+	at java.rmi/sun.rmi.server.UnicastServerRef.dispatch(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Unknown Source)
+	at java.base/java.security.AccessController.doPrivileged(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport.serviceCall(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport.handleMessages(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0(Unknown Source)
+	at java.base/java.security.AccessController.doPrivileged(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Unknown Source)
+Caused by: java.lang.IllegalStateException: No mapping for symbol: VAR IR_TEMPORARY_VARIABLE name:tmp0_elvis_lhs type:kotlin.collections.List<com.bilalgnd.saracapp.Secenek>? [val]
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrFrameMap.typeOf(irCodegenUtils.kt:57)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitGetValue(ExpressionCodegen.kt:746)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitGetValue(ExpressionCodegen.kt:135)
+	at org.jetbrains.kotlin.ir.expressions.IrGetValue.accept(IrGetValue.kt:18)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.gen(ExpressionCodegen.kt:214)
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrCallGenerator.genValueAndPut(IrCallGenerator.kt:48)
+	at org.jetbrains.kotlin.backend.jvm.intrinsics.JvmInvokeDynamic.invoke(JvmInvokeDynamic.kt:52)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:548)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:135)
+	at org.jetbrains.kotlin.ir.expressions.IrCall.accept(IrCall.kt:24)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:527)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:541)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:135)
+	at org.jetbrains.kotlin.ir.visitors.IrVisitor.visitBlock(IrVisitor.kt:122)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlock(ExpressionCodegen.kt:413)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlock(ExpressionCodegen.kt:135)
+	at org.jetbrains.kotlin.ir.expressions.IrBlock.accept(IrBlock.kt:18)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.gen(ExpressionCodegen.kt:214)
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrCallGenerator.genValueAndPut(IrCallGenerator.kt:48)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall$handleParameter(ExpressionCodegen.kt:564)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:577)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:135)
+	at org.jetbrains.kotlin.ir.expressions.IrCall.accept(IrCall.kt:24)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.gen(ExpressionCodegen.kt:214)
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrCallGenerator.genValueAndPut(IrCallGenerator.kt:48)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall$handleParameter(ExpressionCodegen.kt:564)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:577)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:135)
+	at org.jetbrains.kotlin.ir.expressions.IrCall.accept(IrCall.kt:24)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:527)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:541)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:135)
+	at org.jetbrains.kotlin.ir.visitors.IrVisitor.visitBlock(IrVisitor.kt:122)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlock(ExpressionCodegen.kt:413)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlock(ExpressionCodegen.kt:135)
+	at org.jetbrains.kotlin.ir.expressions.IrBlock.accept(IrBlock.kt:18)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitWhen(ExpressionCodegen.kt:1049)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitWhen(ExpressionCodegen.kt:135)
+	at org.jetbrains.kotlin.ir.expressions.IrWhen.accept(IrWhen.kt:24)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:527)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:532)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:135)
+	at org.jetbrains.kotlin.ir.expressions.IrBlockBody.accept(IrBlockBody.kt:20)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.generate(ExpressionCodegen.kt:233)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.doGenerate(FunctionCodegen.kt:126)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	... 46 more
+
+

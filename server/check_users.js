@@ -1,0 +1,1 @@
+﻿require('dotenv').config(); const mongoose = require('mongoose'); const { UserModel } = require('./dist/models'); async function run() { await mongoose.connect(process.env.MONGODB_URI); const users = await UserModel.find({}, 'username password_hash'); console.log(users); process.exit(0); } run();

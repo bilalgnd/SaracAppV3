@@ -1,0 +1,54 @@
+# Bağımlılıklar (Node & npm)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Android & Gradle
+.gradle/
+build/
+app/build/
+local.properties
+.cxx/
+captures/
+*.apk
+*.aab
+
+# Electron & React Build Çıktıları
+dist/
+out/
+release/
+*.exe
+*.asar
+*.dll
+*.so
+*.dylib
+win-unpacked/
+
+# IDE & Editör
+.idea/
+.vscode/
+*.iml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Çevresel Değişkenler & Güvenlik
+.env
+.env.local
+.env.*.local
+secrets_report.txt
+
+# Projeye Özel Yedek & Geçici Klasörler
+backs/
+temp_extract/
+temp_backup/
+silinecekler_ve_arsiv/
+exe-apk dist/
+Archive/
+xapp1/
+
+# İşletim Sistemi Kalıntıları
+.DS_Store
+Thumbs.db

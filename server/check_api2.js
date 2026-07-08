@@ -1,0 +1,1 @@
+﻿const axios = require('axios'); async function run() { try { const res = await axios.get('https://bilalgnd.shop/api/settings', { headers: { Authorization: 'Bearer 01012345' } }); console.log(JSON.stringify(res.data).substring(0, 500)); } catch (err) { console.error(err.message); } } run();
