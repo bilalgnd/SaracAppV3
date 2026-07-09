@@ -8,12 +8,13 @@
   ],
   "host_permissions": [
     "*://*.trendyol.com/*",
+    "*://*.tgoyemek.com/*",
     "*://*.yemeksepeti.com/*",
     "https://bilalgnd.shop/*"
   ],
   "content_scripts": [
     {
-      "matches": ["*://*.trendyol.com/*", "*://*.yemeksepeti.com/*"],
+      "matches": ["*://*.trendyol.com/*", "*://*.tgoyemek.com/*", "*://*.yemeksepeti.com/*"],
       "js": ["content.js"],
       "run_at": "document_start"
     }
@@ -21,7 +22,7 @@
   "web_accessible_resources": [
     {
       "resources": ["inject.js"],
-      "matches": ["*://*.trendyol.com/*", "*://*.yemeksepeti.com/*"]
+      "matches": ["*://*.trendyol.com/*", "*://*.tgoyemek.com/*", "*://*.yemeksepeti.com/*"]
     }
   ]
 }

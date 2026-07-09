@@ -7,7 +7,7 @@
         const url = args[0] ? args[0].toString() : '';
         
         // Trendyol URL filtresi
-        if (url.includes('trendyol') && url.includes('order')) {
+        if ((url.includes('trendyol') || url.includes('tgoyemek')) && url.includes('order')) {
             const clone = response.clone();
             clone.json().then(data => {
                 window.postMessage({ type: 'TRENDYOL_ORDER', payload: data }, '*');
@@ -36,7 +36,7 @@
         this.addEventListener('load', function() {
             const url = this._url ? this._url.toString() : '';
             
-            if (url.includes('trendyol') && url.includes('order')) {
+            if ((url.includes('trendyol') || url.includes('tgoyemek')) && url.includes('order')) {
                 try {
                     const data = JSON.parse(this.responseText);
                     window.postMessage({ type: 'TRENDYOL_ORDER', payload: data }, '*');
