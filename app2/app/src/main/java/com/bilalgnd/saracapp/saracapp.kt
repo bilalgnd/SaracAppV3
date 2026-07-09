@@ -179,6 +179,9 @@ interface KasaApi {
     @retrofit2.http.POST("api/clear_data")
     suspend fun verileriSifirla(): retrofit2.Response<Void>
 
+    @retrofit2.http.POST("api/register_fcm_token")
+    suspend fun fcmTokenKaydet(@retrofit2.http.Body request: Map<String, String>): retrofit2.Response<Void>
+
     @retrofit2.http.GET("api/logs")
     suspend fun loglariGetir(): retrofit2.Response<List<SystemLog>>
 
@@ -257,6 +260,8 @@ class HafizaYoneticisi(context: Context) {
         defter.edit().putString("KASA_IP", finalIp).apply()
     }
     fun kasaIpOku(): String = defter.getString("KASA_IP", "") ?: ""
+
+    fun fcmTokenOku(): String = defter.getString("FCM_TOKEN", "") ?: ""
 
     fun garsonRengiKaydet(renk: String) = defter.edit().putString("GARSON_RENGI", renk).apply()
     fun garsonRengiOku(): String = defter.getString("GARSON_RENGI", "#FFFFFF") ?: "#FFFFFF"
@@ -372,6 +377,22 @@ val odeme_listesi = listOf("POS", "NAKİT", "Paket")
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+            }
+        }
+
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val token = task.result
+                android.util.Log.d("FCM", "FCM Token: $token")
+                val defter = getSharedPreferences("SaracogluDefteri", android.content.Context.MODE_PRIVATE)
+                defter.edit().putString("FCM_TOKEN", token).apply()
+            }
+        }
+
         enableEdgeToEdge()
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(background = Color(0xFF0F0F0F), surface = Color(0xFF1E1E1E), primary = Color(0xFFFF9800), onPrimary = Color.White)) {
@@ -438,6 +459,17 @@ fun AnaEkran() {
                         ucretliEkstralar = body.ekstralar ?: emptyMap()
                         val drinksCat = kategoriler.find { it.name.contains("içecek", ignoreCase = true) || it.name.contains("icecek", ignoreCase = true) }
                         icecekMenusu = drinksCat?.items ?: emptyList()
+                    }
+                    
+                    val tokenVar = hafiza.fcmTokenOku()
+                    android.util.Log.e("API", "TokenVar is: $tokenVar")
+                    if (tokenVar.isNotBlank()) {
+                        try { 
+                            val res = api.fcmTokenKaydet(mapOf("token" to tokenVar))
+                            android.util.Log.e("API", "fcmTokenKaydet response: ${res.isSuccessful}")
+                        } catch (e: Exception) {
+                            android.util.Log.e("API", "fcmTokenKaydet ERROR: ${e.message}")
+                        }
                     }
                 } catch (e: Exception) { }
 

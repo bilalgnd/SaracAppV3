@@ -1,8 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore, Order } from '../store'
+import { ChevronUp, X } from 'lucide-react'
 
 export default function CartPanel() {
   const { cart, orders, editingOrderIndex, clearCart, setOrders, removeFromCart, setCart, customerName, setCustomerName, orderNote, setOrderNote } = useStore()
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false)
 
   const isEditing = editingOrderIndex !== null
 
@@ -115,8 +117,24 @@ export default function CartPanel() {
   }
 
   return (
-    <div className="cart-panel">
-      <div className="cart-header" style={{ padding: '10px', backgroundColor: 'transparent', borderBottom: 'none' }}>
+    <>
+      <div className="cart-mobile-mini-bar" onClick={() => setIsMobileExpanded(true)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ChevronUp size={20} />
+          <span>Sepeti Gör ({cart.length} Ürün)</span>
+        </div>
+        <div>{cartTotal} ₺</div>
+      </div>
+
+      <div className={`cart-panel ${isMobileExpanded ? 'expanded' : ''}`}>
+        <div className="cart-mobile-header" style={{ display: 'none', justifyContent: 'space-between', alignItems: 'center', padding: '10px', backgroundColor: 'var(--bg-panel)', borderBottom: '1px solid var(--bg-hover)' }}>
+          <span style={{ fontWeight: 'bold', fontSize: '18px' }}>Sepetim</span>
+          <button onClick={() => setIsMobileExpanded(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', display: 'flex' }}>
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="cart-header" style={{ padding: '10px', backgroundColor: 'transparent', borderBottom: 'none' }}>
         <input 
           className="cart-input" 
           placeholder="Masa No / İsim" 
@@ -180,5 +198,6 @@ export default function CartPanel() {
         )}
       </div>
     </div>
+    </>
   )
 }

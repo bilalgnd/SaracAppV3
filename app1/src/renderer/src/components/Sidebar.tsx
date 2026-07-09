@@ -86,7 +86,7 @@ export default function Sidebar() {
         <div className="logo-subtitle">POS DASHBOARD</div>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div className="nav-tabs-container" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {tabs.map((tab, idx) => (
           <button
             key={idx}

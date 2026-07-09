@@ -2,10 +2,14 @@ import express from 'express'
 import { WebSocketServer, WebSocket } from 'ws'
 import http from 'http'
 import axios from 'axios'
-import { getShop, shopContext, shops } from './models'
+import { ActivityLogModel, ShopState, shops, getShop, shopContext } from './models'
+import { initializeApp, cert } from 'firebase-admin/app'
+import { getMessaging } from 'firebase-admin/messaging'
 import { join, dirname } from 'path'
-import { writeFileSync, readFileSync } from 'fs'
-
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs'
+import { startBotService } from './services/botService'
+import * as fs from 'fs'
+import * as path from 'path'
 
 import { z } from 'zod'
 import crypto from 'crypto'
@@ -21,6 +25,14 @@ if (!getShop().systemSettings['API_TOKEN']) {
 }
 const API_TOKEN = getShop().systemSettings['API_TOKEN']
 
+export function getActiveShop(req: any) {
+  if (req && req.user && req.user.shopId) {
+    const { ShopState } = require('./models');
+    if (!shops.has(req.user.shopId)) shops.set(req.user.shopId, new ShopState(req.user.shopId));
+    return shops.get(req.user.shopId) || getShop();
+  }
+  return getShop();
+}
 export interface SystemLog {
   time: string;
   source: string;
@@ -40,8 +52,46 @@ export function addSystemLog(source: string, type: 'success' | 'error' | 'warnin
 }
 
 
+let fcmTokens: string[] = []
+try {
+  fcmTokens = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'fcm_tokens.json'), 'utf-8'))
+} catch (e) {
+  fcmTokens = []
+}
+
+function saveFcmTokens() {
+  try {
+    if (!fs.existsSync(path.join(__dirname, '..', 'data'))) {
+      fs.mkdirSync(path.join(__dirname, '..', 'data'), { recursive: true })
+    }
+    fs.writeFileSync(path.join(__dirname, '..', 'data', 'fcm_tokens.json'), JSON.stringify(fcmTokens))
+  } catch (e) { }
+}
+
+try {
+  const serviceAccount = require('../firebase-adminsdk.json')
+  initializeApp({
+    credential: cert(serviceAccount)
+  })
+  console.log('Firebase Admin initialized.')
+} catch (e: any) {
+  console.log('Firebase Admin init failed (missing firebase-adminsdk.json maybe?)', e.message)
+}
+
 const app = express()
 app.use(express.json())
+
+app.get('/api/admin/fcm_tokens', (req, res) => res.json({ tokens: fcmTokens }))
+
+app.post('/api/register_fcm_token', (req, res) => {
+  const { token } = req.body
+  if (token && !fcmTokens.includes(token)) {
+    fcmTokens.push(token)
+    saveFcmTokens()
+    console.log('New FCM token registered:', token)
+  }
+  res.json({ success: true })
+})
 
 app.use((req, res, next) => {
   let shopId = 'admin';
@@ -339,7 +389,10 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
     })
   } catch (err) {
     // Fallback: Check if token matches any shop's API_TOKEN
-    const { shops } = require('./models')
+    const { shops, getShop } = require('./models')
+    if (token === getShop().systemSettings.API_TOKEN) {
+      return shopContext.run('admin', () => next())
+    }
     for (const [sId, shop] of shops.entries()) {
       if (shop.systemSettings && shop.systemSettings['API_TOKEN'] === token) {
         return shopContext.run(sId, () => {
@@ -383,9 +436,36 @@ const webDir = join(__dirname, '../public')
 
 app.use('/static', express.static(join(webDir, 'static')))
 
-app.use('/pos', express.static(join(webDir, 'pos_app')))
+app.use('/pos', express.static(join(webDir, 'pos_app'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+      res.setHeader('Pragma', 'no-cache')
+      res.setHeader('Expires', '0')
+    }
+  }
+}))
 app.get(/^\/pos(\/.*)?$/, (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Expires', '0')
   res.sendFile(join(webDir, 'pos_app', 'index.html'))
+})
+
+app.use('/qr', express.static(join(webDir, 'qr_app'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+      res.setHeader('Pragma', 'no-cache')
+      res.setHeader('Expires', '0')
+    }
+  }
+}))
+app.get(/^\/qr(\/.*)?$/, (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Expires', '0')
+  res.sendFile(join(webDir, 'qr_app', 'index.html'))
 })
 
 app.get('/', (_req, res) => {
@@ -408,13 +488,14 @@ const server = http.createServer(app)
 const wss = new WebSocketServer({ server, path: '/ws' })
 
 
-export function broadcastUpdateToPhones() {
-  const data = JSON.stringify(getShop().activeOrders)
-  getShop().connectedPhones.forEach(ws => {
+export function broadcastUpdateToPhones(shop?: any) {
+  const targetShop = shop || getShop()
+  const data = JSON.stringify(targetShop.activeOrders)
+  targetShop.connectedPhones.forEach(ws => {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(data)
     } else {
-      getShop().connectedPhones.delete(ws)
+      targetShop.connectedPhones.delete(ws)
     }
   })
 }
@@ -428,8 +509,13 @@ export function getConnectedPhones(): string[] {
       if (username) {
         id = username
       } else {
-        const ip = (ws as any)._socket?.remoteAddress || 'Bilinmeyen IP'
-        id = ip.replace('::ffff:', '')
+        const deviceId = (ws as any).deviceId
+        if (deviceId) {
+          id = deviceId
+        } else {
+          const ip = (ws as any)._socket?.remoteAddress || 'Bilinmeyen IP'
+          id = ip.replace('::ffff:', '')
+        }
       }
       counts[id] = (counts[id] || 0) + 1
     }
@@ -438,17 +524,18 @@ export function getConnectedPhones(): string[] {
   return Object.entries(counts).map(([id, count]) => count > 1 ? `${id} (${count} aktif bağlantı)` : id)
 }
 
-export function broadcastMessageToPhones(msgObj: any) {
-  const data = JSON.stringify(msgObj)
-  getShop().connectedPhones.forEach(ws => {
+export function broadcastMessageToPhones(messageObj: any, shop?: any) {
+  const targetShop = shop || getShop()
+  const data = JSON.stringify(messageObj)
+  targetShop.connectedPhones.forEach(ws => {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(data)
     }
   })
 }
 
-export function notifyUI(action: string, data?: any) {
-  broadcastMessageToPhones({ type: 'server-event', action, data })
+export function notifyUI(action: string, data?: any, shop?: any) {
+  broadcastMessageToPhones({ type: 'server-event', action, data }, shop)
 }
 
 wss.on('connection', (ws, req) => {
@@ -457,14 +544,15 @@ wss.on('connection', (ws, req) => {
   const explicitShopId = urlParams.get('shopId')
   const isTv = urlParams.get('tv') === 'true'
   
-  let shopId = 'admin';
+  let shopId: string | null = null;
   let jwtDecoded: any = null;
+  const deviceId = urlParams.get('deviceId');
 
   if (token) {
     if (token.length > 20) {
       try {
         jwtDecoded = jwt.verify(token, JWT_SECRET);
-        shopId = jwtDecoded.username || 'admin';
+        shopId = jwtDecoded.username;
       } catch (e) {}
     }
     if (!jwtDecoded) {
@@ -478,8 +566,15 @@ wss.on('connection', (ws, req) => {
   } else if (explicitShopId) {
     shopId = explicitShopId;
   } else if (isTv && req.url?.includes('admin')) {
-      // TV connects to admin
+      shopId = 'admin';
   }
+
+  if (!shopId) {
+    ws.close(1008, 'Unauthorized');
+    return;
+  }
+  
+  (ws as any).deviceId = deviceId;
   
   shopContext.run(shopId, () => {
       if (!isTv) {
@@ -495,7 +590,7 @@ wss.on('connection', (ws, req) => {
 
       console.log('Phone connected')
       getShop().connectedPhones.add(ws)
-      addSystemLog(isTv ? 'TV_EKRAN' : (jwtDecoded ? 'KULLANICI_MOBIL' : 'POS_APP'), 'success', 'Sunucuya ba\u015Far\u0131yla ba\u011Fland\u0131.');
+      addSystemLog(isTv ? 'TV_EKRAN' : (jwtDecoded ? 'KULLANICI_MOBIL' : 'POS_APP'), 'success', 'Sunucuya ba\u0131Far\u0131yla ba\u011Fland\u0131.');
       ws.send(JSON.stringify(getShop().activeOrders)) // Send initial state to phone
       notifyUI('request_update')
       
@@ -558,42 +653,44 @@ app.get('/daily_total', (_req, res) => {
   })
 })
 
-app.post('/api/clear_data', (_req, res) => {
-  getShop().pastOrders.length = 0
-  getShop().savePastOrders()
+app.post('/api/clear_data', (req: any, res) => {
+  const shop = getActiveShop(req)
+  shop.pastOrders.length = 0
+  shop.savePastOrders()
   res.json({ success: true })
 })
 
-app.get('/api/past_orders', requireAuth, (_req, res) => {
+app.get('/api/past_orders', requireAuth, (req: any, res) => {
   // Return the last 500 past orders
-  res.json(getShop().pastOrders.slice(0, 500))
+  res.json(getActiveShop(req).pastOrders.slice(0, 500))
 })
 
-app.get('/menu', requireAuth, (_req, res) => {
-  res.json(getShop().getFullMenu())
+app.get('/menu', requireAuth, (req: any, res) => {
+  res.json(getActiveShop(req).getFullMenu())
 })
 
 app.post('/menu', requireAuth, (req: any, res: any): any => {
   if (req.body) {
-    getShop().updateCustomMenu(req.body)
+    getActiveShop(req).updateCustomMenu(req.body)
     res.json({ success: true })
   } else {
     res.status(400).json({ error: 'Body required' })
   }
 })
 
-app.get('/api/active_orders', requireAuth, (_req, res) => {
-  res.json(getShop().activeOrders)
+app.get('/api/active_orders', requireAuth, (req: any, res) => {
+  res.json(getActiveShop(req).activeOrders)
 })
 
 app.post('/api/sync_orders', requireAuth, idempotencyMiddleware, async (req: any, res: any): Promise<any> => {
   console.log('SYNC_ORDERS CALLED:', req.body ? 'Has body' : 'No body', Array.isArray(req.body) ? 'Array' : 'Object')
   if (Array.isArray(req.body)) {
-    getShop().activeOrders.length = 0
-    getShop().activeOrders.push(...req.body)
-    getShop().saveOrders()
-    broadcastUpdateToPhones()
-    notifyUI('orders_update')
+    const shop = getActiveShop(req)
+    shop.activeOrders.length = 0
+    shop.activeOrders.push(...req.body)
+    shop.saveOrders()
+    broadcastUpdateToPhones(shop)
+    notifyUI('orders_update', null, shop)
 
     const { ActivityLogModel } = require('./models')
     try {
@@ -609,6 +706,164 @@ app.post('/api/sync_orders', requireAuth, idempotencyMiddleware, async (req: any
   } else {
     res.status(400).json({ error: 'Array required' })
   }
+})
+
+// QR Order Public Endpoints
+app.get('/api/public/menu', (req: any, res: any) => {
+  let activeShop = getShop()
+  const { shops, ShopState } = require('./models')
+  
+  if (req.query.shop) {
+    if (!shops.has(req.query.shop)) shops.set(req.query.shop, new ShopState(req.query.shop))
+    activeShop = shops.get(req.query.shop)
+  } else {
+    if (!shops.has('sarac')) shops.set('sarac', new ShopState('sarac'))
+    activeShop = shops.get('sarac')
+  }
+  
+  res.json(activeShop.getFullMenu())
+})
+
+app.post('/api/public/submit_order', (req: any, res: any) => {
+  const { customerName, items, totalAmount } = req.body
+  
+  if (!customerName || !items || !Array.isArray(items)) {
+    return res.status(400).json({ error: 'Invalid order data' })
+  }
+
+  let shop = getShop()
+  const { shops, ShopState } = require('./models')
+  
+  if (req.query.shop) {
+    if (!shops.has(req.query.shop)) shops.set(req.query.shop, new ShopState(req.query.shop))
+    shop = shops.get(req.query.shop)
+  } else {
+    if (!shops.has('sarac')) shops.set('sarac', new ShopState('sarac'))
+    shop = shops.get('sarac')
+  }
+
+  const expandedItems: any[] = []
+  items.forEach((i: any) => {
+    const qty = i.quantity || 1
+    for (let j = 0; j < qty; j++) {
+      expandedItems.push({
+        name: i.name,
+        portion: i.portion || '',
+        price: i.price,
+        notes: i.notes || ''
+      })
+    }
+  })
+
+  const newOrder = {
+    id: Date.now().toString(),
+    customer_name: `${customerName} (QR)`,
+    time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+    items: expandedItems,
+    total_amount: totalAmount,
+    status: 'waiting'
+  }
+
+  shop.activeOrders.push(newOrder)
+  shop.saveOrders()
+  
+  broadcastUpdateToPhones(shop)
+  notifyUI('orders_update', null, shop)
+
+  if (fcmTokens.length > 0) {
+    const message = {
+      notification: {
+        title: 'Yeni Sipariş!',
+        body: `QR Menüden ${customerName} isimli müşteriden ${totalAmount} ₺ tutarında yeni sipariş geldi!`
+      },
+      tokens: fcmTokens
+    };
+    try {
+      getMessaging().sendEachForMulticast(message)
+        .then((response: any) => console.log(response.successCount + ' messages were sent successfully'))
+        .catch((error: any) => console.log('Error sending message:', error));
+    } catch (e) {
+      console.log('FCM error:', e)
+    }
+  }
+
+  const { ActivityLogModel, shopContext } = require('./models')
+  try {
+    ActivityLogModel.create({
+      username: 'QR_CUSTOMER',
+      shopId: shop.shopId || 'admin',
+      action: 'qr_order',
+      details: `QR Siparişi alındı: ${customerName} (Toplam: ${totalAmount} ₺)`
+    })
+  } catch(e) {}
+
+  res.json({ success: true, orderId: newOrder.id })
+})
+
+app.get('/api/public/order_status', (req: any, res: any) => {
+  const { id } = req.query
+  if (!id) return res.status(400).json({ error: 'ID required' })
+
+  let shop = getShop()
+  const { shops, ShopState } = require('./models')
+  
+  if (req.query.shop) {
+    if (!shops.has(req.query.shop)) shops.set(req.query.shop, new ShopState(req.query.shop))
+    shop = shops.get(req.query.shop)
+  } else {
+    if (!shops.has('sarac')) shops.set('sarac', new ShopState('sarac'))
+    shop = shops.get('sarac')
+  }
+
+  // Check active orders
+  const active = shop.activeOrders.find(o => o.id === id)
+  if (active) {
+    return res.json({ status: active.status })
+  }
+
+  // Check past orders
+  const past = shop.pastOrders.find(o => o.id === id)
+  if (past) {
+    return res.json({ status: past.status })
+  }
+
+  res.status(404).json({ error: 'Order not found' })
+})
+
+app.post('/api/public/call_waiter', (req: any, res: any) => {
+  const { id } = req.body
+  if (!id) return res.status(400).json({ error: 'ID required' })
+
+  let shop = getShop()
+  const { shops, ShopState } = require('./models')
+  
+  if (req.body.shop) {
+    if (!shops.has(req.body.shop)) shops.set(req.body.shop, new ShopState(req.body.shop))
+    shop = shops.get(req.body.shop)
+  } else {
+    if (!shops.has('sarac')) shops.set('sarac', new ShopState('sarac'))
+    shop = shops.get('sarac')
+  }
+
+  const active = shop.activeOrders.find(o => o.id === id)
+  if (!active) return res.status(404).json({ error: 'Active order not found' })
+
+  if (fcmTokens.length > 0) {
+    const message = {
+      notification: {
+        title: 'Garson Çağrısı!',
+        body: `${active.customer_name} masasından garson çağrılıyor!`
+      },
+      tokens: fcmTokens
+    };
+    try {
+      getMessaging().sendEachForMulticast(message)
+    } catch (e) {
+      console.log('FCM error:', e)
+    }
+  }
+
+  res.json({ success: true })
 })
 
 app.get('/api/daily_report', (req: any, res: any): any => {
@@ -805,29 +1060,30 @@ app.post('/test_print', requireAuth, (_req, res) => {
 
 app.post('/close_bill', requireAuth, idempotencyMiddleware, async (req: any, res: any): Promise<any> => {
   const cname = req.body.customer_name
-  const idx = getShop().activeOrders.findIndex(o => o.customer_name === cname)
+  const shop = getActiveShop(req)
+  const idx = shop.activeOrders.findIndex(o => o.customer_name === cname)
   let amount = 0
   if (idx !== -1) {
-    amount = getShop().activeOrders[idx].total_amount || 0
-    const finishedOrder = getShop().activeOrders[idx]
+    amount = shop.activeOrders[idx].total_amount || 0
+    const finishedOrder = shop.activeOrders[idx]
     finishedOrder.status = "Tamamlandı"
     finishedOrder.completedAt = new Date().toISOString()
-    getShop().pastOrders.unshift(finishedOrder)
+    shop.pastOrders.unshift(finishedOrder)
     
     // Keep past orders reasonable (e.g. max 500)
-    if (getShop().pastOrders.length > 500) {
-      getShop().pastOrders.pop()
+    if (shop.pastOrders.length > 500) {
+      shop.pastOrders.pop()
     }
     
-    getShop().activeOrders.splice(idx, 1)
+    shop.activeOrders.splice(idx, 1)
     
     globalDailyTotal += amount
-    getShop().systemSettings['dailyTotal'] = globalDailyTotal
+    shop.systemSettings['dailyTotal'] = globalDailyTotal
     
-    getShop().saveOrders()
-    getShop().savePastOrders()
-    getShop().saveSettings()
-    broadcastUpdateToPhones()
+    shop.saveOrders()
+    shop.savePastOrders()
+    shop.saveSettings()
+    broadcastUpdateToPhones(shop)
   }
   
   const { ActivityLogModel } = require('./models')
@@ -966,13 +1222,14 @@ app.post('/yemeksepeti_siparis', requireAuth, idempotencyMiddleware, (req: any, 
 app.post('/update_status', requireAuth, (req: any, res: any): any => {
   const cname = req.body.customer_name
   const status = req.body.status
-  const idx = getShop().activeOrders.findIndex(o => o.customer_name === cname)
+  const shop = getActiveShop(req)
+  const idx = shop.activeOrders.findIndex(o => o.customer_name === cname)
   if (idx !== -1) {
-    getShop().activeOrders[idx].status = status
-    getShop().saveOrders()
-    broadcastUpdateToPhones()
+    shop.activeOrders[idx].status = status
+    shop.saveOrders()
+    broadcastUpdateToPhones(shop)
   }
-  notifyUI('update_status', req.body)
+  notifyUI('update_status', req.body, shop)
   res.json({ success: true })
 })
 
@@ -1233,6 +1490,25 @@ import { initializeModels } from './models';
 initializeModels().then(() => {
   server.listen(5000, '0.0.0.0', () => {
     console.log('Server is running on port 5000')
+    
+    // Bot servisini başlat
+    startBotService((newOrder) => {
+      const exists = getShop().activeOrders.some(o => o.order_id === newOrder.order_id);
+      if (exists) return; // Zaten varsa ekleme
+      
+      const formattedOrder = {
+          ...newOrder,
+          masa_no: getShop().getNextQueueNo().toString(),
+          time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+          status: 'waiting',
+          color: newOrder.platform === 'trendyol' ? '#FF9800' : '#E00034'
+      };
+
+      getShop().activeOrders.unshift(formattedOrder);
+      getShop().saveOrders();
+      broadcastUpdateToPhones();
+      notifyUI('order_received', formattedOrder);
+    });
   })
 }).catch(console.error);
 

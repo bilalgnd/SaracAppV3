@@ -13,8 +13,12 @@ async function upload() {
   console.log('Connected. Uploading dist/server.js and src/server.ts...');
   await ssh.putFile(path.join(__dirname, 'dist', 'server.js'), '/home/bilalgnd/saracapp/dist/server.js');
   await ssh.putFile(path.join(__dirname, 'src', 'server.ts'), '/home/bilalgnd/saracapp/src/server.ts');
+  await ssh.putFile(path.join(__dirname, 'package.json'), '/home/bilalgnd/saracapp/package.json');
+  await ssh.putFile(path.join(__dirname, 'package-lock.json'), '/home/bilalgnd/saracapp/package-lock.json');
   await ssh.putFile(path.join(__dirname, 'dist', 'models.js'), '/home/bilalgnd/saracapp/dist/models.js');
   await ssh.putFile(path.join(__dirname, 'src', 'models.ts'), '/home/bilalgnd/saracapp/src/models.ts');
+  await ssh.putDirectory(path.join(__dirname, 'src', 'services'), '/home/bilalgnd/saracapp/src/services');
+  await ssh.putDirectory(path.join(__dirname, 'dist', 'services'), '/home/bilalgnd/saracapp/dist/services');
   await ssh.putFile(path.join(__dirname, 'public', 'templates', 'admintools.html'), '/home/bilalgnd/saracapp/public/templates/admintools.html');
   await ssh.putFile(path.join(__dirname, 'public', 'templates', 'portfolio.html'), '/home/bilalgnd/saracapp/public/templates/portfolio.html');
   await ssh.putFile(path.join(__dirname, 'public', 'templates', 'tv.html'), '/home/bilalgnd/saracapp/public/templates/tv.html');
@@ -22,7 +26,10 @@ async function upload() {
   await ssh.putFile(path.join(__dirname, 'public', 'static', 'profile.jpg'), '/home/bilalgnd/saracapp/public/static/profile.jpg');
   await ssh.putFile(path.join(__dirname, 'public', 'static', 'bg.jpg'), '/home/bilalgnd/saracapp/public/static/bg.jpg');
   await ssh.putDirectory(path.join(__dirname, 'public', 'pos_app'), '/home/bilalgnd/saracapp/public/pos_app');
-  console.log('Uploaded. Restarting PM2...');
+  await ssh.putDirectory(path.join(__dirname, 'public', 'qr_app'), '/home/bilalgnd/saracapp/public/qr_app');
+  console.log('Uploaded. Installing dependencies...');
+  await ssh.execCommand('npm install', { cwd: '/home/bilalgnd/saracapp' });
+  console.log('Restarting PM2...');
   const res = await ssh.execCommand('pm2 restart saracapp');
   console.log(res.stdout);
   if (res.stderr) console.error(res.stderr);

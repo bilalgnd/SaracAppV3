@@ -44,8 +44,8 @@ server {
 }
 `;
 
-  await ssh.execCommand(`echo '18901745bilalGND!' | sudo -S bash -c "cat > /etc/nginx/sites-available/saracapp << 'EOF'${nginxConfig}EOF"`);
-  await ssh.execCommand(`echo '18901745bilalGND!' | sudo -S systemctl restart nginx`);
+  await ssh.execCommand(`echo '${process.env.SSH_PASSWORD}' | sudo -S bash -c "cat > /etc/nginx/sites-available/saracapp << 'EOF'${nginxConfig}EOF"`);
+  await ssh.execCommand(`echo '${process.env.SSH_PASSWORD}' | sudo -S systemctl restart nginx`);
 
   console.log('Fixed Nginx WS');
   process.exit(0);

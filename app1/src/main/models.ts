@@ -25,6 +25,21 @@ export async function initializeModels() {
     changed = true;
   }
   
+  if (systemSettings["ENABLE_LOCAL_BOT"] === undefined) {
+    systemSettings["ENABLE_LOCAL_BOT"] = false;
+    changed = true;
+  }
+  
+  if (systemSettings["ENABLE_EXTENSION"] === undefined) {
+    systemSettings["ENABLE_EXTENSION"] = true;
+    changed = true;
+  }
+
+  if (systemSettings["ENABLE_FILE_WATCHER"] === undefined) {
+    systemSettings["ENABLE_FILE_WATCHER"] = false;
+    changed = true;
+  }
+  
   if (changed) {
     saveSettings();
   }

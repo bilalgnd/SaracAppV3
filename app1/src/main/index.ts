@@ -25,6 +25,8 @@ import { autoUpdater } from 'electron-updater'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { initializeModels, systemSettings, saveSettings } from './models'
+import { startBotService, stopBotService } from './botService'
+import { startFileWatcher, stopFileWatcher } from './fileWatcher'
 import { printReceipt } from './printer'
 import axios from 'axios'
 import WebSocket from 'ws'
@@ -56,6 +58,9 @@ localApp.use(express.json())
 
 localApp.post('/trendyol_web_siparis', async (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
+  if (!systemSettings.ENABLE_EXTENSION) {
+    return res.status(403).json({ error: "Extension listener is disabled" });
+  }
   try {
     const response = await axios.post(`${CLOUD_URL}/trendyol_web_siparis`, req.body)
     res.json(response.data)
@@ -66,6 +71,9 @@ localApp.post('/trendyol_web_siparis', async (req, res) => {
 
 localApp.post('/yemeksepeti_siparis', async (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
+  if (!systemSettings.ENABLE_EXTENSION) {
+    return res.status(403).json({ error: "Extension listener is disabled" });
+  }
   try {
     const response = await axios.post(`${CLOUD_URL}/yemeksepeti_siparis`, req.body)
     res.json(response.data)
@@ -153,6 +161,14 @@ async function createWindow(): Promise<void> {
     axios.defaults.headers.common['Authorization'] = `Bearer ${systemSettings.API_TOKEN}`
     fetchInitialData()
     connectWebSocket()
+  }
+
+  if (systemSettings.ENABLE_LOCAL_BOT) {
+    startBotService()
+  }
+
+  if (systemSettings.ENABLE_FILE_WATCHER) {
+    startFileWatcher()
   }
 
   mainWindow = new BrowserWindow({
@@ -280,6 +296,20 @@ app.whenReady().then(() => {
         await axios.post(`${CLOUD_URL}/set_tv_screensaver`, { mode: settings.TV_SCREENSAVER })
       }
     } catch(e) {}
+
+    // Handle bot toggle
+    if (settings.ENABLE_LOCAL_BOT) {
+      startBotService();
+    } else {
+      stopBotService();
+    }
+
+    // Handle file watcher toggle
+    if (settings.ENABLE_FILE_WATCHER) {
+      startFileWatcher();
+    } else {
+      stopFileWatcher();
+    }
   })
 
   ipcMain.handle('get-past-orders', async () => {

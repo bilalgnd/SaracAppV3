@@ -14,7 +14,7 @@ async function deploy() {
 
   const runCmd = async (cmd) => {
     console.log(`Running: ${cmd}`);
-    const res = await ssh.execCommand(cmd.startsWith('sudo') ? `echo '18901745bilalGND!' | sudo -S ${cmd.substring(5)}` : cmd, { cwd: '/home/bilalgnd' });
+    const res = await ssh.execCommand(cmd.startsWith('sudo') ? `echo '${process.env.SSH_PASSWORD}' | sudo -S ${cmd.substring(5)}` : cmd, { cwd: '/home/bilalgnd' });
     console.log(res.stdout);
     if (res.stderr) console.error(res.stderr);
     return res;
@@ -31,11 +31,15 @@ async function deploy() {
   await runCmd('mkdir -p /home/bilalgnd/saracapp');
 
   console.log('Uploading files...');
-  await ssh.putDirectory(__dirname + '/src', '/home/bilalgnd/saracapp/src');
-  await ssh.putDirectory(__dirname + '/public', '/home/bilalgnd/saracapp/public');
-  await ssh.putFile(__dirname + '/package.json', '/home/bilalgnd/saracapp/package.json');
-  await ssh.putFile(__dirname + '/tsconfig.json', '/home/bilalgnd/saracapp/tsconfig.json');
-  await ssh.putFile(__dirname + '/.env', '/home/bilalgnd/saracapp/.env');
+  await ssh.putDirectory(path.join(__dirname, '../src'), '/home/bilalgnd/saracapp/src');
+  await ssh.putDirectory(path.join(__dirname, '../public'), '/home/bilalgnd/saracapp/public');
+  await ssh.putFile(path.join(__dirname, '../package.json'), '/home/bilalgnd/saracapp/package.json');
+  await ssh.putFile(path.join(__dirname, '../tsconfig.json'), '/home/bilalgnd/saracapp/tsconfig.json');
+  await ssh.putFile(path.join(__dirname, '../.env'), '/home/bilalgnd/saracapp/.env');
+  
+  if (require('fs').existsSync(path.join(__dirname, '../firebase-adminsdk.json'))) {
+    await ssh.putFile(path.join(__dirname, '../firebase-adminsdk.json'), '/home/bilalgnd/saracapp/firebase-adminsdk.json');
+  }
   console.log('Files uploaded.');
 
   // Install dependencies and start

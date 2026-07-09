@@ -1,0 +1,19 @@
+{
+  "name": "saracapp",
+  "version": "3.0.0",
+  "private": true,
+  "workspaces": [
+    "app1",
+    "app2",
+    "qr-app",
+    "server"
+  ],
+  "scripts": {
+    "start:server": "npm run start --workspace=server",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:app1": "npm run dev --workspace=app1",
+    "dev:app2": "npm run dev --workspace=app2",
+    "dev:qr-app": "npm run dev --workspace=qr-app",
+    "dev:all": "npm run dev --workspaces --if-present"
+  }
+}

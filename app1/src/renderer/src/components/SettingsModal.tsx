@@ -452,6 +452,70 @@ export default function SettingsModal() {
                   ))}
                 </div>
               </div>
+
+              <div className="settings-card" style={{ marginTop: 20 }}>
+                <div className="settings-card-title">Sipariş Yakalama Yöntemleri (Çift Siparişi Önleme)</div>
+                <p style={{ fontSize: 12, color: 'gray', marginBottom: 15 }}>Farklı yöntemler aynı siparişi çift düşürebilir. Sadece güvendiğiniz tek bir yöntemi aktif bırakmanız önerilir.</p>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  {/* 1. Eklenti */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold', color: '#fff' }}>1. Chrome Eklentisi (Tavsiye Edilen)</div>
+                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>Tarayıcıya kurduğunuz eklentiden gelen verileri kabul eder.</div>
+                    </div>
+                    <button 
+                      className={`settings-btn ${settings.ENABLE_EXTENSION ? 'success' : 'danger'}`}
+                      onClick={() => {
+                        const newVal = !settings.ENABLE_EXTENSION;
+                        handleSettingChange('ENABLE_EXTENSION', newVal);
+                        window.api.saveSettings({ ...settings, ENABLE_EXTENSION: newVal });
+                      }}
+                      style={{ padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', width: '100px' }}
+                    >
+                      {settings.ENABLE_EXTENSION ? 'Açık' : 'Kapalı'}
+                    </button>
+                  </div>
+
+                  {/* 2. Yerel Bot */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold', color: '#fff' }}>2. Yerel Kasa Botu (Puppeteer)</div>
+                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>Arka planda Chrome'a bağlanıp verileri Belgelerim'e kaydeder.</div>
+                    </div>
+                    <button 
+                      className={`settings-btn ${settings.ENABLE_LOCAL_BOT ? 'success' : 'danger'}`}
+                      onClick={() => {
+                        const newVal = !settings.ENABLE_LOCAL_BOT;
+                        handleSettingChange('ENABLE_LOCAL_BOT', newVal);
+                        window.api.saveSettings({ ...settings, ENABLE_LOCAL_BOT: newVal });
+                      }}
+                      style={{ padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', width: '100px' }}
+                    >
+                      {settings.ENABLE_LOCAL_BOT ? 'Açık' : 'Kapalı'}
+                    </button>
+                  </div>
+
+                  {/* 3. Dosya Okuyucu */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold', color: '#fff' }}>3. Yerel Belge Okuyucu (Log İzleyici)</div>
+                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>Belgelerim/logs klasörüne düşen PDF ve TXT dosyalarını okur.</div>
+                    </div>
+                    <button 
+                      className={`settings-btn ${settings.ENABLE_FILE_WATCHER ? 'success' : 'danger'}`}
+                      onClick={() => {
+                        const newVal = !settings.ENABLE_FILE_WATCHER;
+                        handleSettingChange('ENABLE_FILE_WATCHER', newVal);
+                        window.api.saveSettings({ ...settings, ENABLE_FILE_WATCHER: newVal });
+                      }}
+                      style={{ padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', width: '100px' }}
+                    >
+                      {settings.ENABLE_FILE_WATCHER ? 'Açık' : 'Kapalı'}
+                    </button>
+                  </div>
+                </div>
+              </div>
               <div className="settings-card" style={{ marginTop: 20 }}>
                 <div className="settings-card-title">Aktif Garson Cihazları (App2)</div>
                 {networkStatus?.connectedDevices?.length > 0 ? (

@@ -1,0 +1,8 @@
+version: 6.0.1
+files:
+  - url: SaracAppv6.0.1-setup.exe
+    sha512: B23HVDrufFVrW7GuMDM3R/KlGtgsps5aqD0AqBlL2iNsrbtz6h9BJXblZJk4sDfWMI7fIc4MGvAgumFssHmC6Q==
+    size: 85056710
+path: SaracAppv6.0.1-setup.exe
+sha512: B23HVDrufFVrW7GuMDM3R/KlGtgsps5aqD0AqBlL2iNsrbtz6h9BJXblZJk4sDfWMI7fIc4MGvAgumFssHmC6Q==
+releaseDate: '2026-07-08T23:14:45.084Z'
