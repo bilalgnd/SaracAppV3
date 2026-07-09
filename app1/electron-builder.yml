@@ -1,5 +1,5 @@
 appId: com.saracoglu.pos
-productName: SaracAppv6.0.1
+productName: SaracAppv6.0.2
 directories:
   buildResources: build
 files:
@@ -15,10 +15,10 @@ extraResources:
   - from: "resources/extension"
     to: "extension"
 win:
-  executableName: SaracAppv6.0.1
+  executableName: SaracAppv6.0.2
   icon: resources/icon.png
 nsis:
-  artifactName: SaracAppv6.0.1-setup.${ext}
+  artifactName: SaracAppv6.0.2-setup.${ext}
   shortcutName: SaracApp
   uninstallDisplayName: SaracApp
   createDesktopShortcut: always
@@ -45,4 +45,4 @@ npmRebuild: false
 publish:
   provider: github
   owner: bilalgnd
-  repo: SaracAppV2
+  repo: SaracAppV3

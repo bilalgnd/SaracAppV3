@@ -114,7 +114,7 @@ export default function SettingsModal() {
     customAlert("Ayarlar kaydedildi!")
   }
 
-  const handleSettingChange = (key: string, value: string) => {
+  const handleSettingChange = (key: string, value: any) => {
     setSettings((prev: any) => ({ ...prev, [key]: value }))
   }
 

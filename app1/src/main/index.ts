@@ -59,7 +59,8 @@ localApp.use(express.json())
 localApp.post('/trendyol_web_siparis', async (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
   if (!systemSettings.ENABLE_EXTENSION) {
-    return res.status(403).json({ error: "Extension listener is disabled" });
+    res.status(403).json({ error: "Extension listener is disabled" });
+    return;
   }
   try {
     const response = await axios.post(`${CLOUD_URL}/trendyol_web_siparis`, req.body)
@@ -72,7 +73,8 @@ localApp.post('/trendyol_web_siparis', async (req, res) => {
 localApp.post('/yemeksepeti_siparis', async (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
   if (!systemSettings.ENABLE_EXTENSION) {
-    return res.status(403).json({ error: "Extension listener is disabled" });
+    res.status(403).json({ error: "Extension listener is disabled" });
+    return;
   }
   try {
     const response = await axios.post(`${CLOUD_URL}/yemeksepeti_siparis`, req.body)
