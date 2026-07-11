@@ -1,6 +1,6 @@
 {
   "name": "saracapp2",
-  "version": "6.0.2",
+  "version": "6.0.3",
   "description": "An Electron application with React and TypeScript",
   "main": "./out/main/index.js",
   "author": "example.com",
@@ -23,7 +23,9 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.18.1",
+    "dotenv": "^16.6.1",
     "electron-updater": "^6.8.9",
     "express": "^5.2.1",
     "framer-motion": "^12.41.0",
@@ -31,10 +33,12 @@
     "localtunnel": "^2.0.2",
     "lucide-react": "^1.21.0",
     "node-thermal-printer": "^4.6.0",
-    "puppeteer-core": "^25.3.0",
+    "pdfjs-dist": "^3.11.174",
+    "react-is": "^19.2.7",
     "recharts": "^3.9.1",
     "socket.io": "^4.8.3",
     "sweetalert2": "^11.26.25",
+    "tesseract.js": "^7.0.0",
     "ws": "^8.21.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
@@ -62,5 +66,8 @@
     "react-dom": "^19.2.1",
     "typescript": "^5.9.3",
     "vite": "^7.2.6"
-  }
+  },
+  "keywords": [],
+  "license": "ISC",
+  "type": "commonjs"
 }

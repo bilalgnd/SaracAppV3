@@ -1,7 +1,6 @@
-import { app, shell, BrowserWindow, ipcMain, globalShortcut } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, globalShortcut, dialog } from 'electron'
 import { join } from 'path'
 import * as fs from 'fs'
-import express from 'express'
 // --- MIGRATION & USER DATA PATH OVERRIDE ---
 const appDataPath = app.getPath('appData')
 const newUserDataPath = join(appDataPath, 'SaracApp')
@@ -25,11 +24,13 @@ import { autoUpdater } from 'electron-updater'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { initializeModels, systemSettings, saveSettings } from './models'
-import { startBotService, stopBotService } from './botService'
+
 import { startFileWatcher, stopFileWatcher } from './fileWatcher'
 import { printReceipt } from './printer'
 import axios from 'axios'
 import WebSocket from 'ws'
+import express from 'express'
+import os from 'os'
 
 let mainWindow: BrowserWindow
 let isQuitting = false
@@ -53,54 +54,11 @@ let activeOrders: any[] = []
 let fullMenu: any = null
 let wsClient: WebSocket | null = null
 
-const localApp = express()
-localApp.use(express.json())
 
-localApp.post('/trendyol_web_siparis', async (req, res) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  if (!systemSettings.ENABLE_EXTENSION) {
-    res.status(403).json({ error: "Extension listener is disabled" });
-    return;
-  }
-  try {
-    const response = await axios.post(`${CLOUD_URL}/trendyol_web_siparis`, req.body)
-    res.json(response.data)
-  } catch (e: any) {
-    res.status(500).json({ error: e.message })
-  }
-})
-
-localApp.post('/yemeksepeti_siparis', async (req, res) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  if (!systemSettings.ENABLE_EXTENSION) {
-    res.status(403).json({ error: "Extension listener is disabled" });
-    return;
-  }
-  try {
-    const response = await axios.post(`${CLOUD_URL}/yemeksepeti_siparis`, req.body)
-    res.json(response.data)
-  } catch (e: any) {
-    res.status(500).json({ error: e.message })
-  }
-})
-
-localApp.post('/api/extension_logs', async (req, res) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  try {
-    const response = await axios.post(`${CLOUD_URL}/api/extension_logs`, req.body)
-    res.json(response.data)
-  } catch (e: any) {
-    res.status(500).json({ error: e.message })
-  }
-})
-
-localApp.listen(5000, () => {
-  console.log('Local extension bridge listening on port 5000')
-})
 
 function connectWebSocket() {
   const token = systemSettings.API_TOKEN || ''
-  console.log('Connecting to WS with token:', token)
+  console.log('Connecting to WS...')
   wsClient = new WebSocket(`${WS_URL}?token=${token}`)
 
   wsClient.on('open', () => {
@@ -114,6 +72,24 @@ function connectWebSocket() {
     try {
       const parsed = JSON.parse(data.toString())
       if (parsed.type === 'server-event') {
+        if (parsed.action === 'clean_logs') {
+           const logDir = systemSettings.PDF_LOGS_DIR || join(app.getPath('documents'), 'logs');
+           const trashDir = join(logDir, '.trash');
+           if (!fs.existsSync(trashDir)) fs.mkdirSync(trashDir, { recursive: true });
+           fs.readdir(logDir, (err, files) => {
+             if (err) return;
+             files.forEach(file => {
+               if (file !== '.trash') {
+                 const src = join(logDir, file);
+                 const dest = join(trashDir, file);
+                 try {
+                   const stats = fs.statSync(src);
+                   if (stats.isFile()) fs.renameSync(src, dest);
+                 } catch(e){}
+               }
+             });
+           });
+        }
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('server-event', parsed)
         }
@@ -143,6 +119,53 @@ function connectWebSocket() {
   })
 }
 
+function startLocalApi() {
+  const expressApp = express();
+  
+  expressApp.use((_req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    next();
+  });
+
+  expressApp.get('/api/local_logs', (_req, res) => {
+    const logDir = systemSettings.PDF_LOGS_DIR || join(app.getPath('documents'), 'logs');
+    if (!fs.existsSync(logDir)) {
+      return res.json([]);
+    }
+    const files = fs.readdirSync(logDir)
+      .filter(f => !f.startsWith('.') && (f.toLowerCase().endsWith('.pdf') || f.toLowerCase().endsWith('.png') || f.toLowerCase().endsWith('.jpg')))
+      .map(f => {
+        const stats = fs.statSync(join(logDir, f));
+        return { name: f, size: stats.size, time: stats.mtimeMs };
+      })
+      .sort((a, b) => b.time - a.time);
+    res.json(files);
+  });
+
+  expressApp.get('/api/local_logs/download/:filename', (req, res) => {
+    const logDir = systemSettings.PDF_LOGS_DIR || join(app.getPath('documents'), 'logs');
+    const filePath = join(logDir, req.params.filename);
+    // Güvenlik için basit path traversal engeli
+    if (filePath.includes('..') || !fs.existsSync(filePath)) {
+      return res.status(404).send('Not found');
+    }
+    res.download(filePath);
+  });
+
+  expressApp.listen(3005, '0.0.0.0', () => {
+    const interfaces = os.networkInterfaces();
+    let localIp = '127.0.0.1';
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name] || []) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          localIp = iface.address;
+        }
+      }
+    }
+    console.log(`Local API listening on http://${localIp}:3005`);
+  });
+}
+
 async function fetchInitialData() {
   try {
     const res = await axios.get(`${CLOUD_URL}/menu`)
@@ -165,13 +188,9 @@ async function createWindow(): Promise<void> {
     connectWebSocket()
   }
 
-  if (systemSettings.ENABLE_LOCAL_BOT) {
-    startBotService()
-  }
 
-  if (systemSettings.ENABLE_FILE_WATCHER) {
-    startFileWatcher()
-  }
+
+  // Move startFileWatcher down
 
   mainWindow = new BrowserWindow({
     width: 1366,
@@ -187,6 +206,10 @@ async function createWindow(): Promise<void> {
       sandbox: false
     }
   })
+
+  if (systemSettings.ENABLE_FILE_WATCHER) {
+    startFileWatcher(mainWindow)
+  }
 
   ipcMain.handle('minimize-window', () => {
     if (mainWindow) mainWindow.minimize()
@@ -238,6 +261,8 @@ app.whenReady().then(() => {
     autoUpdater.checkForUpdatesAndNotify()
   }
 
+  startLocalApi()
+
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -250,6 +275,13 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('get-printers', async () => await mainWindow.webContents.getPrintersAsync())
   ipcMain.handle('get-next-queue-no', () => Date.now().toString().slice(-4))
+  ipcMain.handle('select-directory', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory']
+    })
+    return result.canceled ? null : result.filePaths[0]
+  })
+  
   
   const getTvUrlWithShop = () => {
     let shopId = 'admin';
@@ -299,16 +331,11 @@ app.whenReady().then(() => {
       }
     } catch(e) {}
 
-    // Handle bot toggle
-    if (settings.ENABLE_LOCAL_BOT) {
-      startBotService();
-    } else {
-      stopBotService();
-    }
+
 
     // Handle file watcher toggle
     if (settings.ENABLE_FILE_WATCHER) {
-      startFileWatcher();
+      startFileWatcher(mainWindow);
     } else {
       stopFileWatcher();
     }
@@ -412,6 +439,8 @@ app.whenReady().then(() => {
     }
   })
 
+
+
   ipcMain.on('print-receipt', async (_, data) => {
     const custName = data.customerName || data.customer_name || 'Bilinmiyor'
     const total = data.totalAmount || data.total_amount || 0
@@ -460,6 +489,17 @@ app.whenReady().then(() => {
     if (!is.dev) autoUpdater.quitAndInstall()
   })
 
+  ipcMain.on('dump-ocr-log', (_event, text) => {
+    try {
+      const os = require('os')
+      const path = require('path')
+      const desktopPath = path.join(os.homedir(), 'Desktop', 'ocr_debug_log.txt')
+      fs.writeFileSync(desktopPath, text)
+    } catch(e) {
+      console.error('Log error', e)
+    }
+  })
+
   ipcMain.on('exit-app', () => {
     isQuitting = true
     app.quit()
@@ -492,3 +532,22 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
 })
+
+export async function addAndSyncOrder(newOrder: any) {
+  try {
+    activeOrders = [newOrder, ...activeOrders];
+    // Ana ekrana da haber ver
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('server-event', { action: 'request_update' });
+      mainWindow.webContents.send('ocr-success', { message: 'Sipariş başarıyla ayrıştırıldı ve eklendi.' });
+    }
+    await axios.post(`${CLOUD_URL}/api/sync_orders`, activeOrders, {
+      headers: { 'Authorization': `Bearer ${systemSettings.API_TOKEN}` }
+    });
+    return true;
+  } catch (e: any) {
+    console.error('addAndSyncOrder error:', e.message);
+    return false;
+  }
+}
+

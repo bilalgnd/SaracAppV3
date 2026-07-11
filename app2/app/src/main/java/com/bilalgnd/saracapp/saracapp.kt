@@ -179,6 +179,9 @@ interface KasaApi {
     @retrofit2.http.POST("api/clear_data")
     suspend fun verileriSifirla(): retrofit2.Response<Void>
 
+    @retrofit2.http.POST("api/clean_logs")
+    suspend fun cleanLogs(): retrofit2.Response<Void>
+
     @retrofit2.http.POST("api/register_fcm_token")
     suspend fun fcmTokenKaydet(@retrofit2.http.Body request: Map<String, String>): retrofit2.Response<Void>
 
@@ -395,7 +398,7 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme(background = Color(0xFF0F0F0F), surface = Color(0xFF1E1E1E), primary = Color(0xFFFF9800), onPrimary = Color.White)) {
+            MaterialTheme(colorScheme = darkColorScheme(background = Color(0xFF0F0F0F), surface = Color(0xFF1E1E1E), primary = Color(0xFFF54E4E), onPrimary = Color.White)) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { AnaEkran() }
             }
         }
@@ -408,6 +411,7 @@ fun AnaEkran() {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val hafiza = remember { HafizaYoneticisi(context) }
+    var adminPanelAcik by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     var isLoggedIn by remember { mutableStateOf(hafiza.kasaTokenOku().isNotBlank()) }
@@ -545,44 +549,50 @@ fun AnaEkran() {
                             val hapticFeedback = LocalHapticFeedback.current
                             val universityRomanBold = FontFamily(Font(R.font.university_roman_bold))
                             Text("SARAÇOGLU DÖNER", fontFamily = universityRomanBold, color = Color.White, fontSize = 26.sp, letterSpacing = 1.sp, modifier = Modifier.pointerInput(Unit) {
-                                detectTapGestures(onLongPress = {
-                                    if (isBossModeUnlocked) {
+                                detectTapGestures(
+                                    onLongPress = {
                                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        coroutineScope.launch {
-                                            try {
-                                                val api = ApiClient.getApi(hafiza.kasaIpOku(), "")
-                                                val tokenRsp = api.bossTokenGetir("saracoglu_boss_2026")
-                                                
-                                                if (tokenRsp.isSuccessful && tokenRsp.body() != null) {
-                                                    val newToken = tokenRsp.body()!!.token
-                                                    hafiza.kasaTokenKaydet(newToken)
+                                        adminPanelAcik = true
+                                    },
+                                    onDoubleTap = {
+                                        if (isBossModeUnlocked) {
+                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            coroutineScope.launch {
+                                                try {
+                                                    val api = ApiClient.getApi(hafiza.kasaIpOku(), "")
+                                                    val tokenRsp = api.bossTokenGetir("saracoglu_boss_2026")
                                                     
-                                                    withContext(Dispatchers.Main) {
-                                                        Toast.makeText(context, "Boss Login 🔑", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                    
-                                                    val rsp = ApiClient.getApi(hafiza.kasaIpOku(), newToken).menuGetir()
-                                                    if (rsp.isSuccessful) {
-                                                        kasaOnline = true
-                                                        val v = rsp.body()
-                                                        if (v?.categories != null) {
-                                                            kategoriler = v.categories
+                                                    if (tokenRsp.isSuccessful && tokenRsp.body() != null) {
+                                                        val newToken = tokenRsp.body()!!.token
+                                                        hafiza.kasaTokenKaydet(newToken)
+                                                        
+                                                        withContext(Dispatchers.Main) {
+                                                            Toast.makeText(context, "Boss Login 🔑", Toast.LENGTH_SHORT).show()
                                                         }
-                                                        if (v?.ekstralar != null) ucretliEkstralar = v.ekstralar
+                                                        
+                                                        val rsp = ApiClient.getApi(hafiza.kasaIpOku(), newToken).menuGetir()
+                                                        if (rsp.isSuccessful) {
+                                                            kasaOnline = true
+                                                            val v = rsp.body()
+                                                            if (v?.categories != null) {
+                                                                kategoriler = v.categories
+                                                            }
+                                                            if (v?.ekstralar != null) ucretliEkstralar = v.ekstralar
+                                                        }
+                                                    } else {
+                                                        withContext(Dispatchers.Main) {
+                                                            Toast.makeText(context, "Boss Login Başarısız!", Toast.LENGTH_SHORT).show()
+                                                        }
                                                     }
-                                                } else {
+                                                } catch (e: Exception) {
                                                     withContext(Dispatchers.Main) {
-                                                        Toast.makeText(context, "Boss Login Başarısız!", Toast.LENGTH_SHORT).show()
+                                                        Toast.makeText(context, "Ağ Hatası: Kasa bulunamadı", Toast.LENGTH_SHORT).show()
                                                     }
-                                                }
-                                            } catch (e: Exception) {
-                                                withContext(Dispatchers.Main) {
-                                                    Toast.makeText(context, "Ağ Hatası: Kasa bulunamadı", Toast.LENGTH_SHORT).show()
                                                 }
                                             }
                                         }
                                     }
-                                })
+                                )
                             })
                         }
                         if (aktifMasaAdi == null && !siparisEkraniAcik && !raporEkraniAcik) {
@@ -705,38 +715,56 @@ fun AnaEkran() {
             }
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            if (raporEkraniAcik) {
+        Box(modifier = Modifier.padding(paddingValues)) {
+            if (adminPanelAcik) {
+                AdminPanelScreen(onBack = { adminPanelAcik = false })
+            } else if (raporEkraniAcik) {
                 RaporEkrani(hafiza)
             } else if (!siparisEkraniAcik) {
-                if (sekmeler.isNotEmpty()) {
-                    if (sekmeler.size <= 4) {
-                        TabRow(
-                            selectedTabIndex = pagerState.currentPage, containerColor = Color(0xFF0F0F0F), contentColor = Color.White,
-                            indicator = { tabPositions ->
-                                if (pagerState.currentPage < tabPositions.size) {
-                                    TabRowDefaults.Indicator(Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]), color = Color(0xFFFF9800), height = 4.dp)
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (sekmeler.isNotEmpty()) {
+                        if (sekmeler.size <= 4) {
+                            TabRow(
+                                selectedTabIndex = pagerState.currentPage, containerColor = Color(0xFF0F0F0F), contentColor = Color.White,
+                                indicator = { tabPositions ->
+                                    if (pagerState.currentPage < tabPositions.size) {
+                                        TabRowDefaults.Indicator(Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]), color = Color(0xFFF54E4E), height = 4.dp)
+                                    }
+                                }
+                            ) {
+                                sekmeler.forEachIndexed { index, sekme ->
+                                    Tab(selected = pagerState.currentPage == index, onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                                        text = { Text(sekme, fontSize = 14.sp, fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Medium, color = if (pagerState.currentPage == index) Color(0xFFF54E4E) else Color.LightGray, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) })
                                 }
                             }
-                        ) {
-                            sekmeler.forEachIndexed { index, sekme ->
-                                Tab(selected = pagerState.currentPage == index, onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                                    text = { Text(sekme, fontSize = 14.sp, fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Medium, color = if (pagerState.currentPage == index) Color(0xFFFF9800) else Color.LightGray, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) })
+                        } else {
+                            ScrollableTabRow(
+                                selectedTabIndex = pagerState.currentPage, containerColor = Color(0xFF0F0F0F), contentColor = Color.White,
+                                edgePadding = 0.dp,
+                                indicator = { tabPositions ->
+                                    if (pagerState.currentPage < tabPositions.size) {
+                                        TabRowDefaults.Indicator(Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]), color = Color(0xFFF54E4E), height = 4.dp)
+                                    }
+                                }
+                            ) {
+                                sekmeler.forEachIndexed { index, sekme ->
+                                    Tab(selected = pagerState.currentPage == index, onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                                        text = { Text(sekme, fontSize = 14.sp, fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Medium, color = if (pagerState.currentPage == index) Color(0xFFF54E4E) else Color.LightGray, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) })
+                                }
                             }
                         }
+                    }
+
+                    if (kategoriler.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Color(0xFFF54E4E))
+                        }
                     } else {
-                        ScrollableTabRow(
-                            selectedTabIndex = pagerState.currentPage, containerColor = Color(0xFF0F0F0F), contentColor = Color.White,
-                            edgePadding = 0.dp,
-                            indicator = { tabPositions ->
-                                if (pagerState.currentPage < tabPositions.size) {
-                                    TabRowDefaults.Indicator(Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]), color = Color(0xFFFF9800), height = 4.dp)
+                        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { sayfaIndexi ->
+                            if (sayfaIndexi >= 0 && sayfaIndexi < menuler_listesi.size) {
+                                LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp)) {
+                                    items(menuler_listesi[sayfaIndexi]) { urun -> UrunKarti(urun, onClick = { siparisIcinAcilanUrun = urun }, onLongClick = { }) }
                                 }
-                            }
-                        ) {
-                            sekmeler.forEachIndexed { index, sekme ->
-                                Tab(selected = pagerState.currentPage == index, onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                                    text = { Text(sekme, fontSize = 14.sp, fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Medium, color = if (pagerState.currentPage == index) Color(0xFFFF9800) else Color.LightGray, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) })
                             }
                         }
                     }
@@ -859,23 +887,8 @@ fun AnaEkran() {
                         )
                     }
                 }
-            } else {
-                if (kategoriler.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color(0xFFFF9800))
-                    }
-                } else {
-                    HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { sayfaIndexi ->
-                        if (sayfaIndexi >= 0 && sayfaIndexi < menuler_listesi.size) {
-                            LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp)) {
-                                items(menuler_listesi[sayfaIndexi]) { urun -> UrunKarti(urun, onClick = { siparisIcinAcilanUrun = urun }, onLongClick = { }) }
-                            }
-                        }
-                    }
-                }
             }
         }
-
         if (!kasaOnline && !kasaAyarPenceresiAcik) {
             Box(
                 modifier = Modifier
@@ -885,7 +898,7 @@ fun AnaEkran() {
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = Color(0xFFFF9800), strokeWidth = 4.dp, modifier = Modifier.size(64.dp))
+                    CircularProgressIndicator(color = Color(0xFFF54E4E), strokeWidth = 4.dp, modifier = Modifier.size(64.dp))
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Sunucu Bekleniyor...",
@@ -1054,6 +1067,34 @@ fun AnaEkran() {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Sistem Durumu / Loglar", color = Color.White)
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+                        
+                        Button(
+                            onClick = {
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    try {
+                                        val api = ApiClient.getApi(hafiza.kasaIpOku(), hafiza.kasaTokenOku())
+                                        val res = api.cleanLogs()
+                                        withContext(Dispatchers.Main) {
+                                            if (res.isSuccessful) {
+                                                Toast.makeText(context, "Klasör temizleme isteği gönderildi", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                Toast.makeText(context, "İstek başarısız", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(context, "Bağlantı hatası: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("PDF Klasörünü Temizle", color = Color.White)
                         }
 
                         Spacer(Modifier.height(24.dp))
@@ -1283,7 +1324,7 @@ fun SiparisBottomSheet(urun: Urun, guncelMasaAdi: String?, icecekMenusu: List<Ur
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         }
                     }, modifier = Modifier.size(40.dp)) { Text("-", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold) }
-                    Text("$adet", color = Color(0xFFFF9800), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 16.dp))
+                    Text("$adet", color = Color(0xFFF54E4E), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 16.dp))
                     IconButton(onClick = {
                         adet++
                         urunAyarlari.add(UrunAyar(urun))
@@ -1302,7 +1343,7 @@ fun SiparisBottomSheet(urun: Urun, guncelMasaAdi: String?, icecekMenusu: List<Ur
                         if (aktifIndex < tabPositions.size) {
                             androidx.compose.material3.TabRowDefaults.SecondaryIndicator(
                                 Modifier.tabIndicatorOffset(tabPositions[aktifIndex]),
-                                color = Color(0xFFFF9800)
+                                color = Color(0xFFF54E4E)
                             )
                         }
                     },
@@ -1312,7 +1353,7 @@ fun SiparisBottomSheet(urun: Urun, guncelMasaAdi: String?, icecekMenusu: List<Ur
                         androidx.compose.material3.Tab(
                             selected = aktifIndex == i,
                             onClick = { aktifIndex = i },
-                            selectedContentColor = Color(0xFFFF9800),
+                            selectedContentColor = Color(0xFFF54E4E),
                             unselectedContentColor = Color.Gray
                         ) {
                             Text("${i + 1}. Ürün", modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp), fontWeight = FontWeight.Bold)
@@ -1526,7 +1567,7 @@ fun SiparisBottomSheet(urun: Urun, guncelMasaAdi: String?, icecekMenusu: List<Ur
                     }
                     icecekMenusu.forEachIndexed { _, ic -> if (seciliIcecekler[ic.ad] == true) { val icAdet = icecekAdetleri[ic.ad] ?: 1; repeat(icAdet) { kalemler.add(SiparisKalemi(ic.ad, "Standart", (ic.secenekler?.firstOrNull()?.fiyat ?: 0), "")) } } }
                     onSiparisEkle(musteriAdi, kalemler)
-                }, modifier = Modifier.fillMaxWidth().height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)), shape = RoundedCornerShape(16.dp)
+                }, modifier = Modifier.fillMaxWidth().height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF54E4E)), shape = RoundedCornerShape(16.dp)
             ) { Text("Sepete Ekle - TOPLAM: $toplamTutar ₺", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 20.sp) }
             Spacer(modifier = Modifier.height(40.dp))
         }
@@ -1675,7 +1716,7 @@ fun AdisyonKarti(adisyon: Adisyon, tamamlandiClick: () -> Unit, kalemSilClick: (
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(onClick = ilaveClick, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF9800)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF9800)), shape = RoundedCornerShape(12.dp)) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Add, contentDescription = null) }
+            OutlinedButton(onClick = ilaveClick, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF54E4E)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF54E4E)), shape = RoundedCornerShape(12.dp)) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Add, contentDescription = null) }
             Spacer(modifier = Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
                 Button(onClick = yazdirClick, modifier = Modifier.weight(1f).height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF424242)), shape = RoundedCornerShape(12.dp)) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Print, contentDescription = null) }
@@ -1716,7 +1757,7 @@ fun RaporEkrani(hafiza: HafizaYoneticisi) {
 
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Color(0xFFFF9800))
+            CircularProgressIndicator(color = Color(0xFFF54E4E))
         }
     } else if (errorMsg != null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1898,7 +1939,15 @@ fun SistemLoglariDialog(hafiza: HafizaYoneticisi, onDismiss: () -> Unit) {
     var logs by remember { mutableStateOf<List<SystemLog>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMsg by remember { mutableStateOf("") }
+    var cursorBlink by remember { mutableStateOf(true) }
     
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(500)
+            cursorBlink = !cursorBlink
+        }
+    }
+
     LaunchedEffect(Unit) {
         while (true) {
             try {
@@ -1920,32 +1969,48 @@ fun SistemLoglariDialog(hafiza: HafizaYoneticisi, onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color.Black,
+        containerColor = Color(0xFF1E1E1E),
         modifier = Modifier.fillMaxHeight(0.9f).fillMaxWidth(0.95f),
-        title = { Text("saracapp@terminal:~\$ tail -f /var/log/system.log", color = Color(0xFF00FF00), fontSize = 14.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("root@saracapp:~# tail -f /var/log/system.log", color = Color(0xFF4CAF50), fontSize = 14.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                if (cursorBlink) {
+                    Text(" █", color = Color(0xFF4CAF50), fontSize = 14.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                }
+            }
+        },
         text = {
-            Column(modifier = Modifier.fillMaxSize().background(Color.Black).padding(4.dp)) {
+            Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A), shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).border(1.dp, Color(0xFF333333), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).padding(8.dp)) {
                 if (isLoading) {
-                    CircularProgressIndicator(color = Color(0xFF00FF00), modifier = Modifier.align(Alignment.CenterHorizontally))
+                    CircularProgressIndicator(color = Color(0xFF4CAF50), modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 16.dp))
                 } else if (errorMsg.isNotEmpty()) {
-                    Text(errorMsg, color = Color.Red, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, modifier = Modifier.padding(16.dp))
+                    Text(errorMsg, color = Color(0xFFFF5252), fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, modifier = Modifier.padding(16.dp))
                 } else if (logs.isEmpty()) {
-                    Text("saracapp@terminal:~\$ No logs found.", color = Color.Gray, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, modifier = Modifier.padding(16.dp))
+                    Text("root@saracapp:~# No logs found.", color = Color.Gray, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, modifier = Modifier.padding(16.dp))
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         items(logs) { log ->
                             val textColor = when (log.type) {
-                                "success" -> Color(0xFF00FF00)
+                                "success" -> Color(0xFF4CAF50)
                                 "error" -> Color(0xFFFF5252)
                                 "warning" -> Color(0xFFFFC107)
-                                else -> Color.LightGray
+                                else -> Color(0xFF64B5F6)
                             }
-                            Text(
-                                text = "[${log.time}] [${log.source}] ${log.message}",
-                                color = textColor,
+                            androidx.compose.material3.Text(
+                                androidx.compose.ui.text.buildAnnotatedString {
+                                    pushStyle(androidx.compose.ui.text.SpanStyle(color = Color(0xFF888888)))
+                                    append("[${log.time}] ")
+                                    pop()
+                                    pushStyle(androidx.compose.ui.text.SpanStyle(color = Color(0xFFE0E0E0), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
+                                    append("[${log.source}] ")
+                                    pop()
+                                    pushStyle(androidx.compose.ui.text.SpanStyle(color = textColor))
+                                    append(log.message)
+                                    pop()
+                                },
                                 fontSize = 13.sp,
                                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                modifier = Modifier.padding(vertical = 2.dp)
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)
                             )
                         }
                     }
@@ -1958,4 +2023,118 @@ fun SistemLoglariDialog(hafiza: HafizaYoneticisi, onDismiss: () -> Unit) {
             }
         }
     )
+}
+
+@Composable
+fun AdminPanelScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val prefs = context.getSharedPreferences("SaracogluDefteri", Context.MODE_PRIVATE)
+    var localIp by remember { mutableStateOf(prefs.getString("admin_local_ip", "192.168.1.") ?: "192.168.1.") }
+    var logs by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    fun fetchLogs() {
+        if (localIp.isBlank()) return
+        prefs.edit().putString("admin_local_ip", localIp).apply()
+        isLoading = true
+        errorMsg = null
+        coroutineScope.launch(Dispatchers.IO) {
+            try {
+                val client = okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+                val url = "http://$localIp:3005/api/local_logs"
+                val request = okhttp3.Request.Builder().url(url).build()
+                val response = client.newCall(request).execute()
+                if (response.isSuccessful) {
+                    val body = response.body?.string() ?: "[]"
+                    val jsonArray = org.json.JSONArray(body)
+                    val list = mutableListOf<Map<String, Any>>()
+                    for (i in 0 until jsonArray.length()) {
+                        val obj = jsonArray.getJSONObject(i)
+                        list.add(mapOf(
+                            "name" to obj.getString("name"),
+                            "size" to obj.getLong("size"),
+                            "time" to obj.getLong("time")
+                        ))
+                    }
+                    withContext(Dispatchers.Main) {
+                        logs = list
+                        isLoading = false
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        errorMsg = "Sunucu hatası: ${response.code}"
+                        isLoading = false
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    errorMsg = "Bağlantı hatası: ${e.message}"
+                    isLoading = false
+                }
+            }
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F0F)).padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Close, contentDescription = "Geri", tint = Color.White)
+            }
+            Text("Admin Paneli - OCR Logları", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        OutlinedTextField(
+            value = localIp,
+            onValueChange = { localIp = it },
+            label = { Text("Kasa Yerel IP (örn: 192.168.1.50)") },
+            modifier = Modifier.fillMaxWidth(),
+            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color(0xFFF54E4E)
+            )
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = { fetchLogs() },
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF54E4E))
+        ) {
+            Text("Dosyaları Getir", color = Color.White, fontWeight = FontWeight.Bold)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        if (isLoading) {
+            CircularProgressIndicator(color = Color(0xFFF54E4E), modifier = Modifier.align(Alignment.CenterHorizontally))
+        } else if (errorMsg != null) {
+            Text(errorMsg!!, color = Color.Red, modifier = Modifier.align(Alignment.CenterHorizontally))
+        } else {
+            androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(logs.size) { index ->
+                    val log = logs[index]
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable {
+                            val url = "http://$localIp:3005/api/local_logs/download/${log["name"]}"
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                            intent.data = android.net.Uri.parse(url)
+                            context.startActivity(intent)
+                        },
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(log["name"].toString(), color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("Boyut: ${log["size"].toString()} bytes", color = Color.Gray, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

@@ -7,21 +7,21 @@
 
 
 :root {
-  --bg-dark: #121212;
-  --bg-panel: #1E1E1E;
-  --bg-card: #2A2A2A;
-  --bg-hover: #3A3A3A;
+  --bg-dark: #141111;
+  --bg-panel: #1E1A1A;
+  --bg-card: #2A2424;
+  --bg-hover: #383030;
   
-  --primary: #FF9800;
-  --primary-hover: #F57C00;
-  --success: #4CAF50;
-  --success-hover: #43A047;
-  --danger: #F44336;
-  --danger-hover: #E53935;
-  --info: #0288D1;
+  --primary: #F54E4E;
+  --primary-hover: #E03E3E;
+  --success: #10B981;
+  --success-hover: #059669;
+  --danger: #EF4444;
+  --danger-hover: #DC2626;
+  --info: #3B82F6;
   
-  --text-main: #FFFFFF;
-  --text-muted: #9E9E9E;
+  --text-main: #F9FAFB;
+  --text-muted: #9CA3AF;
   
   --radius-sm: 8px;
   --radius-md: 12px;

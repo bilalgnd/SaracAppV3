@@ -8,6 +8,7 @@ const api = {
   getSettings: () => ipcRenderer.invoke('get-settings'),
   getPrinters: () => ipcRenderer.invoke('get-printers'),
   getNextQueueNo: () => ipcRenderer.invoke('get-next-queue-no'),
+  selectDirectory: () => ipcRenderer.invoke('select-directory'),
   getTvLink: () => ipcRenderer.invoke('get-tv-link'),
   getSpotifyLoginLink: () => ipcRenderer.invoke('get-spotify-login-link'),
   restartTvTunnel: () => ipcRenderer.invoke('restart-tv-tunnel'),
@@ -20,6 +21,7 @@ const api = {
   savePastOrder: (order: any) => ipcRenderer.send('save-past-order', order),
   deletePastOrder: (index: number) => ipcRenderer.send('delete-past-order', index),
   clearPastOrders: () => ipcRenderer.send('clear-past-orders'),
+  dumpOcrLog: (text: string) => ipcRenderer.send('dump-ocr-log', text),
   getNetworkStatus: () => ipcRenderer.invoke('get-network-status'),
   getPastOrders: () => ipcRenderer.invoke('get-past-orders'),
   saveMenu: (menu: any) => ipcRenderer.send('save-menu', menu),
@@ -50,6 +52,17 @@ const api = {
   },
   offServerEvent: (subscription: any) => {
     ipcRenderer.removeListener('server-event', subscription)
+  },
+  onProcessPdf: (callback: (data: any) => void) => {
+    const subscription = (_event: any, args: any) => {
+      console.log('IPC process-pdf tetiklendi, callback çağrılıyor...');
+      callback(args);
+    };
+    ipcRenderer.on('process-pdf', subscription)
+    return subscription
+  },
+  offProcessPdf: (subscription: any) => {
+    ipcRenderer.removeListener('process-pdf', subscription)
   },
   updatePrice: (productName: string, portion: string, price: number) => ipcRenderer.invoke('update-price', { productName, portion, price }),
   minimizeWindow: () => ipcRenderer.invoke('minimize-window'),

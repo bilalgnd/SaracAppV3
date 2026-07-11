@@ -43,7 +43,7 @@ export const systemLogs: SystemLog[] = [];
 
 export function addSystemLog(source: string, type: 'success' | 'error' | 'warning' | 'info', message: string) {
   systemLogs.unshift({
-    time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     source,
     type,
     message
@@ -590,7 +590,7 @@ wss.on('connection', (ws, req) => {
 
       console.log('Phone connected')
       getShop().connectedPhones.add(ws)
-      addSystemLog(isTv ? 'TV_EKRAN' : (jwtDecoded ? 'KULLANICI_MOBIL' : 'POS_APP'), 'success', 'Sunucuya ba\u0131Far\u0131yla ba\u011Fland\u0131.');
+      addSystemLog(isTv ? 'TV_EKRAN' : (jwtDecoded ? 'KULLANICI_MOBIL' : 'POS_APP'), 'success', 'Sunucuya başarıyla bağlandı.');
       ws.send(JSON.stringify(getShop().activeOrders)) // Send initial state to phone
       notifyUI('request_update')
       
@@ -657,6 +657,11 @@ app.post('/api/clear_data', (req: any, res) => {
   const shop = getActiveShop(req)
   shop.pastOrders.length = 0
   shop.savePastOrders()
+  res.json({ success: true })
+})
+
+app.post('/api/clean_logs', requireAuth, (req: any, res: any) => {
+  notifyUI('clean_logs')
   res.json({ success: true })
 })
 

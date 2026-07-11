@@ -1,5 +1,5 @@
 appId: com.saracoglu.pos
-productName: SaracAppv6.0.2
+productName: SaracAppv6.0.3
 directories:
   buildResources: build
 files:
@@ -15,12 +15,12 @@ extraResources:
   - from: "resources/extension"
     to: "extension"
 win:
-  executableName: SaracAppv6.0.2
+  executableName: SaracAppv6.0.3
   icon: resources/icon.png
 nsis:
-  artifactName: SaracAppv6.0.2-setup.${ext}
-  shortcutName: SaracApp
-  uninstallDisplayName: SaracApp
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
   entitlementsInherit: build/entitlements.mac.plist

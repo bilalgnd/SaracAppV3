@@ -1,24 +1,24 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
-import axios from 'axios';
-// import pdfParse from 'pdf-parse'; // Ileride PDF icin eklenebilir
+import { BrowserWindow, app } from 'electron';
+import { systemSettings } from './models';
+import { processPdfOrder } from './aiOcrService';
 
 let watcher: fs.FSWatcher | null = null;
 let isWatching = false;
 
-const CLOUD_URL = 'https://bilalgnd.shop';
-const logsDir = path.join(os.homedir(), 'Documents', 'logs');
 const processedFiles = new Set<string>();
 
-export function startFileWatcher() {
+export function startFileWatcher(mainWindow?: BrowserWindow) {
     if (isWatching) return;
     
+    const logsDir = systemSettings.PDF_LOGS_DIR || path.join(app.getPath('documents'), 'logs');
+
     if (!fs.existsSync(logsDir)) {
         try {
             fs.mkdirSync(logsDir, { recursive: true });
         } catch(e) {
-            console.error("[FileWatcher] Klasör oluşturulamadı:", e);
+            console.error("[FileWatcher] Klasor olusturulamadi:", e);
             return;
         }
     }
@@ -32,13 +32,15 @@ export function startFileWatcher() {
             const ext = path.extname(filename).toLowerCase();
             const filePath = path.join(logsDir, filename);
             
-            // Aynı dosyayı tekrar tekrar okumamak için
+            // Ignore .trash folder and anything inside it
+            if (filename === '.trash' || filePath.includes('.trash')) return;
+            
             if (processedFiles.has(filePath)) return;
 
             if (eventType === 'change' || eventType === 'rename') {
                 if (fs.existsSync(filePath)) {
-                    // Dosyanın yazılmasının bitmesini beklemek için ufak bir gecikme
-                    setTimeout(() => processFile(filePath, ext), 1000);
+                    // Dosyanın tamamen yazılmasını beklemek için çok kısa bir süre bekle (2 saniye yerine 300ms)
+                    setTimeout(() => processFile(filePath, ext, mainWindow), 300);
                 }
             }
         });
@@ -47,44 +49,32 @@ export function startFileWatcher() {
     }
 }
 
-async function processFile(filePath: string, ext: string) {
+async function processFile(filePath: string, ext: string, mainWindow?: BrowserWindow) {
     if (processedFiles.has(filePath)) return;
     processedFiles.add(filePath);
 
     try {
-        let content = '';
-        if (ext === '.txt' || ext === '.json' || ext === '.js') {
-            content = fs.readFileSync(filePath, 'utf-8');
-        } else if (ext === '.pdf') {
-            // İleride pdf-parse kütüphanesi eklenerek PDF'ten metin çıkarılabilir.
-            content = "[PDF Dosyası Algılandı, henüz metin çıkarma desteklenmiyor]";
-        } else {
-            return; // Desteklenmeyen format
-        }
-
-        console.log(`[FileWatcher] Yeni dosya okundu: ${filePath}`);
-        
-        // Okunan veriyi incelemek ve buluta göndermek için geçici çözüm:
-        // Şimdilik sipariş detaylarını bilmiyoruz, bu yüzden ham içeriği sunucuya "log" olarak atabiliriz
-        // veya burada JSON parse etmeyi deneyebiliriz.
-        
-        try {
-            const data = JSON.parse(content);
-            // Eğer geçerli bir JSON ise Trendyol veya Yemeksepeti endpoint'ine atılabilir
-            if (data && data.customerName) {
-                await axios.post(`${CLOUD_URL}/trendyol_web_siparis`, data);
+        if (['.pdf', '.png', '.jpg', '.jpeg'].includes(ext)) {
+            console.log(`[FileWatcher] Yeni siparis dosyasi bulundu: ${filePath}`);
+            // AI OCR Servisi ile işlemi başlat (IPC yerine arka planda yapıyoruz)
+            console.log(`[FileWatcher] AI OCR Basliyor: ${filePath}`);
+            const success = await processPdfOrder(filePath);
+            
+            if (success) {
+                console.log(`[FileWatcher] Basarili: Siparis sisteme eklendi.`);
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    // Kullanıcıya bilgi vermek için basit bir IPC gönderebiliriz
+                    mainWindow.webContents.send('ocr-success', { message: 'Sipariş başarıyla ayrıştırıldı ve kaydedildi.' });
+                }
+            } else {
+                console.error(`[FileWatcher] Basarisiz: Siparis ayristirilamadi.`);
             }
-        } catch (e) {
-            // JSON değilse düz metindir. İleride Regex ile müşteri adı ve ürünler ayıklanabilir.
-            const dumpPath = path.join(os.homedir(), 'Documents', 'bot_payloads.txt');
-            fs.appendFileSync(dumpPath, `\n=== FILE WATCHER: ${path.basename(filePath)} ===\n${content}\n`, 'utf8');
         }
-
     } catch (error) {
         console.error(`[FileWatcher] Dosya okuma hatası (${filePath}):`, error);
     }
     
-    // Test amaçlı olduğu için seti 1 dakika sonra temizle ki aynı isimli dosya gelirse okusun
+    // Test amaçlı aynı isimli dosya tekrar gelirse diye listeyi temizle
     setTimeout(() => {
         processedFiles.delete(filePath);
     }, 60000);
