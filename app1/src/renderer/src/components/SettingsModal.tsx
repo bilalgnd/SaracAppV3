@@ -432,6 +432,7 @@ export default function SettingsModal() {
                     <button 
                       key={opt.val}
                       onClick={() => {
+                        window.api.logSystemEvent(`Ayarlar: TV Ekran Koruyucu -> ${opt.label}`, 'info');
                         handleSettingChange('TV_SCREENSAVER', opt.val);
                         const updatedSettings = { ...settings, TV_SCREENSAVER: opt.val };
                         window.api.saveSettings(updatedSettings);
@@ -453,68 +454,112 @@ export default function SettingsModal() {
                 </div>
               </div>
 
+
               <div className="settings-card" style={{ marginTop: 20 }}>
-                <div className="settings-card-title">Sipariş Yakalama Yöntemi (Yapay Zeka OCR)</div>
-                <p style={{ fontSize: 12, color: 'gray', marginBottom: 15 }}>Uygulama, seçtiğiniz klasöre düşen PDF ve görsel (PNG, JPG) sipariş fişlerini otomatik olarak yapay zeka ile okur ve kasaya düşürür.</p>
+                <div className="settings-card-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  Sipariş Entegrasyonu (Otomatik)
+                  <div style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: networkStatus?.botStatus === 'connected' ? '#4caf50' : (networkStatus?.botStatus === 'error' ? '#ff9800' : '#f44336'),
+                    boxShadow: `0 0 8px ${networkStatus?.botStatus === 'connected' ? '#4caf50' : (networkStatus?.botStatus === 'error' ? '#ff9800' : '#f44336')}`
+                  }} title={networkStatus?.botStatus === 'connected' ? 'Bağlantı Aktif' : (networkStatus?.botStatus === 'error' ? 'Bağlantı Hatası' : 'Bağlantı Yok')}></div>
+                </div>
+                <p style={{ fontSize: 12, color: 'gray', marginBottom: 15 }}>Siparişlerin kasaya nasıl aktarılacağını seçin. (Her iki seçenek de aynı anda açık olabilir)</p>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
                     <div>
-                      <div style={{ fontWeight: 'bold', color: '#fff' }}>Yapay Zeka Destekli Belge Okuyucu (AI OCR)</div>
-                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>Belirtilen klasöre düşen PDF ve görsel (PNG, JPG) dosyalarını yapay zeka ile okuyup kaydeder.</div>
+                      <div style={{ fontWeight: 'bold', color: '#fff' }}>Arka Plan (Network) Dinleme</div>
+                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>Sipariş geldiği an hiçbir şeye basmanıza gerek kalmadan ağ trafiğinden arka planda sessizce yakalar. (Tavsiye Edilen)</div>
                     </div>
                     <button 
-                      className={`settings-btn ${settings.ENABLE_FILE_WATCHER ? 'success' : 'danger'}`}
+                      className={`settings-btn ${settings.ENABLE_BOT_NETWORK !== false ? 'success' : 'danger'}`}
                       onClick={() => {
-                        const newVal = !settings.ENABLE_FILE_WATCHER;
-                        handleSettingChange('ENABLE_FILE_WATCHER', newVal);
-                        window.api.saveSettings({ ...settings, ENABLE_FILE_WATCHER: newVal });
+                        const newVal = settings.ENABLE_BOT_NETWORK === false ? true : false;
+                        window.api.logSystemEvent(`Ayarlar: Otomatik Sipariş (Arka Plan) -> ${newVal ? 'Açık' : 'Kapalı'}`, newVal ? 'success' : 'warning');
+                        handleSettingChange('ENABLE_BOT_NETWORK', newVal);
+                        window.api.saveSettings({ ...settings, ENABLE_BOT_NETWORK: newVal });
                       }}
                       style={{ padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', width: '100px' }}
                     >
-                      {settings.ENABLE_FILE_WATCHER ? 'Açık' : 'Kapalı'}
+                      {settings.ENABLE_BOT_NETWORK !== false ? 'Açık' : 'Kapalı'}
                     </button>
                   </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: 12, color: '#aaa', fontWeight: 'bold' }}>Sipariş Dosyalarının (PDF/PNG) Düştüğü Klasör:</label>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <input 
-                        type="text" 
-                        readOnly 
-                        className="settings-input" 
-                        style={{ flex: 1, marginBottom: 0, opacity: 0.8 }} 
-                        value={settings.PDF_LOGS_DIR || 'Belgelerim/logs (Varsayılan)'} 
-                      />
-                      <button 
-                        className="settings-btn primary" 
-                        onClick={async () => {
-                          const dir = await (window.api as any).selectDirectory();
-                          if (dir) {
-                            handleSettingChange('PDF_LOGS_DIR', dir);
-                            window.api.saveSettings({ ...settings, PDF_LOGS_DIR: dir });
-                            customAlert("Klasör başarıyla seçildi!");
-                          }
-                        }}
-                      >
-                        Klasör Seç
-                      </button>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold', color: '#fff' }}>Yazdır (Print) Yakalama</div>
+                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>Siz fiş yazdırmak için Yazdır butonuna bastığınızda ekrandaki metni kopyalarak alternatif/yedek olarak kasaya gönderir.</div>
                     </div>
+                    <button 
+                      className={`settings-btn ${settings.ENABLE_BOT_PRINT !== false ? 'success' : 'danger'}`}
+                      onClick={() => {
+                        const newVal = settings.ENABLE_BOT_PRINT === false ? true : false;
+                        window.api.logSystemEvent(`Ayarlar: Otomatik Sipariş (Yazdır Yakalama) -> ${newVal ? 'Açık' : 'Kapalı'}`, newVal ? 'success' : 'warning');
+                        handleSettingChange('ENABLE_BOT_PRINT', newVal);
+                        window.api.saveSettings({ ...settings, ENABLE_BOT_PRINT: newVal });
+                      }}
+                      style={{ padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', width: '100px' }}
+                    >
+                      {settings.ENABLE_BOT_PRINT !== false ? 'Açık' : 'Kapalı'}
+                    </button>
                   </div>
                 </div>
               </div>
+
               <div className="settings-card" style={{ marginTop: 20 }}>
-                <div className="settings-card-title">Aktif Garson Cihazları (App2)</div>
+                <div className="settings-card-title">Bağlı Cihazlar</div>
                 {networkStatus?.connectedDevices?.length > 0 ? (
-                  <ul style={{ paddingLeft: 20, color: '#4CAF50', fontWeight: 'bold' }}>
-                    {networkStatus.connectedDevices.map((ip: string, i: number) => (
-                      <li key={i} style={{ marginBottom: 5 }}>Cihaz: {ip}</li>
-                    ))}
-                  </ul>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {/* Group by device type */}
+                    {['Masaüstü (Kasa)', 'Garson Uygulaması', 'TV Ekranı', 'Bilinmeyen Cihaz', 'Harici Bağlantı', 'Cihaz'].map((typeLabel) => {
+                      const group = networkStatus.connectedDevices.filter((d: any) => {
+                        const isObj = typeof d === 'object' && d !== null;
+                        const devType = isObj ? d.type : 'Cihaz';
+                        return devType === typeLabel;
+                      });
+                      
+                      if (group.length === 0) return null;
+                      
+                      return (
+                        <div key={typeLabel}>
+                          <div style={{ fontSize: '13px', color: '#4caf50', fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }}>
+                            {typeLabel}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {group.map((device: any, i: number) => {
+                              const isObj = typeof device === 'object' && device !== null;
+                              const devId = isObj ? device.id : device;
+                              const devIp = isObj ? device.ip : 'Bilinmeyen IP';
+                              const timeStr = isObj && device.connectedAt ? new Date(device.connectedAt).toLocaleTimeString('tr-TR') : '';
+                              
+                              return (
+                                <div key={i} style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <div>
+                                    <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '14px' }}>{devId}</div>
+                                    <div style={{ fontSize: '12px', color: '#aaa', marginTop: '4px' }}>IP: {devIp}</div>
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: '#888', textAlign: 'right' }}>
+                                    <div style={{ color: '#4caf50', marginBottom: '4px', fontWeight: 'bold' }}>● Aktif</div>
+                                    {timeStr}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
-                  <p style={{ color: '#F44336' }}>Şu an hiçbir garson cihazı bağlı değil.</p>
+                  <p style={{ color: '#F44336', fontSize: '14px' }}>Şu an hiçbir cihaz bağlı değil.</p>
                 )}
-                <button className="settings-btn" style={{ marginTop: 15 }} onClick={fetchNetworkStatus}>Yenile</button>
+                <button className="settings-btn" style={{ marginTop: 15 }} onClick={() => {
+                  window.api.logSystemEvent('Ayarlar: Bağlı Cihazlar listesi yenilendi', 'info');
+                  fetchNetworkStatus();
+                }}>Yenile</button>
               </div>
             </div>
           )}

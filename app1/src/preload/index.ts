@@ -22,6 +22,7 @@ const api = {
   deletePastOrder: (index: number) => ipcRenderer.send('delete-past-order', index),
   clearPastOrders: () => ipcRenderer.send('clear-past-orders'),
   dumpOcrLog: (text: string) => ipcRenderer.send('dump-ocr-log', text),
+  logSystemEvent: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => ipcRenderer.send('log-system-event', { message, type }),
   getNetworkStatus: () => ipcRenderer.invoke('get-network-status'),
   getPastOrders: () => ipcRenderer.invoke('get-past-orders'),
   saveMenu: (menu: any) => ipcRenderer.send('save-menu', menu),

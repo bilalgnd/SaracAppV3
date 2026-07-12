@@ -1,0 +1,10 @@
+
+DevTools remote debugging requires a non-default data directory. Specify this using --user-data-dir.
+Created TensorFlow Lite XNNPACK delegate for CPU.
+[3212:12524:0712/021211.550:ERROR:extensions\browser\service_worker\service_worker_task_queue.cc:481] DidStartWorkerFail epcnnfbjfcgphgdmggkamkmgojdagdnn: 15
+[3212:12524:0712/021214.154:ERROR:components\device_event_log\device_event_log_impl.cc:200] [02:12:14.155] USB: usb_service_win.cc:108 SetupDiGetDeviceProperty({{A45C254E-DF1C-4EFD-8020-67D146A850E0}, 6}) failed: Element not found. (0x490)
+[3212:17792:0712/021214.649:ERROR:google_apis\gcm\engine\registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[3212:17792:0712/021235.950:ERROR:google_apis\gcm\engine\registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[3212:12524:0712/021247.002:ERROR:extensions\browser\service_worker\service_worker_task_queue.cc:481] DidStartWorkerFail epcnnfbjfcgphgdmggkamkmgojdagdnn: 15
+[3212:17792:0712/021319.646:ERROR:google_apis\gcm\engine\registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[3212:12524:0712/021339.273:ERROR:extensions\browser\service_worker\service_worker_task_queue.cc:481] DidStartWorkerFail epcnnfbjfcgphgdmggkamkmgojdagdnn: 15

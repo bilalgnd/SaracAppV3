@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Saraç App Sipariş Dinleyici",
+  "version": "1.0",
+  "description": "Yemeksepeti ve Trendyol yazdırma ekranından sipariş bilgilerini çekip kasaya iletir.",
+  "permissions": ["activeTab"],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.yemeksepeti.com/*",
+        "*://*.trendyol.com/*",
+        "*://*.tgoyemek.com/*",
+        "file:///*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

@@ -226,5 +226,19 @@ export const webApi = {
   updatePrice: async (_obj: any) => {},
   minimizeWindow: () => {},
   maximizeWindow: () => {},
-  closeWindow: () => {}
+  closeWindow: () => {},
+  
+  onProcessPdf: (callback: (data: any) => void) => {
+    if (!listeners['process-pdf']) listeners['process-pdf'] = [];
+    listeners['process-pdf'].push(callback);
+    return callback;
+  },
+  offProcessPdf: (subscription: any) => {
+    if (listeners['process-pdf']) {
+      listeners['process-pdf'] = listeners['process-pdf'].filter(cb => cb !== subscription);
+    }
+  },
+  logSystemEvent: (message: string, type?: string) => {
+    console.log(`[SystemEvent] [${type || 'info'}] ${message}`);
+  }
 };

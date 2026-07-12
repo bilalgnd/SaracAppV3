@@ -40,17 +40,26 @@ export interface SystemLog {
   message: string;
 }
 export const systemLogs: SystemLog[] = [];
+export const terminalClients: any[] = [];
 
 export function addSystemLog(source: string, type: 'success' | 'error' | 'warning' | 'info', message: string) {
-  systemLogs.unshift({
+  const log: SystemLog = {
     time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     source,
     type,
     message
-  });
+  };
+  systemLogs.unshift(log);
   if (systemLogs.length > 100) systemLogs.pop();
+  
+  // Broadcast to terminal clients
+  const payload = JSON.stringify({ type: 'system_log', data: log });
+  terminalClients.forEach(ws => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(payload);
+    }
+  });
 }
-
 
 let fcmTokens: string[] = []
 try {
@@ -432,6 +441,16 @@ app.get('/api/logs', (_req, res) => {
   res.json(systemLogs)
 })
 
+app.post('/api/logs', express.json(), (req, res) => {
+  const { source, type, message } = req.body;
+  if (source && type && message) {
+    addSystemLog(source, type, message);
+    res.json({ success: true });
+  } else {
+    res.status(400).json({ success: false, error: 'Missing fields' });
+  }
+})
+
 const webDir = join(__dirname, '../public')
 
 app.use('/static', express.static(join(webDir, 'static')))
@@ -500,28 +519,35 @@ export function broadcastUpdateToPhones(shop?: any) {
   })
 }
 
-export function getConnectedPhones(): string[] {
-  const counts: Record<string, number> = {}
+export function getConnectedPhones(): any[] {
+  const devicesMap = new Map<string, any>()
+  
   getShop().connectedPhones.forEach(ws => {
     if (ws.readyState === WebSocket.OPEN) {
       const username = (ws as any).username
-      let id = ''
-      if (username) {
-        id = username
-      } else {
-        const deviceId = (ws as any).deviceId
-        if (deviceId) {
-          id = deviceId
-        } else {
-          const ip = (ws as any)._socket?.remoteAddress || 'Bilinmeyen IP'
-          id = ip.replace('::ffff:', '')
-        }
+      const deviceId = (ws as any).deviceId
+      const isTv = (ws as any).isTv
+      const ip = (ws as any)._socket?.remoteAddress?.replace('::ffff:', '') || 'Bilinmeyen IP'
+      const connectedAt = (ws as any).connectedAt || Date.now()
+
+      let type = 'Bilinmeyen Cihaz'
+      if (isTv) type = 'TV Ekranı'
+      else if (deviceId && deviceId.startsWith('PC-')) type = 'Masaüstü (Kasa)'
+      else if (deviceId && deviceId.startsWith('MOB-')) type = 'Garson Uygulaması'
+      else if (username) type = 'Garson Uygulaması'
+      else type = 'Harici Bağlantı'
+
+      let id = deviceId || username || ip
+
+      // Deduplicate by ID, keeping the most recent connection
+      const existing = devicesMap.get(id)
+      if (!existing || connectedAt > existing.connectedAt) {
+        devicesMap.set(id, { id, type, ip, connectedAt })
       }
-      counts[id] = (counts[id] || 0) + 1
     }
   })
   
-  return Object.entries(counts).map(([id, count]) => count > 1 ? `${id} (${count} aktif bağlantı)` : id)
+  return Array.from(devicesMap.values()).sort((a, b) => b.connectedAt - a.connectedAt)
 }
 
 export function broadcastMessageToPhones(messageObj: any, shop?: any) {
@@ -543,10 +569,23 @@ wss.on('connection', (ws, req) => {
   const token = urlParams.get('token')
   const explicitShopId = urlParams.get('shopId')
   const isTv = urlParams.get('tv') === 'true'
+  const isTerminal = urlParams.get('isTerminal') === 'true'
   
   let shopId: string | null = null;
   let jwtDecoded: any = null;
   const deviceId = urlParams.get('deviceId');
+
+  // If it's a terminal client, bypass shop logic
+  if (isTerminal) {
+    terminalClients.push(ws);
+    ws.on('close', () => {
+      const index = terminalClients.indexOf(ws);
+      if (index > -1) terminalClients.splice(index, 1);
+    });
+    // Send initial log history
+    ws.send(JSON.stringify({ type: 'system_log_history', data: systemLogs }));
+    return;
+  }
 
   if (token) {
     if (token.length > 20) {
@@ -575,6 +614,8 @@ wss.on('connection', (ws, req) => {
   }
   
   (ws as any).deviceId = deviceId;
+  (ws as any).isTv = isTv;
+  (ws as any).connectedAt = Date.now();
   
   shopContext.run(shopId, () => {
       if (!isTv) {
@@ -590,7 +631,8 @@ wss.on('connection', (ws, req) => {
 
       console.log('Phone connected')
       getShop().connectedPhones.add(ws)
-      addSystemLog(isTv ? 'TV_EKRAN' : (jwtDecoded ? 'KULLANICI_MOBIL' : 'POS_APP'), 'success', 'Sunucuya başarıyla bağlandı.');
+      const appName = isTv ? 'TV_EKRAN' : (jwtDecoded ? (jwtDecoded.role === 'kasa' ? 'App1' : 'App2') : 'App1');
+      addSystemLog(appName, 'success', 'Sunucuya başarıyla bağlandı.');
       ws.send(JSON.stringify(getShop().activeOrders)) // Send initial state to phone
       notifyUI('request_update')
       
@@ -608,7 +650,7 @@ wss.on('connection', (ws, req) => {
       ws.on('close', () => {
         shopContext.run(shopId, () => {
           console.log('Phone disconnected')
-          addSystemLog(isTv ? 'TV_EKRAN' : (jwtDecoded ? 'KULLANICI_MOBIL' : 'POS_APP'), 'warning', 'Sunucu ba\u011Flant\u0131s\u0131 koptu.');
+          addSystemLog(appName, 'warning', 'WebSocket bağlantısı koptu (Uygulama kapanmış veya ağ gitmiş olabilir).');
           getShop().connectedPhones.delete(ws)
         });
       })
@@ -1319,7 +1361,44 @@ app.post('/siparis', requireAuth, (req: any, res: any): any => {
   }
 })
 
-// Panic route removed
+app.get('/active_devices', requireAuth, (req: any, res: any) => {
+  try {
+    const shopId = req.user?.username || req.user?.shopId;
+    const targetShop = shops.get(shopId) || getShop();
+    const devices: string[] = [];
+    targetShop.connectedPhones.forEach(ws => {
+      const did = (ws as any).deviceId;
+      if (did && !devices.includes(did)) {
+        devices.push(did);
+      }
+    });
+    res.json({ devices });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/panic', requireAuth, (req: any, res: any): any => {
+  try {
+    const { deviceId } = req.body;
+    if (!deviceId) return res.status(400).json({ error: 'deviceId required' });
+    const shopId = req.user?.username || req.user?.shopId;
+    const targetShop = shops.get(shopId) || getShop();
+    
+    let found = false;
+    targetShop.connectedPhones.forEach(ws => {
+      if ((ws as any).deviceId === deviceId && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'server-event', action: 'panic_self_destruct' }));
+        found = true;
+      }
+    });
+    
+    if (!found) return res.status(404).json({ error: 'Device not found or not connected' });
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
 
 app.post('/yazdir', requireAuth, (req: any, res: any): any => {
   try {
@@ -1360,10 +1439,12 @@ app.get('/network_status', (_req, res) => {
       }
     }
   }
+  const { currentBotStatus } = require('./services/botService');
   res.json({
     ip: localIp,
     port: 5000,
-    connectedDevices: getConnectedPhones()
+    connectedDevices: getConnectedPhones(),
+    botStatus: currentBotStatus
   })
 })
 

@@ -34,6 +34,7 @@ interface Api {
     installUpdate: () => Promise<any>
     onUpdaterEvent: (callback: (action: string, data?: any) => void) => any
     offUpdaterEvent: (subscription: any) => void
+    logSystemEvent: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void
 }
 
 interface Window {

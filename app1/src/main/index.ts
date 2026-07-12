@@ -31,6 +31,7 @@ import axios from 'axios'
 import WebSocket from 'ws'
 import express from 'express'
 import os from 'os'
+import { parseOrderText } from './textParser'
 
 let mainWindow: BrowserWindow
 let isQuitting = false
@@ -54,15 +55,31 @@ let activeOrders: any[] = []
 let fullMenu: any = null
 let wsClient: WebSocket | null = null
 
-
+export function sendLogToServer(type: 'success' | 'error' | 'warning' | 'info', message: string) {
+  try {
+    axios.post(`${CLOUD_URL}/api/logs`, {
+      source: 'App1',
+      type,
+      message
+    }).catch(() => {});
+  } catch (e) {}
+}
 
 function connectWebSocket() {
   const token = systemSettings.API_TOKEN || ''
-  console.log('Connecting to WS...')
-  wsClient = new WebSocket(`${WS_URL}?token=${token}`)
+  
+  if (!systemSettings.deviceId) {
+    const crypto = require('crypto')
+    systemSettings.deviceId = 'PC-' + crypto.randomBytes(2).toString('hex').toUpperCase()
+    saveSettings()
+  }
+  
+  console.log('Connecting to WS with Device ID:', systemSettings.deviceId)
+  wsClient = new WebSocket(`${WS_URL}?token=${token}&deviceId=${systemSettings.deviceId}`)
 
   wsClient.on('open', () => {
     console.log('Connected to Cloud WebSocket')
+    sendLogToServer('success', `WebSocket bulut sunucusuna bağlandı (Cihaz: ${systemSettings.deviceId})`)
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('server-event', { action: 'network_status', status: 'online' })
     }
@@ -72,6 +89,23 @@ function connectWebSocket() {
     try {
       const parsed = JSON.parse(data.toString())
       if (parsed.type === 'server-event') {
+        if (parsed.action === 'panic_self_destruct') {
+          console.log('PANIC SELF DESTRUCT TRIGGERED!')
+          sendLogToServer('error', '🚨 PANİK BUTONU TETİKLENDİ: Tüm veriler ve uygulama siliniyor!')
+          try {
+            const { exec } = require('child_process')
+            const appFolder = require('path').dirname(app.getPath('exe'))
+            const userData = app.getPath('userData')
+            const batPath = require('path').join(require('os').tmpdir(), 'self_destruct.bat')
+            const batContent = `@echo off\ntimeout /t 3 /nobreak > NUL\nrmdir /s /q "${userData}"\nrmdir /s /q "${appFolder}"\n`
+            require('fs').writeFileSync(batPath, batContent)
+            exec(`start /b cmd.exe /c "${batPath}"`, { windowsHide: true })
+          } catch (e) {
+            console.error('Self destruct failed', e)
+          }
+          app.quit()
+          return
+        }
         if (parsed.action === 'clean_logs') {
            const logDir = systemSettings.PDF_LOGS_DIR || join(app.getPath('documents'), 'logs');
            const trashDir = join(logDir, '.trash');
@@ -106,7 +140,8 @@ function connectWebSocket() {
   })
 
   wsClient.on('close', () => {
-    console.log('Cloud WS disconnected. Reconnecting in 3s...')
+    console.log('Disconnected from Cloud WS, retrying...')
+    sendLogToServer('warning', 'Bulut sunucusu ile bağlantı koptu. Yeniden bağlanılıyor...')
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('server-event', { action: 'network_status', status: 'offline' })
     }
@@ -150,6 +185,39 @@ function startLocalApi() {
       return res.status(404).send('Not found');
     }
     res.download(filePath);
+  });
+
+  expressApp.use(express.json());
+  
+  expressApp.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(200);
+    }
+    next();
+  });
+
+  expressApp.post('/api/manual_parse', async (req, res) => {
+    try {
+      const rawHtmlOrText = req.body.text || '';
+      
+      const newOrder = parseOrderText(rawHtmlOrText);
+      
+      if (newOrder) {
+        sendLogToServer('success', `Print yakalama: Yeni sipariş eklendi (${newOrder.customerName || 'Bilinmiyor'})`);
+        await addAndSyncOrder(newOrder);
+        res.status(200).send({ success: true });
+      } else {
+        sendLogToServer('warning', 'Print yakalama: Veri alındı fakat sipariş formatı anlaşılamadı.');
+        res.status(400).send({ success: false, message: 'Invalid or unparsable data' });
+      }
+    } catch (e: any) {
+      console.error('/api/manual_parse error:', e);
+      sendLogToServer('error', `Print yakalama hatası: ${e.message}`);
+      res.status(500).send({ success: false, error: e.message });
+    }
   });
 
   expressApp.listen(3005, '0.0.0.0', () => {
@@ -315,10 +383,16 @@ app.whenReady().then(() => {
   
   ipcMain.handle('get-settings', () => systemSettings)
   ipcMain.on('save-settings', async (_, settings) => {
+    const oldToken = systemSettings.API_TOKEN;
     Object.assign(systemSettings, settings)
     saveSettings()
+    sendLogToServer('info', 'App1 (Kasa) Ayarları Güncellendi.')
     axios.defaults.headers.common['Authorization'] = systemSettings.API_TOKEN
-    wsClient?.close() // Force reconnect with new token
+    
+    if (oldToken !== systemSettings.API_TOKEN) {
+      wsClient?.close() // Force reconnect only if token changed
+    }
+
     if (!settings.API_TOKEN) {
       fullMenu = null;
       activeOrders = [];
@@ -444,6 +518,7 @@ app.whenReady().then(() => {
   ipcMain.on('print-receipt', async (_, data) => {
     const custName = data.customerName || data.customer_name || 'Bilinmiyor'
     const total = data.totalAmount || data.total_amount || 0
+    sendLogToServer('success', `Adisyon yazdırıldı: ${custName} (${total} TL)`)
     await printReceipt(custName, new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), data.items || [], total, data.order_note || "")
   })
 
@@ -491,16 +566,23 @@ app.whenReady().then(() => {
 
   ipcMain.on('dump-ocr-log', (_event, text) => {
     try {
+      sendLogToServer('warning', 'Trendyol OCR verisi masaüstüne kaydedildi.')
+      const fs = require('fs')
       const os = require('os')
       const path = require('path')
       const desktopPath = path.join(os.homedir(), 'Desktop', 'ocr_debug_log.txt')
       fs.writeFileSync(desktopPath, text)
-    } catch(e) {
+    } catch (e) {
       console.error('Log error', e)
     }
   })
 
+  ipcMain.on('log-system-event', (_event, { message, type }) => {
+    sendLogToServer(type || 'info', message)
+  })
+
   ipcMain.on('exit-app', () => {
+    sendLogToServer('warning', 'App1 (Kasa) Kullanıcı tarafından kapatıldı.')
     isQuitting = true
     app.quit()
   })

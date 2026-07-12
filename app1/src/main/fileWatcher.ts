@@ -3,6 +3,7 @@ import path from 'path';
 import { BrowserWindow, app } from 'electron';
 import { systemSettings } from './models';
 import { processPdfOrder } from './aiOcrService';
+import { sendLogToServer } from './index';
 
 let watcher: fs.FSWatcher | null = null;
 let isWatching = false;
@@ -62,12 +63,23 @@ async function processFile(filePath: string, ext: string, mainWindow?: BrowserWi
             
             if (success) {
                 console.log(`[FileWatcher] Basarili: Siparis sisteme eklendi.`);
+                sendLogToServer('success', `Dosya dinleme: Yeni sipariş algılandı`);
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     // Kullanıcıya bilgi vermek için basit bir IPC gönderebiliriz
                     mainWindow.webContents.send('ocr-success', { message: 'Sipariş başarıyla ayrıştırıldı ve kaydedildi.' });
                 }
             } else {
-                console.error(`[FileWatcher] Basarisiz: Siparis ayristirilamadi.`);
+                console.error(`[FileWatcher] AI OCR Basarisiz, yerel Tesseract OCR'a dusuluyor...`);
+                sendLogToServer('warning', `Dosya dinleme: OCR başarısız, manuel işleme bekleniyor.`);
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    try {
+                        const fileBuffer = fs.readFileSync(filePath);
+                        const base64Data = fileBuffer.toString('base64');
+                        mainWindow.webContents.send('process-pdf', { filePath, data: base64Data });
+                    } catch (e) {
+                        console.error('[FileWatcher] Tesseract fallback sirasinda dosya okuma hatasi:', e);
+                    }
+                }
             }
         }
     } catch (error) {

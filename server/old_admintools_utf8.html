@@ -1,0 +1,453 @@
+﻿<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SARAÇ DÖNER - Sistem Kontrol Merkezi</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            dark: '#121212',
+            panel: '#1e1e1e',
+            primary: '#ef4444',
+            primaryDark: '#dc2626'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #121212; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+    .glass-panel {
+      background: rgba(30, 30, 30, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .swal2-popup {
+      background: #1e1e1e !important;
+      color: #fff !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 1rem !important;
+    }
+    .swal2-title, .swal2-html-container { color: #fff !important; }
+    .swal2-input, .swal2-select { 
+      background: rgba(0,0,0,0.5) !important; 
+      color: white !important; 
+      border: 1px solid rgba(255,255,255,0.2) !important; 
+    }
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus, 
+    input:-webkit-autofill:active{
+        -webkit-box-shadow: 0 0 0 30px #1e1e1e inset !important;
+        -webkit-text-fill-color: white !important;
+        transition: background-color 5000s ease-in-out 0s;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <!-- Login Screen -->
+  <div id="loginScreen" class="glass-panel p-8 rounded-2xl shadow-2xl w-full max-w-md text-center transform transition-all duration-500">
+    <div class="mb-6">
+      <div class="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-shield-halved text-primary text-3xl"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-white">Yönetici Girişi</h2>
+      <p class="text-gray-400 text-sm mt-2">Sisteme erişmek için master parolayı girin.</p>
+    </div>
+    
+    <input type="password" id="passwordInput" placeholder="Admin Şifresi" class="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors mb-4 text-center tracking-widest text-lg" onkeypress="if(event.key === 'Enter') login()" />
+    
+    <button onclick="login()" class="w-full bg-primary hover:bg-primaryDark text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-lg shadow-primary/30">
+      Giriş Yap
+    </button>
+    <div id="loginError" class="text-red-400 mt-3 text-sm hidden">Hatalı şifre!</div>
+  </div>
+
+  <!-- Dashboard Screen -->
+  <div id="dashboardScreen" class="hidden w-full max-w-6xl h-[90vh] flex flex-col">
+    <!-- Header -->
+    <div class="glass-panel rounded-2xl p-6 mb-6 flex flex-col md:flex-row justify-between items-center shadow-lg gap-4">
+      <div class="flex items-center gap-4 w-full md:w-auto justify-center md:justify-start">
+        <div class="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-users-gear text-primary text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold">Sistem Kontrol Merkezi</h1>
+          <p class="text-gray-400 text-sm">Hesapları, oturumları ve aktiviteleri yönetin</p>
+        </div>
+      </div>
+      
+      <div class="flex flex-col md:flex-row items-center gap-4 md:gap-6 w-full md:w-auto">
+        <div class="flex flex-wrap md:flex-nowrap items-center gap-3 bg-black/40 p-2 rounded-xl border border-gray-800 shadow-inner justify-center w-full md:w-auto">
+          <input type="text" id="newUsername" placeholder="Kullanıcı Adı" class="bg-gray-800/60 border border-gray-700 rounded-lg text-white text-sm px-3 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary flex-1 md:w-28 placeholder-gray-500 transition-colors min-w-[100px]">
+          <input type="password" id="newPassword" placeholder="Şifre" class="bg-gray-800/60 border border-gray-700 rounded-lg text-white text-sm px-3 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary flex-1 md:w-28 placeholder-gray-500 transition-colors min-w-[100px]">
+          <select id="newRole" class="bg-gray-800/60 border border-gray-700 rounded-lg text-white text-sm px-3 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors cursor-pointer">
+            <option value="kasa" class="bg-gray-800">Kasa</option>
+            <option value="garson" class="bg-gray-800">Garson</option>
+            <option value="admin" class="bg-gray-800">Admin</option>
+          </select>
+          <button onclick="createUser()" class="bg-primary hover:bg-primaryDark text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap shadow-md shadow-primary/20 w-full md:w-auto"><i class="fa-solid fa-plus mr-1"></i> Aç</button>
+        </div>
+        
+        <button onclick="logout()" class="text-gray-400 hover:text-white transition-colors p-2" title="Çıkış Yap">
+          <i class="fa-solid fa-arrow-right-from-bracket text-xl"></i> Çıkış
+        </button>
+      </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="glass-panel rounded-2xl flex-1 overflow-hidden flex flex-col shadow-lg">
+      <div class="overflow-x-auto flex-1 p-6">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="text-gray-400 border-b border-gray-800 text-sm uppercase tracking-wider">
+              <th class="pb-4 font-medium px-4">Kullanıcı Adı</th>
+              <th class="pb-4 font-medium px-4">Rol</th>
+              <th class="pb-4 font-medium px-4">Durum</th>
+              <th class="pb-4 font-medium px-4">Son Görülme</th>
+              <th class="pb-4 font-medium px-4 text-right">İşlemler</th>
+            </tr>
+          </thead>
+          <tbody id="usersList" class="text-gray-200">
+            <!-- Filled by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let adminToken = localStorage.getItem('adminToken') || '';
+
+    // Init
+    if (adminToken) {
+      showDashboard();
+    }
+
+    async function login() {
+      const pwd = document.getElementById('passwordInput').value;
+      try {
+        const res = await fetch('/api/admin/users', { headers: { 'Authorization': pwd } });
+        if (res.ok) {
+          adminToken = pwd;
+          localStorage.setItem('adminToken', pwd);
+          document.getElementById('loginError').classList.add('hidden');
+          showDashboard();
+        } else {
+          document.getElementById('loginError').classList.remove('hidden');
+          document.getElementById('passwordInput').value = '';
+        }
+      } catch (e) {
+        document.getElementById('loginError').classList.remove('hidden');
+      }
+    }
+
+    function logout() {
+      adminToken = '';
+      localStorage.removeItem('adminToken');
+      document.getElementById('dashboardScreen').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('passwordInput').value = '';
+    }
+
+    function showDashboard() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('dashboardScreen').classList.remove('hidden');
+      fetchUsers();
+    }
+
+    function timeAgo(dateString) {
+      if (!dateString) return 'Hiç girmedi';
+      const date = new Date(dateString);
+      const seconds = Math.floor((new Date() - date) / 1000);
+      let interval = seconds / 31536000;
+      if (interval > 1) return Math.floor(interval) + " yıl önce";
+      interval = seconds / 2592000;
+      if (interval > 1) return Math.floor(interval) + " ay önce";
+      interval = seconds / 86400;
+      if (interval > 1) return Math.floor(interval) + " gün önce";
+      interval = seconds / 3600;
+      if (interval > 1) return Math.floor(interval) + " saat önce";
+      interval = seconds / 60;
+      if (interval > 1) return Math.floor(interval) + " dk önce";
+      if (Math.floor(seconds) < 30) return "Şu an Aktif";
+      return Math.floor(seconds) + " saniye önce";
+    }
+
+    async function fetchUsers() {
+      try {
+        const res = await fetch('/api/admin/users', {
+          headers: { 'Authorization': adminToken }
+        });
+        if (res.status === 401) { logout(); return; }
+        
+        const data = await res.json();
+        const tbody = document.getElementById('usersList');
+        tbody.innerHTML = '';
+        
+        if(data.users.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500">Kayıtlı kullanıcı bulunamadı.</td></tr>`;
+          return;
+        }
+
+        data.users.forEach(u => {
+          let roleBadge = `<span class="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-[10px] font-bold border border-blue-500/30 uppercase">${u.role}</span>`;
+          if(u.role === 'admin') roleBadge = `<span class="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-[10px] font-bold border border-red-500/30 uppercase">ADMİN</span>`;
+          if(u.role === 'kasa') roleBadge = `<span class="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-[10px] font-bold border border-green-500/30 uppercase">KASA</span>`;
+
+          const isSuspended = u.status === 'suspended';
+          const statusBadge = isSuspended 
+            ? `<span class="text-orange-400 text-xs font-semibold"><i class="fa-solid fa-ban mr-1"></i> Donduruldu</span>`
+            : `<span class="text-green-400 text-xs font-semibold"><i class="fa-solid fa-circle-check mr-1"></i> Aktif</span>`;
+          
+          const timeText = timeAgo(u.lastSeen);
+          const isOnline = timeText === "Şu an Aktif";
+
+          tbody.innerHTML += `
+            <tr class="border-b border-gray-800/50 hover:bg-white/5 transition-colors group ${isSuspended ? 'opacity-50' : ''}">
+              <td class="py-3 px-4 font-medium text-white flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gray-800 border ${isOnline ? 'border-green-500' : 'border-gray-700'} flex items-center justify-center text-sm text-gray-400 relative">
+                  <i class="fa-solid fa-user"></i>
+                  ${isOnline ? '<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>' : ''}
+                </div>
+                <div>
+                  <div class="text-base">${u.username}</div>
+                  <div class="text-[10px] text-gray-500 font-mono">${u.account_id || '-'}</div>
+                </div>
+              </td>
+              <td class="py-3 px-4">${roleBadge}</td>
+              <td class="py-3 px-4">${statusBadge}</td>
+              <td class="py-3 px-4 text-gray-400 text-xs">
+                ${timeText}
+                <div class="text-[10px] text-gray-600">${u.lastSeen ? new Date(u.lastSeen).toLocaleString('tr-TR') : ''}</div>
+              </td>
+              <td class="py-3 px-4 text-right">
+                <div class="flex items-center justify-end gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                  <button onclick="editUser('${u.username}', '${u.role}')" class="bg-gray-800 hover:bg-blue-600 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors" title="Düzenle (Şifre/Rol)">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <button onclick="viewLogs('${u.username}')" class="bg-gray-800 hover:bg-purple-600 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors" title="Aktivite Logları">
+                    <i class="fa-solid fa-list-ul"></i>
+                  </button>
+                  <button onclick="toggleSuspend('${u.username}', '${isSuspended ? 'active' : 'suspended'}')" class="bg-gray-800 hover:bg-orange-600 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors" title="${isSuspended ? 'Kilidi Aç' : 'Hesabı Dondur'}">
+                    <i class="fa-solid ${isSuspended ? 'fa-unlock' : 'fa-lock'}"></i>
+                  </button>
+                  <button onclick="kickUser('${u.username}')" class="bg-gray-800 hover:bg-yellow-600 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors" title="Tüm Cihazlardan At (Kick)">
+                    <i class="fa-solid fa-bolt"></i>
+                  </button>
+                  <button onclick="deleteUser('${u._id}', '${u.username}')" class="bg-gray-800 hover:bg-red-600 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors" title="Tamamen Sil">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function createUser() {
+      const username = document.getElementById('newUsername').value;
+      const password = document.getElementById('newPassword').value;
+      const role = document.getElementById('newRole').value;
+      
+      if(!username || !password) return Swal.fire('Hata', 'Kullanıcı adı ve şifre zorunlu!', 'error');
+      if(password.length < 8) return Swal.fire('Hata', 'Şifre en az 8 karakter olmalıdır.', 'error');
+      
+      try {
+        const res = await fetch('/api/admin/create_user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': adminToken },
+          body: JSON.stringify({ username, password, role })
+        });
+        const data = await res.json();
+        if(res.ok && data.success) {
+          Swal.fire({ title: 'Başarılı', text: 'Kullanıcı açıldı.', icon: 'success', timer: 1500, showConfirmButton: false });
+          document.getElementById('newUsername').value = '';
+          document.getElementById('newPassword').value = '';
+          fetchUsers();
+        } else {
+          Swal.fire('Hata', data.error || 'Bilinmeyen hata', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function editUser(username, currentRole) {
+      if(username === 'bilalgnd') return Swal.fire('Hata', 'Ana yönetici hesabı düzenlenemez.', 'error');
+
+      const { value: formValues } = await Swal.fire({
+        title: `${username} Düzenle`,
+        html: `
+          <div class="text-left mb-2 text-sm text-gray-400">Yeni Şifre (Değiştirmek istemiyorsanız boş bırakın)</div>
+          <input id="swal-pwd" type="text" class="swal2-input w-full mx-0 mb-4" placeholder="Yeni şifre">
+          <div class="text-left mb-2 text-sm text-gray-400">Rol</div>
+          <select id="swal-role" class="swal2-select w-full mx-0">
+            <option value="kasa" ${currentRole==='kasa'?'selected':''}>Kasa</option>
+            <option value="garson" ${currentRole==='garson'?'selected':''}>Garson</option>
+            <option value="admin" ${currentRole==='admin'?'selected':''}>Admin</option>
+          </select>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Kaydet',
+        cancelButtonText: 'İptal',
+        preConfirm: () => {
+          return {
+            password: document.getElementById('swal-pwd').value,
+            role: document.getElementById('swal-role').value
+          }
+        }
+      });
+
+      if (formValues) {
+        try {
+          const res = await fetch('/api/admin/update_user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': adminToken },
+            body: JSON.stringify({ targetUsername: username, newPassword: formValues.password, newRole: formValues.role })
+          });
+          const data = await res.json();
+          if(res.ok && data.success) {
+            Swal.fire({ title: 'Güncellendi', icon: 'success', timer: 1000, showConfirmButton: false });
+            fetchUsers();
+          } else {
+            Swal.fire('Hata', data.error || 'Güncellenemedi', 'error');
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    }
+
+    async function toggleSuspend(username, newStatus) {
+      if(username === 'bilalgnd') return Swal.fire('Hata', 'Ana yönetici hesabı dondurulamaz.', 'error');
+      
+      const actionText = newStatus === 'suspended' ? 'Dondurmak' : 'Kilidi kaldırmak';
+      const confirmResult = await Swal.fire({
+        title: 'Emin misiniz?',
+        text: `${username} adlı kullanıcının hesabını ${actionText} istediğinize emin misiniz?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: newStatus === 'suspended' ? '#f97316' : '#22c55e',
+        confirmButtonText: `Evet, ${actionText}`
+      });
+
+      if(confirmResult.isConfirmed) {
+        try {
+          const res = await fetch('/api/admin/update_user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': adminToken },
+            body: JSON.stringify({ targetUsername: username, newStatus })
+          });
+          if(res.ok) fetchUsers();
+        } catch (e) { console.error(e) }
+      }
+    }
+
+    async function kickUser(username) {
+      const confirmResult = await Swal.fire({
+        title: 'Zorla Çıkış (Kick)',
+        text: `${username} adlı kullanıcının açık olan tüm cihazlardaki oturumları kapatılacak. Onaylıyor musunuz?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#eab308',
+        confirmButtonText: 'Evet, Kickle'
+      });
+
+      if(confirmResult.isConfirmed) {
+        try {
+          const res = await fetch('/api/admin/kick_user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': adminToken },
+            body: JSON.stringify({ targetUsername: username })
+          });
+          const data = await res.json();
+          if(res.ok) {
+            Swal.fire('Başarılı', `${username} adlı kullanıcı ${data.kickedCount} cihazdan atıldı.`, 'success');
+            fetchUsers();
+          }
+        } catch (e) { console.error(e) }
+      }
+    }
+
+    async function viewLogs(username) {
+      try {
+        const res = await fetch('/api/admin/user_logs/' + username, {
+          headers: { 'Authorization': adminToken }
+        });
+        const logs = await res.json();
+        
+        let html = '';
+        if(logs.length === 0) {
+          html = '<div class="text-gray-500 py-4">Bu kullanıcıya ait aktivite bulunamadı.</div>';
+        } else {
+          html = '<div class="text-left text-sm max-h-[60vh] overflow-y-auto pr-2">';
+          logs.forEach(l => {
+            const date = new Date(l.createdAt).toLocaleString('tr-TR');
+            let color = 'text-blue-400';
+            if(l.action.includes('delete') || l.action.includes('cancel')) color = 'text-red-400';
+            if(l.action.includes('close_bill')) color = 'text-green-400';
+            
+            html += `
+              <div class="border-b border-gray-800 py-3">
+                <div class="flex justify-between items-start mb-1">
+                  <span class="font-bold ${color} uppercase text-xs">${l.action.replace('_', ' ')}</span>
+                  <span class="text-xs text-gray-500">${date}</span>
+                </div>
+                <div class="text-gray-300 text-xs">${l.details || '-'}</div>
+              </div>
+            `;
+          });
+          html += '</div>';
+        }
+
+        Swal.fire({
+          title: `${username} Aktivite Geçmişi`,
+          html: html,
+          width: 600,
+          showConfirmButton: true,
+          confirmButtonText: 'Kapat'
+        });
+      } catch (e) { console.error(e) }
+    }
+
+    async function deleteUser(id, username) {
+      if(username === 'bilalgnd') return Swal.fire('Hata', 'Ana yönetici hesabı silinemez.', 'error');
+      
+      const confirmResult = await Swal.fire({
+        title: 'Tamamen Sil?',
+        text: `"${username}" adlı kullanıcıyı silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`,
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Evet, Sil'
+      });
+
+      if(confirmResult.isConfirmed) {
+        try {
+          const res = await fetch('/api/admin/delete_user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': adminToken },
+            body: JSON.stringify({ id })
+          });
+          if(res.ok) fetchUsers();
+        } catch (err) { console.error(err); }
+      }
+    }
+  </script>
+</body>
+</html>

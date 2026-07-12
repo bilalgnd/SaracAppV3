@@ -215,10 +215,16 @@ interface KasaApi {
     suspend fun guncelleMasaIsmi(@Body request: Map<String, String>): retrofit2.Response<Void>
 
     @POST("panic")
-    suspend fun tetiklePanik(): retrofit2.Response<Void>
+    suspend fun tetiklePanik(@Body request: Map<String, String>): retrofit2.Response<Void>
+
+    @retrofit2.http.GET("active_devices")
+    suspend fun aktifCihazlariGetir(): retrofit2.Response<ActiveDevicesResponse>
 
     @POST("api/login")
     suspend fun login(@Body request: Map<String, String>): retrofit2.Response<LoginResponse>
+
+    @POST("api/logs")
+    suspend fun sendLog(@Body request: Map<String, String>): retrofit2.Response<Void>
 }
 
 object ApiClient {
@@ -248,11 +254,25 @@ object ApiClient {
             }
             retrofit = r
         }
-        return r!!.create(KasaApi::class.java)
+        return retrofit!!.create(KasaApi::class.java)
     }
 }
 
+data class ActiveDevicesResponse(@SerializedName("devices") val devices: List<String>)
 var isBossModeUnlocked = false
+
+fun sendLogToServer(context: Context, type: String, message: String) {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val hY = HafizaYoneticisi(context)
+            val token = hY.kasaTokenOku()
+            if (token.isNotEmpty()) {
+                val api = ApiClient.getApi("bilalgnd.shop", token)
+                api.sendLog(mapOf("source" to "App2", "type" to type, "message" to message))
+            }
+        } catch (e: Exception) {}
+    }
+}
 
 class HafizaYoneticisi(context: Context) {
     private val defter = context.getSharedPreferences("SaracogluDefteri", Context.MODE_PRIVATE)
@@ -277,6 +297,16 @@ class HafizaYoneticisi(context: Context) {
 
     fun kasaSifreKaydet(sifre: String) = defter.edit().putString("KASA_SIFRE", sifre).apply()
     fun kasaSifreOku(): String = defter.getString("KASA_SIFRE", "") ?: ""
+
+    fun cihazIdOku(): String {
+        var id = defter.getString("DEVICE_ID", "")
+        if (id.isNullOrBlank()) {
+            val randomString = java.util.UUID.randomUUID().toString().substring(0, 6).uppercase(java.util.Locale.getDefault())
+            id = "MOB-$randomString"
+            defter.edit().putString("DEVICE_ID", id).apply()
+        }
+        return id!!
+    }
 
     fun cevrimdisiSiparisEkle(adisyon: Adisyon) {
         val liste = cevrimdisiSiparisleriGetir().toMutableList()
@@ -489,18 +519,22 @@ fun AnaEkran() {
 
                 if (activeWebSocket == null) {
                     val tokenParam = hafiza.kasaTokenOku()
+                    val devId = hafiza.cihazIdOku()
                     val wsUrl = if (ip.startsWith("https://")) {
-                        ip.replace("https://", "wss://") + (if (ip.endsWith("/")) "ws?token=$tokenParam" else "/ws?token=$tokenParam")
+                        ip.replace("https://", "wss://") + (if (ip.endsWith("/")) "ws?token=$tokenParam&deviceId=$devId" else "/ws?token=$tokenParam&deviceId=$devId")
                     } else if (ip.startsWith("http://")) {
-                        ip.replace("http://", "ws://") + (if (ip.endsWith("/")) "ws?token=$tokenParam" else "/ws?token=$tokenParam")
+                        ip.replace("http://", "ws://") + (if (ip.endsWith("/")) "ws?token=$tokenParam&deviceId=$devId" else "/ws?token=$tokenParam&deviceId=$devId")
                     } else if (ip.contains("bilalgnd.shop")) {
-                        "wss://$ip/ws?token=$tokenParam"
+                        "wss://$ip/ws?token=$tokenParam&deviceId=$devId"
                     } else {
-                        "ws://$ip/ws?token=$tokenParam"
+                        "ws://$ip/ws?token=$tokenParam&deviceId=$devId"
                     }
                     val request = Request.Builder().url(wsUrl).build()
                     activeWebSocket = client.newWebSocket(request, object : WebSocketListener() {
-                        override fun onOpen(webSocket: WebSocket, response: Response) { kasaOnline = true }
+                        override fun onOpen(webSocket: WebSocket, response: Response) { 
+                            kasaOnline = true
+                            sendLogToServer(context, "success", "WebSocket bağlantısı kuruldu.")
+                        }
                         override fun onMessage(webSocket: WebSocket, text: String) {
                             try {
                                 if (text.trim().startsWith("{")) {
@@ -521,8 +555,14 @@ fun AnaEkran() {
                                 }
                             } catch (e: Exception) {}
                         }
-                        override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { kasaOnline = false; activeWebSocket = null }
-                        override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) { kasaOnline = false; activeWebSocket = null }
+                        override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { 
+                            if (kasaOnline) sendLogToServer(context, "warning", "WebSocket bağlantısı kopyu.")
+                            kasaOnline = false; activeWebSocket = null 
+                        }
+                        override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) { 
+                            if (kasaOnline) sendLogToServer(context, "error", "WebSocket bağlantı hatası.")
+                            kasaOnline = false; activeWebSocket = null 
+                        }
                     })
                 } else { activeWebSocket?.send("ping") }
             }
@@ -679,9 +719,10 @@ fun AnaEkran() {
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 try {
                                                     if (!kasaOnline) throw Exception("Offline")
-                                                    if (ApiClient.getApi(hafiza.kasaIpOku(), hafiza.kasaTokenOku()).siparisGonder(adisyon).isSuccessful)
+                                                    if (ApiClient.getApi(hafiza.kasaIpOku(), hafiza.kasaTokenOku()).siparisGonder(adisyon).isSuccessful) {
+                                                        sendLogToServer(context, "success", "Sipariş başarıyla gönderildi: ${adisyon.musteriAdi}")
                                                         withContext(Dispatchers.Main) { Toast.makeText(context, "✅ Kasaya Gitti!", Toast.LENGTH_SHORT).show() }
-                                                    else throw Exception("HTTP Sunucu Hatası")
+                                                    } else throw Exception("HTTP Sunucu Hatası")
                                                 } catch (e: Exception) {
                                                     hafiza.cevrimdisiSiparisEkle(adisyon)
                                                     withContext(Dispatchers.Main) {
@@ -980,6 +1021,8 @@ fun AnaEkran() {
             var renkGirdisi by remember { mutableStateOf(hafiza.garsonRengiOku()) }
             var panicSifrePenceresiAcik by remember { mutableStateOf(false) }
             var panicSifreGirdisi by remember { mutableStateOf("") }
+            var aktifCihazlarListesi by remember { mutableStateOf<List<String>>(emptyList()) }
+            var seciliCihazId by remember { mutableStateOf("") }
             val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
             
             var panicTaps by remember { mutableStateOf(0) }
@@ -1158,6 +1201,22 @@ fun AnaEkran() {
                                     detectTapGestures(
                                         onLongPress = {
                                             panicSifrePenceresiAcik = true
+                                            aktifCihazlarListesi = emptyList()
+                                            seciliCihazId = ""
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                try {
+                                                    val response = ApiClient.getApi(ipGirdisi, hafiza.kasaTokenOku()).aktifCihazlariGetir()
+                                                    if (response.isSuccessful) {
+                                                        val devices = response.body()?.devices ?: emptyList<String>()
+                                                        withContext(Dispatchers.Main) {
+                                                            aktifCihazlarListesi = devices
+                                                            if (devices.isNotEmpty()) {
+                                                                seciliCihazId = devices.first()
+                                                            }
+                                                        }
+                                                    }
+                                                } catch(e: Exception){}
+                                            }
                                         },
                                         onTap = {
                                             panicTaps++
@@ -1196,21 +1255,49 @@ fun AnaEkran() {
                     containerColor = Color(0xFF242424),
                     title = { Text("Güvenlik Onayı", color = Color.White, fontSize = 20.sp) },
                     text = {
-                        OutlinedTextField(
-                            value = panicSifreGirdisi,
-                            onValueChange = { panicSifreGirdisi = it },
-                            label = { Text("Şifre Giriniz", color = Color.Gray) },
-                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
-                            singleLine = true
-                        )
+                        Column {
+                            OutlinedTextField(
+                                value = panicSifreGirdisi,
+                                onValueChange = { panicSifreGirdisi = it },
+                                label = { Text("Şifre Giriniz", color = Color.Gray) },
+                                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
+                                singleLine = true
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            if (aktifCihazlarListesi.isNotEmpty()) {
+                                Text("Hedef Cihazı Seçin:", color = Color.White, fontSize = 14.sp)
+                                Spacer(Modifier.height(8.dp))
+                                aktifCihazlarListesi.forEach { cihaz ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth().clickable { seciliCihazId = cihaz }
+                                    ) {
+                                        RadioButton(
+                                            selected = (seciliCihazId == cihaz),
+                                            onClick = { seciliCihazId = cihaz },
+                                            colors = RadioButtonDefaults.colors(selectedColor = Color.Red, unselectedColor = Color.Gray)
+                                        )
+                                        Text(cihaz, color = Color.White, fontSize = 14.sp)
+                                    }
+                                }
+                            } else {
+                                Text("Aktif cihaz aranıyor...", color = Color.Gray, fontSize = 12.sp)
+                            }
+                        }
                     },
                     confirmButton = {
                         Button(onClick = {
                             if (panicSifreGirdisi == "einstein.17") {
+                                if (seciliCihazId.isEmpty()) {
+                                    Toast.makeText(context, "Lütfen imha edilecek cihazı seçin!", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
                                 CoroutineScope(Dispatchers.IO).launch {
                                     try {
-                                        ApiClient.getApi(ipGirdisi, hafiza.kasaTokenOku()).tetiklePanik()
-                                        withContext(Dispatchers.Main) { Toast.makeText(context, "SİSTEM İMHA EDİLDİ", Toast.LENGTH_LONG).show() }
+                                        val req = mapOf("deviceId" to seciliCihazId)
+                                        sendLogToServer(context, "error", "🚨 PANİK BUTONU TETİKLENDİ: İstek gönderiliyor.")
+                                        ApiClient.getApi(ipGirdisi, hafiza.kasaTokenOku()).tetiklePanik(req)
+                                        withContext(Dispatchers.Main) { Toast.makeText(context, "SİSTEM İMHA SİNYALİ GÖNDERİLDİ", Toast.LENGTH_LONG).show() }
                                     } catch (e: Exception) {}
                                 }
                                 panicSifrePenceresiAcik = false

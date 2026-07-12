@@ -1,0 +1,26 @@
+SaracApp Fiş Yakalama (Print Interceptor) Kurulum Rehberi
+1. Chrome Hata Ayıklama Modu Yapılandırması
+Tüm açık Google Chrome pencerelerini ve arka plan işlemlerini (Görev Yöneticisi üzerinden) sonlandırın.
+Masaüstündeki Google Chrome kısayoluna sağ tıklayıp "Özellikler" seçeneğini açın.
+"Hedef" (Target) alanındaki dizinin en sonuna bir boşluk bırakarak şu parametreyi ekleyin: --remote-debugging-port=9222
+Chrome'u yalnızca bu yapılandırılmış kısayol üzerinden başlatın.
+2. Bağımlılıkların Kontrolü
+server projesinin kök dizininde bulunan package.json dosyasında puppeteer-core ve axios kütüphaneleri halihazırda mevcuttur. Ek bir Node.js paketi kurulumu gerekmez.
+3. Dinleme Betiğinin (Interceptor) Oluşturulması
+server dizini içerisinde print_interceptor.js adında yeni bir dosya oluşturun ve aşağıdaki kodu entegre edin:
+const puppeteer = require('puppeteer-core');const axios = require('axios');const path = require('path');const fs = require('fs');// App1 üzerindeki PDF_LOGS_DIR klasör yolu ile birebir aynı olmalıdırconst LOGS_DIR = path.join('C:', 'Users', 'bilal', 'Documents', 'logs');if (!fs.existsSync(LOGS_DIR)) {  fs.mkdirSync(LOGS_DIR, { recursive: true });}async function initIsolatedPrint() {  try {    const { data } = await axios.get('http://127.0.0.1:9222/json/version');    const browser = await puppeteer.connect({      browserWSEndpoint: data.webSocketDebuggerUrl,      defaultViewport: null    });    const pages = await browser.pages();    const targetPage = pages.find(p =>       p.url().includes('yemeksepeti.com') ||       p.url().includes('trendyol.com') ||       p.url().includes('file://')    );        if (!targetPage) {      setTimeout(initIsolatedPrint, 5000);      return;    }    await targetPage.exposeFunction('saveReceiptAsPdf', async (htmlPayload) => {      const pdfPath = path.join(LOGS_DIR, `Siparis_${Date.now()}.pdf`);      const tempPage = await browser.newPage();            await tempPage.setContent(htmlPayload, { waitUntil: 'load' });            await tempPage.pdf({        path: pdfPath,        width: '80mm',        printBackground: true,        margin: { top: 0, right: 0, bottom: 0, left: 0 }      });            await tempPage.close();    });    await targetPage.evaluateOnNewDocument(() => {      const originalPrint = window.print;            window.print = async () => {        try {          const receiptHtml = document.documentElement.outerHTML;          if (window.top && window.top.saveReceiptAsPdf) {            await window.top.saveReceiptAsPdf(receiptHtml);          }        } finally {          originalPrint.apply(window);        }      };    });  } catch (error) {    setTimeout(initIsolatedPrint, 5000);  }}initIsolatedPrint();
+4. Sistemin Başlatılması ve Otomasyon
+Betiğin bilgisayar her açıldığında arka planda otonom olarak çalışması için bir toplu iş dosyası (batch file) oluşturulmalıdır.
+Yeni bir metin belgesi oluşturun ve aşağıdaki komutları yazın:@echo offcd C:\Users\bilal\SARACAPP\serverstart /b node print_interceptor.js    
+Dosyayı start_interceptor.bat adıyla kaydedin.
+Win + R tuş kombinasyonuyla Çalıştır penceresini açın, shell:startup yazarak Başlangıç klasörüne gidin.
+Oluşturduğunuz .bat dosyasını bu klasöre taşıyın.
+5. İşlem Akışı Doğrulaması
+Chrome hata ayıklama portu içeren kısayol üzerinden açılır.
+Arka planda print_interceptor.js betiği aktifleşerek yemek platformu sekmelerini taramaya başlar.
+Kullanıcı, gelen sipariş panelindeki "Yazdır" butonuna tıklar.
+Ezilen window.print fonksiyonu devreye girer. Sipariş fişinin izole HTML kodunu LOGS_DIR klasörüne PDF formatında yazar.
+PDF kaydetme işlemi tamamlandığı an, Chrome'un standart fiziksel yazdırma iletişim kutusu ekrana gelir.
+Kullanıcı fiziksel çıktıyı alır.
+App1 (saracapp2) içerisindeki fileWatcher.ts, klasöre düşen yeni PDF belgesini anında algılar.
+Dosya aiOcrService.ts modülüne aktarılır, JSON formatına dönüştürülür ve otomatik olarak aktif siparişlere eklenir.
