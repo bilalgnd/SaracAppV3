@@ -80,6 +80,16 @@ export default function SettingsModal() {
     } catch (e) { console.error(e) }
   }
 
+  useEffect(() => {
+    let interval: any
+    if (isOpen && activeTab === 'general') {
+      interval = setInterval(fetchNetworkStatus, 3000)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [isOpen, activeTab])
+
   const fetchPastOrders = async () => {
     try {
       const res = await window.api.getPastOrders()
@@ -410,6 +420,7 @@ export default function SettingsModal() {
           <button className={`settings-tab ${activeTab === 'past_orders' ? 'active' : ''}`} onClick={() => { setActiveTab('past_orders'); fetchPastOrders(); }}>Geçmiş Siparişler</button>
           <button className={`settings-tab ${activeTab === 'printer' ? 'active' : ''}`} onClick={() => { setActiveTab('printer'); loadPrinters(); }}>Yazıcı</button>
           <button className={`settings-tab ${activeTab === 'spotify' ? 'active' : ''}`} onClick={() => setActiveTab('spotify')}>API Keys</button>
+          <button className={`settings-tab ${activeTab === 'trendyol' ? 'active' : ''}`} onClick={() => setActiveTab('trendyol')}>Trendyol (tryol)</button>
           <button className={`settings-tab ${activeTab === 'updates' ? 'active' : ''}`} onClick={() => { setActiveTab('updates'); checkUpdates(); }}>Güncellemeler</button>
         </div>
 
@@ -465,6 +476,18 @@ export default function SettingsModal() {
                     backgroundColor: networkStatus?.botStatus === 'connected' ? '#4caf50' : (networkStatus?.botStatus === 'error' ? '#ff9800' : '#f44336'),
                     boxShadow: `0 0 8px ${networkStatus?.botStatus === 'connected' ? '#4caf50' : (networkStatus?.botStatus === 'error' ? '#ff9800' : '#f44336')}`
                   }} title={networkStatus?.botStatus === 'connected' ? 'Bağlantı Aktif' : (networkStatus?.botStatus === 'error' ? 'Bağlantı Hatası' : 'Bağlantı Yok')}></div>
+                  <span style={{ fontSize: '13px', color: networkStatus?.botStatus === 'connected' ? '#4caf50' : '#ff9800', fontWeight: 'normal', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    {networkStatus?.botMessage || ''}
+                    <button
+                      onClick={fetchNetworkStatus}
+                      style={{
+                        background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', padding: '0 5px', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}
+                      title="Durumu Yenile"
+                    >
+                      ↻
+                    </button>
+                  </span>
                 </div>
                 <p style={{ fontSize: 12, color: 'gray', marginBottom: 15 }}>Siparişlerin kasaya nasıl aktarılacağını seçin. (Her iki seçenek de aynı anda açık olabilir)</p>
                 
@@ -504,6 +527,24 @@ export default function SettingsModal() {
                       style={{ padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', width: '100px' }}
                     >
                       {settings.ENABLE_BOT_PRINT !== false ? 'Açık' : 'Kapalı'}
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold', color: '#fff' }}>Yapay Zeka (AI) Sipariş Okuma Modu</div>
+                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>Platform tasarımı değiştirdiğinde yedek sistem olarak açabilirsiniz. Sipariş fişlerini Gemini AI ile okur. Normalde (Sıfır AI) kapalı kalması önerilir.</div>
+                    </div>
+                    <button 
+                      className={`settings-btn ${settings.ENABLE_AI_PARSING ? 'success' : 'danger'}`}
+                      onClick={() => {
+                        const newVal = settings.ENABLE_AI_PARSING ? false : true;
+                        window.api.logSystemEvent(`Ayarlar: Yapay Zeka Modu -> ${newVal ? 'Açık' : 'Kapalı'}`, newVal ? 'success' : 'warning');
+                        handleSettingChange('ENABLE_AI_PARSING', newVal);
+                        window.api.saveSettings({ ...settings, ENABLE_AI_PARSING: newVal });
+                      }}
+                      style={{ padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', width: '100px' }}
+                    >
+                      {settings.ENABLE_AI_PARSING ? 'Açık' : 'Kapalı'}
                     </button>
                   </div>
                 </div>
@@ -863,6 +904,112 @@ export default function SettingsModal() {
                 <div className="settings-row" style={{ marginTop: 20 }}>
                   <button className="settings-btn primary" onClick={handleSaveSettings}>Değişiklikleri Kaydet</button>
                   <button className="settings-btn success" onClick={triggerSpotifyLogin}>Spotify'ı Yetkilendir (Login)</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'trendyol' && (
+            <div>
+              <div className="settings-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Trendyol (tryol) Entegrasyonu</span>
+              </div>
+              <div className="settings-card">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold', color: '#fff' }}>Trendyol Log Alma Servisi</div>
+                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>Sipariş paketlerini çeker ve loglar.</div>
+                    </div>
+                    <button 
+                      className={`settings-btn ${settings.ENABLE_TRENDYOL ? 'success' : 'danger'}`}
+                      onClick={() => {
+                        const newVal = settings.ENABLE_TRENDYOL ? false : true;
+                        handleSettingChange('ENABLE_TRENDYOL', newVal);
+                        window.api.saveSettings({ ...settings, ENABLE_TRENDYOL: newVal });
+                      }}
+                      style={{ padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', width: '100px' }}
+                    >
+                      {settings.ENABLE_TRENDYOL ? 'Açık' : 'Kapalı'}
+                    </button>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '13px', color: '#aaa' }}>Satıcı ID</label>
+                    <input 
+                      type="text" 
+                      className="settings-input" 
+                      value={settings.TRENDYOL_SUPPLIER_ID || ''}
+                      onChange={(e) => handleSettingChange('TRENDYOL_SUPPLIER_ID', e.target.value)}
+                      placeholder="6647850"
+                    />
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '13px', color: '#aaa' }}>API Key</label>
+                    <input 
+                      type="text" 
+                      className="settings-input" 
+                      value={settings.TRENDYOL_API_KEY || ''}
+                      onChange={(e) => handleSettingChange('TRENDYOL_API_KEY', e.target.value)}
+                      placeholder="bYv2F8LWu5QAHfucbind"
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '13px', color: '#aaa' }}>API Secret</label>
+                    <input 
+                      type="password" 
+                      className="settings-input" 
+                      value={settings.TRENDYOL_API_SECRET || ''}
+                      onChange={(e) => handleSettingChange('TRENDYOL_API_SECRET', e.target.value)}
+                      placeholder="zCFUGzkEL4kjXkdZ9ZRN"
+                    />
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '13px', color: '#aaa' }}>Entg. Ref Code</label>
+                    <input 
+                      type="text" 
+                      className="settings-input" 
+                      value={settings.TRENDYOL_REF_CODE || ''}
+                      onChange={(e) => handleSettingChange('TRENDYOL_REF_CODE', e.target.value)}
+                      placeholder="2dbebaa4-6410-4882-9d78-44722e87db9a"
+                    />
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '13px', color: '#aaa' }}>Token</label>
+                    <input 
+                      type="text" 
+                      className="settings-input" 
+                      value={settings.TRENDYOL_TOKEN || ''}
+                      onChange={(e) => handleSettingChange('TRENDYOL_TOKEN', e.target.value)}
+                      placeholder="Yll2MkY4TFd1NVFBSGZ1Y2JpbmQ6ekNGVUd6a0VMNGtqWGtkWjlaUk4="
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '13px', color: '#aaa' }}>Trendyol API Endpoint</label>
+                    <input 
+                      type="text" 
+                      className="settings-input" 
+                      value={settings.TRENDYOL_API_URL || 'https://api.trendyol.com/integration/oms/core/t/orders?status=Created'}
+                      onChange={(e) => handleSettingChange('TRENDYOL_API_URL', e.target.value)}
+                      placeholder="https://api.trendyol.com/integration/oms/core/t/orders?status=Created"
+                    />
+                  </div>
+
+                  <div style={{ marginTop: 20 }}>
+                    <button className="settings-btn success" onClick={handleSaveSettings}>
+                      Ayarları Kaydet
+                    </button>
+                    <button className="settings-btn" style={{ marginLeft: 10 }} onClick={() => window.api.openTrendyolLogs()}>
+                      Log Klasörünü Aç
+                    </button>
+                  </div>
+
                 </div>
               </div>
             </div>

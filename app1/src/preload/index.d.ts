@@ -11,6 +11,7 @@ declare global {
       getNextQueueNo: () => Promise<number>
       getTvLink: () => Promise<string>
       restartTvTunnel: () => Promise<string>
+      openTrendyolLogs: () => Promise<void>
       saveOrders: (orders: any[]) => void
       saveSettings: (settings: any) => void
       printReceipt: (data: any) => void

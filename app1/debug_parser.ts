@@ -1,5 +1,5 @@
-export function parseOrderText(text: string): any {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+function parseOrderText(text: string): any {
+    const lines = text.split('\\n').map(l => l.trim()).filter(l => l.length > 0);
     
     let customerName = "Bilinmeyen Müşteri";
     let neighborhood = "";
@@ -10,7 +10,7 @@ export function parseOrderText(text: string): any {
     // 1. Müşteri ve Adres Çıkarımı
     // Trendyol
     let sipKoduIdx = lines.findIndex(l => l.includes("Sipariş Kodu:"));
-    let ySipNoIdx = lines.findIndex(l => /^#\d+/.test(l));
+    let ySipNoIdx = lines.findIndex(l => /^#\\d+/.test(l));
     
     let addressStartIndex = -1;
 
@@ -43,7 +43,7 @@ export function parseOrderText(text: string): any {
         }
     }
     
-    const mahMatch = address.match(/([a-zA-ZçÇğĞıİöÖşŞüÜ]+)\s+(Mah|Mh)\./i);
+    const mahMatch = address.match(/([a-zA-ZçÇğĞıİöÖşŞüÜ]+)\\s+(Mah|Mh)\\b/i);
     if (mahMatch) neighborhood = mahMatch[1].trim() + " Mh.";
 
     if (notesStartIndex !== -1) {
@@ -55,29 +55,24 @@ export function parseOrderText(text: string): any {
     if (toplamIdx !== -1) {
         // Tutar bazen aynı satırda, bazen alt satırda
         let totalStr = lines[toplamIdx];
-        if (!/\d/.test(totalStr) && lines.length > toplamIdx + 1) {
+        if (!/\\d/.test(totalStr) && lines.length > toplamIdx + 1) {
              totalStr = lines[toplamIdx + 1];
         }
-        const amountMatch = totalStr.match(/[\d.,]+/);
+        const amountMatch = totalStr.match(/[\\d.,]+/);
         if (amountMatch) {
             let amountStr = amountMatch[0];
             if (amountStr.includes(',') && amountStr.indexOf(',') > amountStr.lastIndexOf('.')) {
-                amountStr = amountStr.replace(/\./g, '').replace(',', '.');
+                amountStr = amountStr.replace(/\\./g, '').replace(',', '.');
             } else if (amountStr.includes('.') && amountStr.indexOf('.') > amountStr.lastIndexOf(',')) {
                 amountStr = amountStr.replace(/,/g, '');
             }
-            amountStr = amountStr.replace(/(\.\d{2})\d+$/, '$1');
+            amountStr = amountStr.replace(/(\\.\\d{2})\\d+$/, '$1');
             totalAmount = parseFloat(amountStr);
         }
     }
 
-    console.log("DEBUG: customerName=", customerName, "totalAmount=", totalAmount, "toplamIdx=", toplamIdx);
-
     if (customerName.length > 35) customerName = customerName.substring(0, 35);
-    if (customerName === "Bilinmeyen Müşteri" && totalAmount === 0) {
-        console.log("DEBUG: returning null");
-        return null;
-    }
+    if (customerName === "Bilinmeyen Müşteri" && totalAmount === 0) return null;
 
     // 3. Ürün Çıkarımı
     let extractedItems: any[] = [];
@@ -91,31 +86,27 @@ export function parseOrderText(text: string): any {
             
             // Yemeksepeti miktar satırı "1 " veya sadece "1" gibi olabilir.
             let qty = 1;
-            let qtyMatch = line.match(/^(\d+)$/);
-            let inlineQtyMatch = line.match(/^(\d+)\s+(.+)$/);
+            let qtyMatch = line.match(/^(\\d+)$/);
             
             let name = "";
             let price = 0;
             let portion = "";
             let notes: string[] = [];
 
-            if (qtyMatch || inlineQtyMatch) {
+            if (qtyMatch) {
                 // Yemeksepeti formatı:
-                if (qtyMatch) {
-                    qty = parseInt(qtyMatch[1]);
-                    i++;
-                    if (i >= itemsBlock.length) break;
-                    
-                    name = itemsBlock[i];
-                    i++;
-                } else if (inlineQtyMatch) {
-                    qty = parseInt(inlineQtyMatch[1]);
-                    name = inlineQtyMatch[2];
-                    i++;
-                }
+                // 1
+                // Tavuk Döner...
+                // ₺
+                // 270,00
+                qty = parseInt(qtyMatch[1]);
+                i++;
+                if (i >= itemsBlock.length) break;
                 
+                name = itemsBlock[i];
+                i++;
                 // 2 satıra taşmış isim olabilir
-                if (i < itemsBlock.length && !itemsBlock[i].includes('₺') && !/\d/.test(itemsBlock[i])) {
+                if (i < itemsBlock.length && !itemsBlock[i].includes('₺') && !/\\d/.test(itemsBlock[i])) {
                     name += " " + itemsBlock[i];
                     i++;
                 }
@@ -127,37 +118,27 @@ export function parseOrderText(text: string): any {
                         price = parseFloat(itemsBlock[i].replace(',', '.'));
                         i++;
                     } else {
-                        let m = itemsBlock[i].match(/[\d.,]+/);
+                        let m = itemsBlock[i].match(/[\\d.,]+/);
                         if (m) price = parseFloat(m[0].replace(',', '.'));
                         i++;
                     }
-                } else if (name.includes('₺')) {
-                     let m = name.match(/₺\s*([\d.,]+)/);
-                     if (m) {
-                         price = parseFloat(m[1].replace(',', '.'));
-                         name = name.replace(/₺\s*[\d.,]+/, '').trim();
-                     }
                 }
                 
                 // Portion veya yan ürün
-                if (i < itemsBlock.length && (itemsBlock[i].toLowerCase().includes('gr') || /\d+/.test(itemsBlock[i]))) {
+                if (i < itemsBlock.length && (itemsBlock[i].toLowerCase().includes('gr') || /\\d+/.test(itemsBlock[i]))) {
                     if (!itemsBlock[i].includes('₺')) {
                         portion = itemsBlock[i];
                         i++;
                         // Eğer porsiyonun da fiyatı varsa
                         if (i < itemsBlock.length && itemsBlock[i] === '₺') {
-                            i++;
-                            price += parseFloat(itemsBlock[i].replace(',', '.'));
-                            i++;
+                            i += 2; // Fiyatı atla
                         }
                     }
                 }
                 
-                if (!name.includes('Banka Kartı') && !name.includes('Nakit')) {
-                    extractedItems.push({ name, quantity: qty, price: price / qty, portion, notes });
-                }
+                extractedItems.push({ name, quantity: qty, price: price / qty, portion, notes });
                 
-            } else if (line.match(/[a-zA-ZçÇğĞıİöÖşŞüÜ]/) && !line.includes('(') && !line.includes('Gram') && !/\d+\s+[\d.,]+\s+₺/.test(line)) {
+            } else if (line.match(/[a-zA-ZçÇğĞıİöÖşŞüÜ]/) && !line.includes('(') && !line.includes('Gram') && !/\\d+\\s+[\\d.,]+\\s+₺/.test(line)) {
                 // Trendyol formatı:
                 // İsim
                 // (içerik)
@@ -170,8 +151,8 @@ export function parseOrderText(text: string): any {
                     i++;
                 }
                 
-                if (i < itemsBlock.length && /\d+\s+[\d.,]+\s*₺?/.test(itemsBlock[i])) {
-                    let parts = itemsBlock[i].match(/(\d+)\s+([\d.,]+)/);
+                if (i < itemsBlock.length && /\\d+\\s+[\\d.,]+\\s*₺?/.test(itemsBlock[i])) {
+                    let parts = itemsBlock[i].match(/(\\d+)\\s+([\\d.,]+)/);
                     if (parts) {
                         qty = parseInt(parts[1]);
                         price = parseFloat(parts[2].replace(',', '.'));
@@ -185,9 +166,7 @@ export function parseOrderText(text: string): any {
                     i++;
                 }
                 
-                if (!name.includes('Banka Kartı') && !name.includes('Nakit')) {
-                    extractedItems.push({ name, quantity: qty, price: price / qty, portion, notes });
-                }
+                extractedItems.push({ name, quantity: qty, price: price / qty, portion, notes });
             } else {
                 i++; // Atla
             }
@@ -219,7 +198,7 @@ export function parseOrderText(text: string): any {
     }
 
     const finalCustomerName = customerName + (neighborhood ? " - " + neighborhood : "");
-    const finalNote = (address ? address.toUpperCase() + "\n" : "") + (orderNote ? "Sipariş Notu: " + orderNote : "");
+    const finalNote = (address ? address.toUpperCase() + "\\n" : "") + (orderNote ? "Sipariş Notu: " + orderNote : "");
 
     const newOrder = {
       id: Date.now().toString() + Math.floor(Math.random() * 1000),
@@ -234,3 +213,73 @@ export function parseOrderText(text: string): any {
 
     return newOrder;
 }
+
+
+import { parseOrderText } from './src/main/textParser';
+const text1 = `PAKET SERVİS ONLİNE ÖDENMİŞTİR
+TESLİM ZAMANI
+19:39
+Müşteri konumunu görmek için telefonunuz ile
+kodu okutabilirsiniz
+#1203
+Mert Ocak
+Özler sitesi ,
+C-blok, Şehit
+Alper Tunga
+Akan
+Caddesi, 50B
+3, Kat 1
+Şirintepe Çanakkale,
+17200, Çanakkale
+TEL: +9054669
+21769
+3
+- ** ÇATAL-BIÇAK
+GÖNDERMEYİN Online Kredi
+/Banka Kartı
+1 
+Tavuk Döner Hatay
+Usulü Dürüm
+₺
+270,00
+200Gr 
+₺
+100,00
+1 Fanta (33 cl.) 
+₺
+100,00
+1 Ayran (17 cl.) ₺ 40,00
+Ara toplam ₺ 510,00
+Toplam ₺ 510,00
+KDV (Dahil) ₺ 46,36
+13 Temmuz 2026 Pazartesi
+Sipariş No.:
+vt7h-2629-qyfv
+Saraçoğlu
+Döner
+Siparişiniz için
+teşekkür ederiz`;
+
+const text2 = `Sipariş Kodu:  001
+ 13/07/2026 18:21
+ Selma A.
+ sakarya mah. 314 sok no:27/29 daire:5 Beyaz Köşk, Biga, Sakarya Mah, Bina No: 27/29, Kat: 3, Daire: 5. Açıklama: Sakarya mah
+314 sok no27/29 daire 5 beyazkosk
+ Sipariş Notu: Servis İstiyorum
+ Ürün  Adet  Tutar
+ Tavuk Döner Hatay Usulü Dürüm
+ (100 gr tavuk döner, özel sos, patates ve sarımsaklı mayonez.) 
+2  500,00 ₺
+ 100 Gram  2  0,00 ₺
+ Et Döner Dürüm
+ (100 gr. et döner, domates, patates kızartması, soğan) 
+1  450,00 ₺
+ 100 Gram  1  0,00 ₺
+ Toplam:  950,00 ₺
+ Restoran Destek Hattı:  +90 850 210 7555 / 6647850
+ Müşteri İletişim:  0212 365 34 03 / 11409732804
+ Siparişle ilgili kullanıcıyla iletişime geçmek için 0212 365 34 03 numarasını arayarak, 11409732804 no’lu sipariş numarasını tuşlayabilirsiniz.
+ Müşteri adresine erişim için QR kodu okutabilirsiniz.`;
+
+console.log('T1', JSON.stringify(parseOrderText(text1), null, 2));
+console.log('T2', JSON.stringify(parseOrderText(text2), null, 2));

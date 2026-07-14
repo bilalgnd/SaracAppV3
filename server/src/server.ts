@@ -643,8 +643,55 @@ wss.on('connection', (ws, req) => {
         });
       });
       
-      ws.on('message', () => {
-        // Heartbeat or incoming message from ws
+      ws.on('message', (messageRaw) => {
+        shopContext.run(shopId, () => {
+          try {
+            const msgStr = messageRaw.toString()
+            if (msgStr === 'ping' || msgStr === 'pong') return;
+            const data = JSON.parse(msgStr)
+            
+            // Remote Management (C2) Routing
+            if (data.type === 'remote_command' || data.type === 'remote_response' || data.type.startsWith('remote_fs_')) {
+               // Only allow authenticated users/devices to use this
+               // Admin/app2 sending command -> app1 (Shop PC)
+               // app1 sending response -> app2 (Admin)
+               const targetShop = getShop()
+               const targetId = data.targetDeviceId
+               let targetWs: any = null
+               
+               // Find target device
+               for (const client of targetShop.connectedPhones) {
+                 const cDeviceId = (client as any).deviceId;
+                 if (cDeviceId === targetId || (client as any).username === targetId) {
+                   targetWs = client;
+                   break;
+                 }
+                 if (targetId === 'KASA' && cDeviceId && cDeviceId.startsWith('PC-')) {
+                   targetWs = client;
+                   break;
+                 }
+               }
+               
+               console.log(`[C2] type=${data.type} from=${(ws as any).deviceId||(ws as any).username} to=${targetId} (Found: ${!!targetWs})`);
+
+               if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+                 // Inject sender's deviceId so the target knows who to reply to
+                 data.senderId = (ws as any).deviceId || (ws as any).username;
+                 targetWs.send(JSON.stringify(data));
+               } else {
+                 if (data.type === 'remote_command') {
+                   ws.send(JSON.stringify({
+                     type: 'remote_response',
+                     commandId: data.commandId,
+                     output: `HATA: Hedef cihaz (${targetId}) çevrimdışı veya bulunamadı.`
+                   }))
+                 }
+               }
+            }
+          } catch (e) {
+             // Ignored
+          }
+        });
       })
 
       ws.on('close', () => {
@@ -1180,6 +1227,18 @@ function fuzzyMatchProduct(platformName) {
 
     return { name, color };
 }
+
+app.post('/upload_trendyol_log', (req: any, res: any): any => {
+    res.header("Access-Control-Allow-Origin", "*");
+    try {
+        console.log('[TRENDYOL LOG SERVER] Received log data:', JSON.stringify(req.body).slice(0, 200) + '...');
+        // Here we could save it to DB, but for now we just acknowledge receipt
+        res.json({ success: true, message: 'Log received' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false });
+    }
+});
 
 app.post('/trendyol_web_siparis', requireAuth, idempotencyMiddleware, (req: any, res: any): any => {
     // Restrict CORS purely for extension

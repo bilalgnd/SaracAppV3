@@ -11,6 +11,7 @@ const api = {
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
   getTvLink: () => ipcRenderer.invoke('get-tv-link'),
   getSpotifyLoginLink: () => ipcRenderer.invoke('get-spotify-login-link'),
+  openTrendyolLogs: () => ipcRenderer.invoke('open-trendyol-logs'),
   restartTvTunnel: () => ipcRenderer.invoke('restart-tv-tunnel'),
   saveOrders: (orders: any[]) => ipcRenderer.send('save-orders', orders),
   saveSettings: (settings: any) => ipcRenderer.send('save-settings', settings),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "525047287781",
+    "project_id": "sapp3-659a4",
+    "storage_bucket": "sapp3-659a4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:525047287781:android:27110e0dc33b0fad7ea90c",
+        "android_client_info": {
+          "package_name": "com.bilalgnd.saracapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbFDRy_p__p8vr-jBlzEvTzrD-6Pba9Kc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

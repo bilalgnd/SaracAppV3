@@ -33,11 +33,46 @@ export async function initializeModels() {
     changed = true;
   }
 
+  if (systemSettings["ENABLE_AI_PARSING"] === undefined) {
+    systemSettings["ENABLE_AI_PARSING"] = false;
+    changed = true;
+  }
+
   if (systemSettings["PDF_LOGS_DIR"] === undefined) {
     systemSettings["PDF_LOGS_DIR"] = "";
     changed = true;
   }
   
+  // Trendyol Settings
+  if (systemSettings["ENABLE_TRENDYOL"] === undefined) {
+    systemSettings["ENABLE_TRENDYOL"] = false;
+    changed = true;
+  }
+  if (!systemSettings["TRENDYOL_SUPPLIER_ID"]) {
+    systemSettings["TRENDYOL_SUPPLIER_ID"] = "";
+    changed = true;
+  }
+  if (!systemSettings["TRENDYOL_API_KEY"]) {
+    systemSettings["TRENDYOL_API_KEY"] = "";
+    changed = true;
+  }
+  if (!systemSettings["TRENDYOL_API_SECRET"]) {
+    systemSettings["TRENDYOL_API_SECRET"] = "";
+    changed = true;
+  }
+  if (!systemSettings["TRENDYOL_REF_CODE"]) {
+    systemSettings["TRENDYOL_REF_CODE"] = "";
+    changed = true;
+  }
+  if (!systemSettings["TRENDYOL_TOKEN"]) {
+    systemSettings["TRENDYOL_TOKEN"] = "";
+    changed = true;
+  }
+  if (!systemSettings["TRENDYOL_API_URL"]) {
+    systemSettings["TRENDYOL_API_URL"] = "https://api.trendyol.com/integration/oms/core/t/orders?status=Created";
+    changed = true;
+  }
+
   if (changed) {
     saveSettings();
   }

