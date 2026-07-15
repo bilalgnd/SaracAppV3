@@ -33,7 +33,6 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { initializeModels, systemSettings, saveSettings } from './models'
 
-import { startFileWatcher, stopFileWatcher } from './fileWatcher'
 import { printReceipt } from './printer'
 import axios from 'axios'
 import WebSocket from 'ws'
@@ -471,9 +470,7 @@ async function createWindow(): Promise<void> {
     }
   })
 
-  if (systemSettings.ENABLE_FILE_WATCHER) {
-    startFileWatcher(mainWindow)
-  }
+  // File watcher archived
 
   ipcMain.handle('minimize-window', () => {
     if (mainWindow) mainWindow.minimize()
@@ -613,12 +610,7 @@ app.whenReady().then(() => {
 
 
 
-    // Handle file watcher toggle
-    if (settings.ENABLE_FILE_WATCHER) {
-      startFileWatcher(mainWindow);
-    } else {
-      stopFileWatcher();
-    }
+    // File watcher archived
   })
 
   ipcMain.handle('get-past-orders', async () => {
@@ -851,6 +843,7 @@ async function checkTargetPages() {
     const targetPage = pages.find(p => 
       p.url().includes('yemeksepeti.com') || 
       p.url().includes('trendyol.com') || 
+      p.url().includes('bilalgnd.shop') ||
       p.url().includes('file://')
     );
 
@@ -865,32 +858,112 @@ async function checkTargetPages() {
       
       if (!isInjected) {
         try {
-          await targetPage.exposeFunction('sendReceiptData', async (textContent: string) => {
+          await targetPage.exposeFunction('triggerTestPdf', async (base64Pdf?: string) => {
             try {
-              // DEBUG: Save textContent to Desktop
-              try {
-                const fs = require('fs')
-                const path = require('path')
-                const os = require('os')
-                const timestamp = new Date().getTime()
-                let platformName = 'unknown'
-                if (textContent.includes('Yemeksepeti') || textContent.includes('Anlık Siparişler')) platformName = 'ysepeti'
-                else if (textContent.includes('Trendyol') || textContent.includes('TGO')) platformName = 'trendyol'
-                
-                fs.writeFileSync(path.join(os.homedir(), 'Desktop', `kasa_debug_${platformName}_${timestamp}.txt`), textContent)
-              } catch (e) {
-                console.error('Debug log save error', e)
+              const fs = require('fs');
+              const path = require('path');
+              const os = require('os');
+              const { execFile } = require('child_process');
+              const util = require('util');
+              const execFileAsync = util.promisify(execFile);
+              
+              const timestamp = new Date().getTime();
+              let testPdfPath = path.join(os.homedir(), 'Desktop', 'fis.pdf');
+              let isTempPdf = false;
+              
+              if (base64Pdf) {
+                  testPdfPath = path.join(os.tmpdir(), `test_receipt_${timestamp}.pdf`);
+                  fs.writeFileSync(testPdfPath, Buffer.from(base64Pdf, 'base64'));
+                  isTempPdf = true;
+              } else if (!fs.existsSync(testPdfPath)) {
+                  sendLogToServer('error', 'Test başarısız: Masaüstünde fis.pdf bulunamadı!');
+                  return;
               }
 
-              const newOrder = parseOrderText(textContent);
-              if (newOrder) {
-                sendLogToServer('success', `Print yakalama (Bot): Yeni sipariş eklendi (${newOrder.customerName || 'Bilinmiyor'})`);
-                await addAndSyncOrder(newOrder);
-              } else {
-                sendLogToServer('warning', 'Print yakalama (Bot): Veri alındı fakat sipariş formatı anlaşılamadı.');
+              const tempTxtPath = path.join(os.tmpdir(), `receipt_${timestamp}.txt`);
+              
+              const exePath = !app.isPackaged 
+                ? path.join(app.getAppPath(), 'bin', 'extract_text.exe')
+                : path.join(process.resourcesPath, 'bin', 'extract_text.exe');
+                
+              await execFileAsync(exePath, [testPdfPath, tempTxtPath], { windowsHide: true });
+              
+              if (fs.existsSync(tempTxtPath)) {
+                const textContent = fs.readFileSync(tempTxtPath, 'utf8');
+                
+                // --- DEBUG: Save to desktop ---
+                try {
+                  const desktopPath = path.join(os.homedir(), 'Desktop', 'ocr_debug_log.txt');
+                  fs.writeFileSync(desktopPath, textContent);
+                  sendLogToServer('info', 'DEBUG: Test PDF text saved to Desktop/ocr_debug_log.txt');
+                } catch(e) {}
+                // ------------------------------
+                
+                const newOrder = parseOrderText(textContent);
+                if (newOrder) {
+                  sendLogToServer('success', `Test Fişi (fis.pdf): Yeni sipariş eklendi (${newOrder.customerName || newOrder.customer_name || 'Bilinmiyor'})`);
+                  await addAndSyncOrder(newOrder);
+                } else {
+                  sendLogToServer('warning', 'Test Fişi (fis.pdf): Okundu fakat format anlaşılamadı.');
+                }
+                
+                if (isTempPdf) {
+                    try { fs.unlinkSync(testPdfPath); } catch(e){}
+                }
+                try { fs.unlinkSync(tempTxtPath); } catch(e){}
               }
             } catch (err: any) {
-              sendLogToServer('error', `Print yakalama (Bot) hatası: ${err.message}`);
+              sendLogToServer('error', `Print yakalama (Test PDF Reader) hatası: ${err.message}`);
+            }
+          });
+
+          await targetPage.exposeFunction('triggerPdfExtraction', async () => {
+            try {
+              const fs = require('fs');
+              const path = require('path');
+              const os = require('os');
+              const { execFile } = require('child_process');
+              const util = require('util');
+              const execFileAsync = util.promisify(execFile);
+
+              const timestamp = new Date().getTime();
+              const tempPdfPath = path.join(os.tmpdir(), `receipt_${timestamp}.pdf`);
+              const tempTxtPath = path.join(os.tmpdir(), `receipt_${timestamp}.txt`);
+              
+              // 1. Generate PDF from the print layout
+              await targetPage.pdf({ path: tempPdfPath, printBackground: true });
+              
+              // 2. Call python exe
+              const exePath = !app.isPackaged 
+                ? path.join(app.getAppPath(), 'bin', 'extract_text.exe')
+                : path.join(process.resourcesPath, 'bin', 'extract_text.exe');
+                
+              await execFileAsync(exePath, [tempPdfPath, tempTxtPath], { windowsHide: true });
+              
+              // 3. Read txt
+              if (fs.existsSync(tempTxtPath)) {
+                const textContent = fs.readFileSync(tempTxtPath, 'utf8');
+                
+                // --- DEBUG: Save to desktop ---
+                try {
+                  const desktopPath = path.join(os.homedir(), 'Desktop', 'ocr_debug_log_real.txt');
+                  fs.writeFileSync(desktopPath, textContent);
+                } catch(e) {}
+                // ------------------------------
+                
+                const newOrder = parseOrderText(textContent);
+                if (newOrder) {
+                  sendLogToServer('success', `Print yakalama (PDF Reader): Yeni sipariş eklendi (${newOrder.customerName || 'Bilinmiyor'})`);
+                  await addAndSyncOrder(newOrder);
+                } else {
+                  sendLogToServer('warning', 'Print yakalama (PDF Reader): Veri alındı fakat sipariş formatı anlaşılamadı.');
+                }
+                
+                // Cleanup
+                try { fs.unlinkSync(tempPdfPath); fs.unlinkSync(tempTxtPath); } catch(e){}
+              }
+            } catch (err: any) {
+              sendLogToServer('error', `Print yakalama (PDF Reader) hatası: ${err.message}`);
             }
           });
         } catch (e) {
@@ -903,9 +976,8 @@ async function checkTargetPages() {
             const originalPrint = window.print;
             window.print = async () => {
               try {
-                const receiptText = document.body.innerText || document.documentElement.innerText;
-                if (window.top && (window.top as any).sendReceiptData) {
-                  await (window.top as any).sendReceiptData(receiptText);
+                if (window.top && (window.top as any).triggerPdfExtraction) {
+                  await (window.top as any).triggerPdfExtraction();
                 }
               } finally {
                 originalPrint.apply(window);

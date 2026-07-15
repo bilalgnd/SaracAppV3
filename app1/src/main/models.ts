@@ -28,21 +28,7 @@ export async function initializeModels() {
 
 
 
-  if (systemSettings["ENABLE_FILE_WATCHER"] === undefined) {
-    systemSettings["ENABLE_FILE_WATCHER"] = false;
-    changed = true;
-  }
-
-  if (systemSettings["ENABLE_AI_PARSING"] === undefined) {
-    systemSettings["ENABLE_AI_PARSING"] = false;
-    changed = true;
-  }
-
-  if (systemSettings["PDF_LOGS_DIR"] === undefined) {
-    systemSettings["PDF_LOGS_DIR"] = "";
-    changed = true;
-  }
-  
+  // Deprecated settings removed  
   // Trendyol Settings
   if (systemSettings["ENABLE_TRENDYOL"] === undefined) {
     systemSettings["ENABLE_TRENDYOL"] = false;

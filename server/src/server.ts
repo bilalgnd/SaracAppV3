@@ -454,6 +454,7 @@ app.post('/api/logs', express.json(), (req, res) => {
 const webDir = join(__dirname, '../public')
 
 app.use('/static', express.static(join(webDir, 'static')))
+app.use('/trendyol-mock', express.static(join(webDir, 'trendyol-mock')))
 
 app.use('/pos', express.static(join(webDir, 'pos_app'), {
   setHeaders: (res, path) => {

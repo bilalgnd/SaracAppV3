@@ -529,24 +529,7 @@ export default function SettingsModal() {
                       {settings.ENABLE_BOT_PRINT !== false ? 'Açık' : 'Kapalı'}
                     </button>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
-                    <div>
-                      <div style={{ fontWeight: 'bold', color: '#fff' }}>Yapay Zeka (AI) Sipariş Okuma Modu</div>
-                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>Platform tasarımı değiştirdiğinde yedek sistem olarak açabilirsiniz. Sipariş fişlerini Gemini AI ile okur. Normalde (Sıfır AI) kapalı kalması önerilir.</div>
-                    </div>
-                    <button 
-                      className={`settings-btn ${settings.ENABLE_AI_PARSING ? 'success' : 'danger'}`}
-                      onClick={() => {
-                        const newVal = settings.ENABLE_AI_PARSING ? false : true;
-                        window.api.logSystemEvent(`Ayarlar: Yapay Zeka Modu -> ${newVal ? 'Açık' : 'Kapalı'}`, newVal ? 'success' : 'warning');
-                        handleSettingChange('ENABLE_AI_PARSING', newVal);
-                        window.api.saveSettings({ ...settings, ENABLE_AI_PARSING: newVal });
-                      }}
-                      style={{ padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', width: '100px' }}
-                    >
-                      {settings.ENABLE_AI_PARSING ? 'Açık' : 'Kapalı'}
-                    </button>
-                  </div>
+
                 </div>
               </div>
 

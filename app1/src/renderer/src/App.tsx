@@ -6,7 +6,6 @@ import MainPanel from './components/MainPanel'
 import CartPanel from './components/CartPanel'
 import OrderModal from './components/OrderModal'
 import SettingsModal from './components/SettingsModal'
-import OcrProcessor from './components/OcrProcessor'
 
 import TitleBar from './components/TitleBar'
 
@@ -186,7 +185,6 @@ function App() {
             <CartPanel />
             <OrderModal />
             <SettingsModal />
-            <OcrProcessor />
           </div>
         </div>
       )}

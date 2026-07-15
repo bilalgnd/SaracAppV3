@@ -86,118 +86,196 @@ export function parseOrderText(text: string): any {
         let itemsBlock = lines.slice(itemsStartIndex + 1, toplamIdx).filter(l => !l.includes("-------") && !l.toLowerCase().includes("ara toplam"));
         
         let i = 0;
-        while (i < itemsBlock.length) {
-            let line = itemsBlock[i];
+        const isTrendyol = lines.some(l => l.toLowerCase().includes('trendyol'));
+        
+        if (isTrendyol) {
+            let currentNoteMode = false;
+            let inParentheses = false;
+            const trendyolV2Regex = /^(.+?)\s+(\d+)\s+([\d.,]+)\s*(?:₺|TL|tl|\u20BA)?\s*$/i;
             
-            // Yemeksepeti miktar satırı "1 " veya sadece "1" gibi olabilir.
-            let qty = 1;
-            let qtyMatch = line.match(/^(\d+)$/);
-            let inlineQtyMatch = line.match(/^(\d+)\s+(.+)$/);
-            
-            let name = "";
-            let price = 0;
-            let portion = "";
-            let notes: string[] = [];
-
-            if (qtyMatch || inlineQtyMatch) {
-                // Yemeksepeti formatı:
-                if (qtyMatch) {
-                    qty = parseInt(qtyMatch[1]);
+            while (i < itemsBlock.length) {
+                let line = itemsBlock[i].replace(/\*\*/g, '').trim();
+                if (!line) { i++; continue; }
+                
+                const lowerLine = line.toLowerCase();
+                if (lowerLine.includes('çıkarılacak malzemeler') || 
+                    lowerLine.includes('a çıkarılacak malzemeler') || 
+                    lowerLine.includes('a karlacak malzemeler') || 
+                    lowerLine.includes('ilave malzemeler') || 
+                    lowerLine.includes('sipariş notu') ||
+                    lowerLine.includes('sipariy notu') ||
+                    lowerLine.includes('sipari notu') ||
+                    lowerLine.includes('malzemeler') ||
+                    lowerLine.includes('notu')) {
+                    currentNoteMode = true;
                     i++;
-                    if (i >= itemsBlock.length) break;
+                    continue;
+                }
+                
+                let v2Match = line.match(trendyolV2Regex);
+                if (v2Match) {
+                    currentNoteMode = false;
+                    inParentheses = false;
+                    let name = v2Match[1].trim();
+                    let qty = parseInt(v2Match[2]);
+                    let priceStr = v2Match[3].replace(/\./g, '').replace(',', '.');
+                    let price = parseFloat(priceStr);
                     
-                    name = itemsBlock[i];
-                    i++;
-                } else if (inlineQtyMatch) {
-                    qty = parseInt(inlineQtyMatch[1]);
-                    name = inlineQtyMatch[2];
-                    i++;
-                }
-                
-                // 2 satıra taşmış isim olabilir
-                if (i < itemsBlock.length && !itemsBlock[i].includes('₺') && !/\d/.test(itemsBlock[i])) {
-                    name += " " + itemsBlock[i];
-                    i++;
-                }
-
-                // ₺ satırı
-                if (i < itemsBlock.length && itemsBlock[i].includes('₺')) {
-                    if (itemsBlock[i] === '₺') {
-                        i++;
-                        price = parseFloat(itemsBlock[i].replace(',', '.'));
-                        i++;
-                    } else {
-                        let m = itemsBlock[i].match(/[\d.,]+/);
-                        if (m) price = parseFloat(m[0].replace(',', '.'));
-                        i++;
-                    }
-                } else if (name.includes('₺')) {
-                     let m = name.match(/₺\s*([\d.,]+)/);
-                     if (m) {
-                         price = parseFloat(m[1].replace(',', '.'));
-                         name = name.replace(/₺\s*[\d.,]+/, '').trim();
-                     }
-                }
-                
-                // Portion veya yan ürün
-                if (i < itemsBlock.length && (itemsBlock[i].toLowerCase().includes('gr') || /\d+/.test(itemsBlock[i]))) {
-                    if (!itemsBlock[i].includes('₺')) {
-                        portion = itemsBlock[i];
-                        i++;
-                        // Eğer porsiyonun da fiyatı varsa
-                        if (i < itemsBlock.length && itemsBlock[i] === '₺') {
-                            i++;
-                            price += parseFloat(itemsBlock[i].replace(',', '.'));
-                            i++;
+                    if (/^\d+\s*gr/i.test(name.trim())) {
+                        if (extractedItems.length > 0) {
+                            extractedItems[extractedItems.length - 1].portion = name.trim();
                         }
+                    } else if (!name.toLowerCase().includes('banka kartı') && !name.toLowerCase().includes('nakit') && !name.toLowerCase().includes('kredi')) {
+                        extractedItems.push({ name, quantity: qty, price: price / qty, portion: '', notes: [] });
                     }
+                    i++;
+                    continue;
                 }
                 
-                if (!name.includes('Banka Kartı') && !name.includes('Nakit')) {
-                    extractedItems.push({ name, quantity: qty, price: price / qty, portion, notes });
+                if (line.startsWith('(')) {
+                    inParentheses = true;
                 }
                 
-            } else if (line.match(/[a-zA-ZçÇğĞıİöÖşŞüÜ]/) && !line.includes('(') && !line.includes('Gram') && !/\d+\s+[\d.,]+\s+₺/.test(line)) {
-                // Trendyol formatı:
-                // İsim
-                // (içerik)
-                // 2  500,00 ₺
-                name = line;
+                if (inParentheses) {
+                    if (extractedItems.length > 0) {
+                        extractedItems[extractedItems.length - 1].notes.push(line);
+                    }
+                    if (line.endsWith(')')) {
+                        inParentheses = false;
+                    }
+                    i++;
+                    continue;
+                }
+                
+                if (currentNoteMode) {
+                    if (extractedItems.length > 0 && line.match(/[a-zA-Z]/)) {
+                        extractedItems[extractedItems.length - 1].notes.push(line);
+                    }
+                    i++;
+                    continue;
+                }
+                
+                if (extractedItems.length > 0) {
+                    extractedItems[extractedItems.length - 1].name += ' ' + line;
+                }
                 i++;
-                
-                if (i < itemsBlock.length && itemsBlock[i].startsWith('(')) {
-                    // İçerik, görmezden gelebiliriz veya notes yapabiliriz
-                    i++;
-                }
-                
-                if (i < itemsBlock.length && /\d+\s+[\d.,]+\s*₺?/.test(itemsBlock[i])) {
-                    let parts = itemsBlock[i].match(/(\d+)\s+([\d.,]+)/);
-                    if (parts) {
-                        qty = parseInt(parts[1]);
-                        price = parseFloat(parts[2].replace(',', '.'));
+            }
+        } else {
+        let bufferName = "";
+        let bufferQty = 1;
+        let inNote = false;
+
+        for (let i = 0; i < itemsBlock.length; i++) {
+            let line = itemsBlock[i].replace(/\*\*/g, '').replace(/₺|TL|tl/g, '').trim();
+            if (!line) continue;
+            
+            // Yemeksepeti'nde ödeme yöntemi satırı ürün ismine karışabiliyor, temizle
+            line = line.replace(/^\/?(banka kartı|banka karti|banka kart|nakit|online kredi|kredi kartı)\/?$/i, '').trim();
+            if (!line) continue;
+            
+            let lower = line.toLowerCase();
+            if (lower.includes('ara toplam') || lower === 'toplam' || lower.startsWith('toplam ')) {
+                if (bufferName) {
+                    if (/^\d+\s*gr/i.test(bufferName.trim()) && extractedItems.length > 0) {
+                        extractedItems[extractedItems.length - 1].portion = bufferName.trim();
+                    } else if (!inNote) {
+                        extractedItems.push({ name: bufferName.trim(), quantity: bufferQty, price: 0, portion: "", notes: [] });
                     }
-                    i++;
+                }
+                break;
+            }
+            
+            if (itemsBlock[i].trim().startsWith('**') || itemsBlock[i].trim().startsWith('- **') || lower.includes('notu:')) {
+                inNote = true;
+                if (bufferName) {
+                    if (/^\d+\s*gr/i.test(bufferName.trim()) && extractedItems.length > 0) {
+                        extractedItems[extractedItems.length - 1].portion = bufferName.trim();
+                    }
+                    bufferName = "";
+                    bufferQty = 1;
                 }
                 
-                // Seçimler / Portion
-                if (i < itemsBlock.length && itemsBlock[i].toLowerCase().includes('gram')) {
-                    portion = itemsBlock[i].split(' ')[0] + "gr";
-                    i++;
+                let noteText = line.replace(/^-/, '').trim();
+                if (extractedItems.length > 0 && noteText) {
+                    extractedItems[extractedItems.length - 1].notes.push(noteText);
+                }
+                continue;
+            }
+            
+            let isNewItemStart = false;
+            let nextLine = (i + 1 < itemsBlock.length) ? itemsBlock[i+1].replace(/\*\*/g, '').replace(/₺|TL|tl/g, '').trim() : "";
+            if (inNote) {
+                if (line.match(/([\d]+,\d{2})$/)) isNewItemStart = true;
+                else if (line.match(/^\d+$/)) isNewItemStart = true;
+                else if (line.match(/^\d+\s+.+/)) isNewItemStart = true;
+                else if (line.match(/^\d+\s*gr/i)) isNewItemStart = true;
+                else if (nextLine.match(/^\d+$/)) isNewItemStart = true;
+                
+                if (isNewItemStart) {
+                    inNote = false;
+                } else {
+                    if (extractedItems.length > 0) extractedItems[extractedItems.length - 1].notes.push(line);
+                    continue;
+                }
+            }
+            
+            let priceMatch = line.match(/([\d]+,\d{2})$/);
+            if (priceMatch) {
+                let price = parseFloat(priceMatch[1].replace(',', '.'));
+                let textPart = line.replace(/[\d]+,\d{2}$/, '').trim();
+                
+                let qtyMatch = textPart.match(/^(\d+)\s+(.+)$/);
+                if (qtyMatch) {
+                    bufferQty = parseInt(qtyMatch[1]);
+                    bufferName += " " + qtyMatch[2];
+                } else if (textPart.match(/^\d+$/)) {
+                    bufferQty = parseInt(textPart);
+                } else {
+                    bufferName += " " + textPart;
                 }
                 
-                if (!name.includes('Banka Kartı') && !name.includes('Nakit')) {
-                    extractedItems.push({ name, quantity: qty, price: price / qty, portion, notes });
+                let finalName = bufferName.trim();
+                if (finalName) {
+                    if (/^\d+\s*gr/i.test(finalName) && extractedItems.length > 0) {
+                        extractedItems[extractedItems.length - 1].portion = finalName;
+                        extractedItems[extractedItems.length - 1].price += (price / extractedItems[extractedItems.length - 1].quantity);
+                    } else {
+                        extractedItems.push({ name: finalName, quantity: bufferQty, price: price / bufferQty, portion: "", notes: [] });
+                    }
                 }
+                bufferName = "";
+                bufferQty = 1;
             } else {
-                i++; // Atla
+                if (line.match(/^\d+$/)) {
+                    bufferQty = parseInt(line);
+                } else {
+                    let qtyMatch = line.match(/^(\d+)\s+(.+)$/);
+                    if (qtyMatch) {
+                        bufferQty = parseInt(qtyMatch[1]);
+                        bufferName += " " + qtyMatch[2];
+                    } else {
+                        bufferName += " " + line;
+                    }
+                }
             }
         }
 
-        let expandedItems: any[] = [];
+        // Handle leftovers
+        if (bufferName) {
+            let bName = bufferName.trim();
+            if (/^\d+\s*gr/i.test(bName) && extractedItems.length > 0) {
+                extractedItems[extractedItems.length - 1].portion = bName;
+            } else if (!inNote) {
+                extractedItems.push({ name: bName, quantity: bufferQty, price: 0, portion: "", notes: [] });
+            }
+        }
+    }
+
+    let expandedItems: any[] = [];
         extractedItems.forEach(item => {
             let n = item.name;
-            if (n.includes("Pilav Üstü Et Döner")) n = "Et Pilav Üstü";
-            else if (n.includes("Et Döner Dürüm")) n = "Et Dürüm";
+            if (n.includes("Pilav Üstü Et Döner")) n = n.replace(/.*Pilav Üstü Et Döner/i, "Et Pilav Üstü");
+            else if (n.includes("Et Döner Dürüm")) n = n.replace(/.*Et Döner Dürüm/i, "Et Dürüm");
             
             if (item.portion && !item.portion.includes("Standart")) {
                 n += " (" + item.portion.replace("Gram", "gr").trim() + ")";
@@ -206,7 +284,8 @@ export function parseOrderText(text: string): any {
             let finalNotes = item.notes.filter((note: string) => note.length > 0).join(', ');
             
             if (item.quantity > 1) {
-                for(let k = 0; k < item.quantity; k++) {
+                let safeQty = Math.min(item.quantity, 50); // Cap to 50 to prevent huge loops
+                for(let k = 0; k < safeQty; k++) {
                     expandedItems.push({ name: n, quantity: 1, price: item.price, notes: finalNotes });
                 }
             } else {
