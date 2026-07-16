@@ -10,6 +10,7 @@ import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs'
 import { startBotService } from './services/botService'
 import * as fs from 'fs'
 import * as path from 'path'
+import multer from 'multer'
 
 import { z } from 'zod'
 import crypto from 'crypto'
@@ -90,6 +91,64 @@ try {
 const app = express()
 app.use(express.json())
 
+// Restrict CORS (Moved to top so it applies to all routes including file uploads)
+app.use((req, res, next) => {
+  const origin = req.headers.origin
+  res.header("Access-Control-Allow-Origin", origin || "*")
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200)
+    return
+  }
+  next()
+})
+
+const sharedFilesDir = path.join(__dirname, '..', 'shared_files');
+if (!fs.existsSync(sharedFilesDir)) fs.mkdirSync(sharedFilesDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, sharedFilesDir)
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.originalname)
+  }
+})
+const upload = multer({ storage: storage })
+
+app.post('/api/shared/upload', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  res.json({ message: 'File uploaded successfully', filename: req.file.originalname });
+});
+
+app.get('/api/shared', (req, res) => {
+  if (!fs.existsSync(sharedFilesDir)) fs.mkdirSync(sharedFilesDir, { recursive: true });
+  const files = fs.readdirSync(sharedFilesDir).map(file => {
+    const stats = fs.statSync(path.join(sharedFilesDir, file));
+    return {
+      name: file,
+      size: stats.size,
+      time: stats.mtime
+    };
+  });
+  // Sort by modification time, newest first
+  files.sort((a, b) => b.time.getTime() - a.time.getTime());
+  res.json(files);
+});
+
+app.delete('/api/shared/:filename', (req, res) => {
+  const file = path.join(sharedFilesDir, req.params.filename);
+  if (fs.existsSync(file)) {
+    fs.unlinkSync(file);
+    res.json({ message: 'Deleted' });
+  } else {
+    res.status(404).json({ error: 'Not found' });
+  }
+});
+
 app.get('/api/admin/fcm_tokens', (req, res) => res.json({ tokens: fcmTokens }))
 
 app.post('/api/register_fcm_token', (req, res) => {
@@ -136,19 +195,7 @@ app.use((req, res, next) => {
 })
 
 
-// Restrict CORS
-app.use((req, res, next) => {
-  const origin = req.headers.origin
-  // In a local network, Origin might be null or match local IPs
-  res.header("Access-Control-Allow-Origin", origin || "*")
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200)
-    return
-  }
-  next()
-})
+
 
 app.get('/admintools', (_req, res) => {
   res.sendFile(join(__dirname, '../public/templates/admintools.html'))
@@ -451,8 +498,10 @@ app.post('/api/logs', express.json(), (req, res) => {
   }
 })
 
-const webDir = join(__dirname, '../public')
 
+const webDir = path.join(__dirname, '..', 'public')
+
+app.use('/shared_files', express.static(path.join(__dirname, '..', 'shared_files')))
 app.use('/static', express.static(join(webDir, 'static')))
 app.use('/trendyol-mock', express.static(join(webDir, 'trendyol-mock')))
 
@@ -493,10 +542,12 @@ app.get('/', (_req, res) => {
 })
 
 app.get('/tv', (_req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.sendFile(join(webDir, 'templates/tv.html'))
 })
 
 app.get('/tv-:shopId', (_req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.sendFile(join(webDir, 'templates/tv.html'))
 })
 
@@ -646,6 +697,7 @@ wss.on('connection', (ws, req) => {
       
       ws.on('message', (messageRaw) => {
         shopContext.run(shopId, () => {
+          ;(ws as any).isAlive = true;
           try {
             const msgStr = messageRaw.toString()
             if (msgStr === 'ping' || msgStr === 'pong') return;
@@ -853,7 +905,7 @@ app.post('/api/public/submit_order', (req: any, res: any) => {
   const newOrder = {
     id: Date.now().toString(),
     customer_name: `${customerName} (QR)`,
-    time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+    time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' }),
     items: expandedItems,
     total_amount: totalAmount,
     status: 'waiting'
@@ -1267,7 +1319,7 @@ app.post('/trendyol_web_siparis', requireAuth, idempotencyMiddleware, (req: any,
             masa_no: getShop().getNextQueueNo().toString(),
             order_note: data.order_note || '',
             order_id: data.order_id,
-            time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+            time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' }),
             items: formattedItems,
             total_amount: data.total_amount || 0,
             status: 'waiting',
@@ -1309,7 +1361,7 @@ app.post('/yemeksepeti_siparis', requireAuth, idempotencyMiddleware, (req: any, 
             masa_no: getShop().getNextQueueNo().toString(),
             order_note: data.order_note || '',
             order_id: data.order_id,
-            time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+            time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' }),
             items: formattedItems,
             total_amount: data.total_amount || 0,
             status: 'waiting',
@@ -1396,7 +1448,7 @@ app.post('/siparis', requireAuth, (req: any, res: any): any => {
         notes: k.notes || ''
       })),
       total_amount: data.total_amount,
-      time: data.time || new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+      time: data.time || new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' }),
       status: data.status || 'waiting',
       color: data.color || '',
       createdBy: (req as any).user?.username || 'Kasa',
@@ -1574,6 +1626,7 @@ app.get('/spotify/callback', async (req: any, res: any) => {
     )
 
     getShop().systemSettings["SPOTIFY_ACCESS_TOKEN"] = response.data.access_token
+    getShop().systemSettings["SPOTIFY_TOKEN_EXPIRY"] = Date.now() + (response.data.expires_in * 1000)
     getShop().systemSettings["SPOTIFY_REFRESH_TOKEN"] = response.data.refresh_token
     getShop().saveSettings()
     res.send("Spotify basariyla baglandi! Kasa uygulamasina donebilirsiniz. Bu pencereyi kapatabilirsiniz.")
@@ -1585,49 +1638,50 @@ app.get('/spotify/callback', async (req: any, res: any) => {
 app.get('/spotify/token', async (_req, res) => {
   let accessToken = getShop().systemSettings["SPOTIFY_ACCESS_TOKEN"] || ""
   let refreshToken = getShop().systemSettings["SPOTIFY_REFRESH_TOKEN"] || ""
+  let tokenExpiry = getShop().systemSettings["SPOTIFY_TOKEN_EXPIRY"] || 0
   
   if (!accessToken || !refreshToken) {
     res.status(401).json({ error: "not_logged_in" })
     return
   }
 
-  try {
-    await axios.get("https://api.spotify.com/v1/me", {
-      headers: { "Authorization": `Bearer ${accessToken}` }
-    })
-    res.json({ access_token: accessToken })
-  } catch (err: any) {
-    if (err.response && err.response.status === 401) {
-      const SPOTIFY_CLIENT_ID = getShop().systemSettings["SPOTIFY_CLIENT_ID"] || ""
-      const SPOTIFY_CLIENT_SECRET = getShop().systemSettings["SPOTIFY_CLIENT_SECRET"] || ""
-      const authHeader = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64')
+  // Refresh if less than 5 minutes remaining, or if expiry is missing
+  if (Date.now() > tokenExpiry - 5 * 60 * 1000 || !tokenExpiry) {
+    const SPOTIFY_CLIENT_ID = getShop().systemSettings["SPOTIFY_CLIENT_ID"] || ""
+    const SPOTIFY_CLIENT_SECRET = getShop().systemSettings["SPOTIFY_CLIENT_SECRET"] || ""
+    const authHeader = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64')
 
-      try {
-        const refRes = await axios.post("https://accounts.spotify.com/api/token", 
-          new URLSearchParams({
-            grant_type: "refresh_token",
-            refresh_token: refreshToken
-          }).toString(),
-          {
-            headers: {
-              "Authorization": `Basic ${authHeader}`,
-              "Content-Type": "application/x-www-form-urlencoded"
-            }
+    try {
+      const refRes = await axios.post("https://accounts.spotify.com/api/token", 
+        new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: refreshToken
+        }).toString(),
+        {
+          headers: {
+            "Authorization": `Basic ${authHeader}`,
+            "Content-Type": "application/x-www-form-urlencoded"
           }
-        )
-        getShop().systemSettings["SPOTIFY_ACCESS_TOKEN"] = refRes.data.access_token
-        if (refRes.data.refresh_token) {
-          getShop().systemSettings["SPOTIFY_REFRESH_TOKEN"] = refRes.data.refresh_token
         }
-        getShop().saveSettings()
-        res.json({ access_token: getShop().systemSettings["SPOTIFY_ACCESS_TOKEN"] })
-      } catch (refErr) {
-        res.status(401).json({ error: "refresh_failed" })
+      )
+      getShop().systemSettings["SPOTIFY_ACCESS_TOKEN"] = refRes.data.access_token
+      if (refRes.data.expires_in) {
+        getShop().systemSettings["SPOTIFY_TOKEN_EXPIRY"] = Date.now() + (refRes.data.expires_in * 1000)
+      } else {
+        getShop().systemSettings["SPOTIFY_TOKEN_EXPIRY"] = Date.now() + (3600 * 1000)
       }
-    } else {
-      res.status(500).json({ error: err.message })
+      if (refRes.data.refresh_token) {
+        getShop().systemSettings["SPOTIFY_REFRESH_TOKEN"] = refRes.data.refresh_token
+      }
+      getShop().saveSettings()
+      accessToken = getShop().systemSettings["SPOTIFY_ACCESS_TOKEN"]
+    } catch (refErr) {
+      res.status(401).json({ error: "refresh_failed" })
+      return
     }
   }
+
+  res.json({ access_token: accessToken })
 })
 
 const PORT = process.env.PORT || 5000;
@@ -1645,7 +1699,7 @@ initializeModels().then(() => {
       const formattedOrder = {
           ...newOrder,
           masa_no: getShop().getNextQueueNo().toString(),
-          time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+          time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' }),
           status: 'waiting',
           color: newOrder.platform === 'trendyol' ? '#FF9800' : '#E00034'
       };

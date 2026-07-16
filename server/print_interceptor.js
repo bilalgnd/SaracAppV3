@@ -13,6 +13,7 @@ async function initIsolatedPrint() {
     const targetPage = pages.find(p => 
       p.url().includes('yemeksepeti.com') || 
       p.url().includes('trendyol.com') || 
+      p.url().includes('tgoyemek.com') || 
       p.url().includes('file://')
     );
     

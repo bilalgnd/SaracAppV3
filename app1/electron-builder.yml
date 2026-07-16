@@ -1,11 +1,12 @@
 appId: com.saracoglu.pos
-productName: SaracAppv6.0.9
+productName: SaracAppv6.0.13
 directories:
   buildResources: build
   output: "../exe-apk dist"
 files:
   - '!**/.vscode/*'
   - '!src/*'
+  - '!dist/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
@@ -18,7 +19,7 @@ extraResources:
   - from: "bin"
     to: "bin"
 win:
-  executableName: SaracAppv6.0.9
+  executableName: SaracAppv6.0.13
   icon: resources/icon.png
 nsis:
   artifactName: ${name}-${version}-setup.${ext}

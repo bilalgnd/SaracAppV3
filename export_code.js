@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const projects = ['app1', 'app2', 'qr-app', 'server'];
-const outDir = 'C:\\Users\\bilal\\SARACAPP\\SARACAPPV3\\backs\\1107_0330';
+const outDir = 'C:\\Users\\bilal\\SARACAPP\\SARACAPPV3\\backs\\1707_0150';
 const rootDir = 'C:\\Users\\bilal\\SARACAPP\\SARACAPPV3';
 
 if (!fs.existsSync(outDir)) {

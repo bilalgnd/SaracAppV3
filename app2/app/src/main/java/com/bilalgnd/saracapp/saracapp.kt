@@ -88,6 +88,9 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.material.icons.filled.Delete
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -475,7 +478,7 @@ fun AnaEkran() {
     var sistemLoglariPenceresiAcik by remember { mutableStateOf(false) }
     var remoteTerminalAcik by remember { mutableStateOf(false) }
     var remoteFileManagerAcik by remember { mutableStateOf(false) }
-
+    var sharedFilesAcik by remember { mutableStateOf(false) }
 
     val sekmeler = kategoriler.map { it.name.uppercase(Locale.getDefault()) }
     val menuler_listesi = kategoriler.map { it.items }
@@ -783,6 +786,8 @@ fun AnaEkran() {
             if (false) {
             } else if (remoteFileManagerAcik) {
                 RemoteFileManagerScreen(onBack = { remoteFileManagerAcik = false })
+            } else if (sharedFilesAcik) {
+                SharedFilesScreen(onBack = { sharedFilesAcik = false })
             } else if (remoteTerminalAcik) {
                 RemoteTerminalScreen(onBack = { remoteTerminalAcik = false })
             } else if (raporEkraniAcik) {
@@ -1077,8 +1082,8 @@ fun AnaEkran() {
                         Text("⚙️ Ayarlar", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(16.dp))
                         
-                        var selectedTab by remember { mutableIntStateOf(if (gelismisAyarlarAcik) 2 else 0) }
-                        val tabs = if (gelismisAyarlarAcik) listOf("Genel", "Sistem", "Gelişmiş") else listOf("Genel", "Sistem")
+                        var selectedTab by remember { mutableIntStateOf(if (gelismisAyarlarAcik) 1 else 0) }
+                        val tabs = if (gelismisAyarlarAcik) listOf("Genel", "Gelişmiş") else listOf("Genel")
                         val prefs = context.getSharedPreferences("SaracogluDefteri", Context.MODE_PRIVATE)
                         
                         androidx.compose.material3.TabRow(
@@ -1207,7 +1212,7 @@ fun AnaEkran() {
                                                               renkGirdisi = hex
                                                               if (hex == "#795548") {
                                                                   gelismisAyarlarAcik = true
-                                                                  selectedTab = 2
+                                                                  selectedTab = 1
                                                                   Toast.makeText(context, "Gelişmiş Mod Aktif (Tema)", Toast.LENGTH_SHORT).show()
                                                               }
                                                           }
@@ -1224,45 +1229,7 @@ fun AnaEkran() {
                                 Spacer(Modifier.height(24.dp))
                                 Text("v5.3.3 | Credits: bilalgnd", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
                             }
-                            else if (selectedTab == 1) { // Sistem Ayarları
-                                Spacer(Modifier.height(16.dp))
-                                Button(
-                                    onClick = { sistemLoglariPenceresiAcik = true; kasaAyarPenceresiAcik = false },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF005080)),
-                                    modifier = Modifier.fillMaxWidth().height(55.dp)
-                                ) {
-                                    Text("Sistem Durumu / Loglar", color = Color.White, fontSize = 16.sp)
-                                }
-
-                                Spacer(Modifier.height(24.dp))
-                                
-                                Button(
-                                    onClick = {
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            try {
-                                                val api = ApiClient.getApi(hafiza.kasaIpOku(), hafiza.kasaTokenOku())
-                                                val res = api.cleanLogs()
-                                                withContext(Dispatchers.Main) {
-                                                    if (res.isSuccessful) {
-                                                        Toast.makeText(context, "Klasör temizleme isteği gönderildi", Toast.LENGTH_SHORT).show()
-                                                    } else {
-                                                        Toast.makeText(context, "İstek başarısız", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                            } catch (e: Exception) {
-                                                withContext(Dispatchers.Main) {
-                                                    Toast.makeText(context, "Bağlantı hatası: ${e.message}", Toast.LENGTH_SHORT).show()
-                                                }
-                                            }
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100)),
-                                    modifier = Modifier.fillMaxWidth().height(55.dp)
-                                ) {
-                                    Text("PDF Klasörünü Temizle", color = Color.White, fontSize = 16.sp)
-                                }
-                            }
-                            else if (selectedTab == 2 && gelismisAyarlarAcik) { // Gelişmiş Ayarlar (Admin)
+                            else if (selectedTab == 1 && gelismisAyarlarAcik) { // Gelişmiş Ayarlar (Admin)
                                 Spacer(Modifier.height(16.dp))
                                 Text("YÖNETİCİ ARAÇLARI", color = Color(0xFFF44336), fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                                 Spacer(Modifier.height(16.dp))
@@ -1305,6 +1272,19 @@ fun AnaEkran() {
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
                                 ) {
                                     Text("Uzak Dosya Yöneticisi", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
+                                
+                                Spacer(Modifier.height(16.dp))
+                                
+                                Button(
+                                    onClick = {
+                                        kasaAyarPenceresiAcik = false
+                                        sharedFilesAcik = true
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(55.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0))
+                                ) {
+                                    Text("Ortak Dosya Paylaşımı", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                 }
                                 
                                 Spacer(Modifier.height(32.dp))
@@ -2764,6 +2744,175 @@ fun RemoteFileManagerScreen(onBack: () -> Unit) {
                             Text(name, color = Color.White, fontSize = 15.sp, maxLines = 1)
                             if (!isDir) {
                                 Text("${size / 1024} KB", color = Color.Gray, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SharedFilesScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    var files by remember { mutableStateOf<org.json.JSONArray?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+    val hafiza = HafizaYoneticisi(context)
+    val ip = hafiza.kasaIpOku()
+
+    fun fetchFiles() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val request = okhttp3.Request.Builder()
+                    .url("https://bilalgnd.shop/api/shared")
+                    .build()
+                val response = okhttp3.OkHttpClient().newCall(request).execute()
+                if (response.isSuccessful) {
+                    val resStr = response.body?.string()
+                    files = org.json.JSONArray(resStr)
+                } else {
+                    files = org.json.JSONArray()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                files = org.json.JSONArray()
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        fetchFiles()
+    }
+
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        uri?.let {
+            isLoading = true
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val contentResolver = context.contentResolver
+                    val cursor = contentResolver.query(it, null, null, null, null)
+                    var fileName = "upload"
+                    if (cursor != null && cursor.moveToFirst()) {
+                        val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        if (nameIndex != -1) fileName = cursor.getString(nameIndex)
+                        cursor.close()
+                    }
+                    
+                    val inputStream = contentResolver.openInputStream(it)
+                    val bytes = inputStream?.readBytes()
+                    inputStream?.close()
+
+                    if (bytes != null) {
+                        val requestBody = okhttp3.MultipartBody.Builder()
+                            .setType(okhttp3.MultipartBody.FORM)
+                            .addFormDataPart("file", fileName, bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
+                            .build()
+
+                        val request = okhttp3.Request.Builder()
+                            .url("https://bilalgnd.shop/api/shared/upload")
+                            .post(requestBody)
+                            .build()
+
+                        val response = okhttp3.OkHttpClient().newCall(request).execute()
+                        withContext(Dispatchers.Main) {
+                            isLoading = false
+                            if (response.isSuccessful) {
+                                fetchFiles()
+                            } else {
+                                Toast.makeText(context, "Yükleme hatası", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        isLoading = false
+                        Toast.makeText(context, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Ortak Dosya Paylaşımı", color = Color.White) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = Color.White)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { fetchFiles() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Yenile", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF1E1E1E))
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { launcher.launch("*/*") },
+                containerColor = Color(0xFF4CAF50)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Dosya Yükle", tint = Color.White)
+            }
+        },
+        containerColor = Color.Black
+    ) { padding ->
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            if (isLoading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = Color(0xFF4CAF50))
+            }
+            if (files == null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (files!!.length() == 0) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Henüz dosya yüklenmemiş.", color = Color.Gray)
+                }
+            } else {
+                androidx.compose.foundation.lazy.LazyColumn {
+                    items(files!!.length()) { i ->
+                        val obj = files!!.getJSONObject(i)
+                        val name = obj.getString("name")
+                        val size = obj.getLong("size")
+                        val sizeMb = size / 1024.0 / 1024.0
+                        
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp).clickable {
+                                val url = "https://bilalgnd.shop/shared_files/$name"
+                                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                context.startActivity(intent)
+                            },
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+                        ) {
+                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Info, contentDescription = null, tint = Color.White)
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(name, color = Color.White, fontWeight = FontWeight.Bold)
+                                    Text(String.format(java.util.Locale.US, "%.2f MB", sizeMb), color = Color.Gray, fontSize = 12.sp)
+                                }
+                                IconButton(onClick = {
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        try {
+                                            val request = okhttp3.Request.Builder()
+                                                .url("https://bilalgnd.shop/api/shared/$name")
+                                                .delete()
+                                                .build()
+                                            okhttp3.OkHttpClient().newCall(request).execute()
+                                            withContext(Dispatchers.Main) { fetchFiles() }
+                                        } catch (e: Exception) {}
+                                    }
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Sil", tint = Color(0xFFF44336))
+                                }
                             }
                         }
                     }

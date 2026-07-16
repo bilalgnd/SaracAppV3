@@ -43,6 +43,23 @@ import puppeteer from 'puppeteer-core'
 let mainWindow: BrowserWindow
 let isQuitting = false
 
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    }
+  })
+}
+
+// Log terminalindeki Chromium cache hatalarını gizlemek/kapatmak için:
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache')
+app.commandLine.appendSwitch('disable-http-cache')
+
+
 axios.interceptors.request.use((config) => {
   if (systemSettings && systemSettings.API_TOKEN) {
     if (systemSettings.API_TOKEN.length > 20) {
@@ -723,25 +740,34 @@ app.whenReady().then(() => {
   ipcMain.on('send-update-to-phones', () => {})
 
   // --- Auto Updater ---
-  autoUpdater.autoDownload = false
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
 
   autoUpdater.on('checking-for-update', () => {
     mainWindow?.webContents.send('updater-event', { action: 'checking' })
   })
   autoUpdater.on('update-available', (info) => {
+    sendLogToServer('info', `Yeni versiyon bulundu (${info.version}). Arka planda indiriliyor...`)
     mainWindow?.webContents.send('updater-event', { action: 'update-available', data: info })
   })
   autoUpdater.on('update-not-available', (info) => {
     mainWindow?.webContents.send('updater-event', { action: 'update-not-available', data: info })
   })
   autoUpdater.on('error', (err) => {
+    sendLogToServer('error', `Güncelleme hatası: ${err.message}`)
     mainWindow?.webContents.send('updater-event', { action: 'error', data: err.message })
   })
   autoUpdater.on('download-progress', (progressObj) => {
     mainWindow?.webContents.send('updater-event', { action: 'download-progress', data: progressObj })
   })
   autoUpdater.on('update-downloaded', (info) => {
+    sendLogToServer('success', `Yeni versiyon (${info.version}) indirildi. Arka planda kuruluyor ve uygulama yeniden başlatılıyor...`)
     mainWindow?.webContents.send('updater-event', { action: 'update-downloaded', data: info })
+    
+    // 3 saniye sonra arka planda sessizce kur ve uygulamayı yeniden başlat
+    setTimeout(() => {
+      autoUpdater.quitAndInstall(true, true)
+    }, 3000)
   })
 
   ipcMain.handle('check-for-updates', async () => {
@@ -762,14 +788,10 @@ app.whenReady().then(() => {
     if (!is.dev) autoUpdater.quitAndInstall()
   })
 
-  ipcMain.on('dump-ocr-log', (_event, text) => {
+  ipcMain.on('dump-ocr-log', (_event, _text) => {
     try {
-      sendLogToServer('warning', 'Trendyol OCR verisi masaüstüne kaydedildi.')
-      const fs = require('fs')
-      const os = require('os')
-      const path = require('path')
-      const desktopPath = path.join(os.homedir(), 'Desktop', 'ocr_debug_log.txt')
-      fs.writeFileSync(desktopPath, text)
+      sendLogToServer('warning', 'Trendyol OCR verisi alındı. (Artık masaüstüne kaydedilmiyor)');
+      // Masaüstüne yazmayı iptal ettik
     } catch (e) {
       console.error('Log error', e)
     }
@@ -869,12 +891,16 @@ async function checkTargetPages() {
               
               const timestamp = new Date().getTime();
               let testPdfPath = path.join(os.homedir(), 'Desktop', 'fis.pdf');
-              let isTempPdf = false;
               
               if (base64Pdf) {
-                  testPdfPath = path.join(os.tmpdir(), `test_receipt_${timestamp}.pdf`);
+                  const logDir = systemSettings.PDF_LOGS_DIR || path.join(app.getPath('documents'), 'logs');
+                  const pdfDir = path.join(logDir, 'pdfs');
+                  if (!fs.existsSync(pdfDir)) {
+                      fs.mkdirSync(pdfDir, { recursive: true });
+                  }
+                  testPdfPath = path.join(pdfDir, `test_receipt_${timestamp}.pdf`);
                   fs.writeFileSync(testPdfPath, Buffer.from(base64Pdf, 'base64'));
-                  isTempPdf = true;
+                  sendLogToServer('info', `Arka plan PDF arşive eklendi: ${testPdfPath}`);
               } else if (!fs.existsSync(testPdfPath)) {
                   sendLogToServer('error', 'Test başarısız: Masaüstünde fis.pdf bulunamadı!');
                   return;
@@ -891,11 +917,9 @@ async function checkTargetPages() {
               if (fs.existsSync(tempTxtPath)) {
                 const textContent = fs.readFileSync(tempTxtPath, 'utf8');
                 
-                // --- DEBUG: Save to desktop ---
+                // --- DEBUG: Console log instead of Desktop ---
                 try {
-                  const desktopPath = path.join(os.homedir(), 'Desktop', 'ocr_debug_log.txt');
-                  fs.writeFileSync(desktopPath, textContent);
-                  sendLogToServer('info', 'DEBUG: Test PDF text saved to Desktop/ocr_debug_log.txt');
+                  sendLogToServer('info', 'DEBUG: Test PDF text okundu (Masaüstüne kaydedilmedi).');
                 } catch(e) {}
                 // ------------------------------
                 
@@ -904,12 +928,10 @@ async function checkTargetPages() {
                   sendLogToServer('success', `Test Fişi (fis.pdf): Yeni sipariş eklendi (${newOrder.customerName || newOrder.customer_name || 'Bilinmiyor'})`);
                   await addAndSyncOrder(newOrder);
                 } else {
-                  sendLogToServer('warning', 'Test Fişi (fis.pdf): Okundu fakat format anlaşılamadı.');
+                  const preview = textContent.replace(/\s+/g, ' ').substring(0, 100);
+                  sendLogToServer('warning', `Test Fişi (fis.pdf): Okundu fakat anlaşılamadı. Alınan: "${preview}..."`);
                 }
                 
-                if (isTempPdf) {
-                    try { fs.unlinkSync(testPdfPath); } catch(e){}
-                }
                 try { fs.unlinkSync(tempTxtPath); } catch(e){}
               }
             } catch (err: any) {
@@ -927,11 +949,18 @@ async function checkTargetPages() {
               const execFileAsync = util.promisify(execFile);
 
               const timestamp = new Date().getTime();
-              const tempPdfPath = path.join(os.tmpdir(), `receipt_${timestamp}.pdf`);
+              
+              const logDir = systemSettings.PDF_LOGS_DIR || path.join(app.getPath('documents'), 'logs');
+              const pdfDir = path.join(logDir, 'pdfs');
+              if (!fs.existsSync(pdfDir)) {
+                  fs.mkdirSync(pdfDir, { recursive: true });
+              }
+              const tempPdfPath = path.join(pdfDir, `receipt_${timestamp}.pdf`);
               const tempTxtPath = path.join(os.tmpdir(), `receipt_${timestamp}.txt`);
               
               // 1. Generate PDF from the print layout
               await targetPage.pdf({ path: tempPdfPath, printBackground: true });
+              sendLogToServer('info', `Arka plan PDF arşive eklendi: ${tempPdfPath}`);
               
               // 2. Call python exe
               const exePath = !app.isPackaged 
@@ -944,10 +973,9 @@ async function checkTargetPages() {
               if (fs.existsSync(tempTxtPath)) {
                 const textContent = fs.readFileSync(tempTxtPath, 'utf8');
                 
-                // --- DEBUG: Save to desktop ---
+                // --- DEBUG: Save to desktop (IPTAL EDILDI) ---
                 try {
-                  const desktopPath = path.join(os.homedir(), 'Desktop', 'ocr_debug_log_real.txt');
-                  fs.writeFileSync(desktopPath, textContent);
+                  // Masaüstüne debug kaydı yapılmıyor
                 } catch(e) {}
                 // ------------------------------
                 
@@ -956,14 +984,38 @@ async function checkTargetPages() {
                   sendLogToServer('success', `Print yakalama (PDF Reader): Yeni sipariş eklendi (${newOrder.customerName || 'Bilinmiyor'})`);
                   await addAndSyncOrder(newOrder);
                 } else {
-                  sendLogToServer('warning', 'Print yakalama (PDF Reader): Veri alındı fakat sipariş formatı anlaşılamadı.');
+                  const preview = textContent.replace(/\s+/g, ' ').substring(0, 100);
+                  sendLogToServer('warning', `Print yakalama (PDF Reader): Format anlaşılamadı. Alınan: "${preview}..."`);
                 }
                 
-                // Cleanup
-                try { fs.unlinkSync(tempPdfPath); fs.unlinkSync(tempTxtPath); } catch(e){}
+                // Cleanup (sadece txt dosyasını siliyoruz, pdf kalıcı oluyor)
+                try { fs.unlinkSync(tempTxtPath); } catch(e){}
               }
             } catch (err: any) {
               sendLogToServer('error', `Print yakalama (PDF Reader) hatası: ${err.message}`);
+            }
+          });
+
+          await targetPage.exposeFunction('sendRawTextToKasa', async (textContent: string) => {
+            try {
+                const fs = require('fs');
+                const path = require('path');
+                const os = require('os');
+                
+                try {
+                  // Masaüstüne debug kaydı yapılmıyor
+                } catch(e) {}
+                
+                const newOrder = parseOrderText(textContent);
+                if (newOrder) {
+                  sendLogToServer('success', `Print yakalama (Text Reader): Yeni sipariş eklendi (${newOrder.customerName || newOrder.customer_name || 'Bilinmiyor'})`);
+                  await addAndSyncOrder(newOrder);
+                } else {
+                  const preview = textContent.replace(/\s+/g, ' ').substring(0, 100);
+                  sendLogToServer('warning', `Print yakalama (Text Reader): Format anlaşılamadı. Alınan: "${preview}..."`);
+                }
+            } catch (err: any) {
+              sendLogToServer('error', `Print yakalama (Text Reader) hatası: ${err.message}`);
             }
           });
         } catch (e) {
@@ -976,7 +1028,10 @@ async function checkTargetPages() {
             const originalPrint = window.print;
             window.print = async () => {
               try {
-                if (window.top && (window.top as any).triggerPdfExtraction) {
+                const receiptText = document.body.innerText || document.documentElement.innerText;
+                if (window.top && (window.top as any).sendRawTextToKasa) {
+                  await (window.top as any).sendRawTextToKasa(receiptText);
+                } else if (window.top && (window.top as any).triggerPdfExtraction) {
                   await (window.top as any).triggerPdfExtraction();
                 }
               } finally {
@@ -1035,3 +1090,4 @@ async function startChromeInterceptor() {
     setTimeout(startChromeInterceptor, 1000);
   }
 }
+

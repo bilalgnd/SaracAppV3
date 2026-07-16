@@ -529,6 +529,14 @@
     </div>
 
     <script>
+        let tvShopId = '';
+        const match = window.location.pathname.match(/\/tv-([^\/]+)/);
+        if (match) {
+            tvShopId = match[1];
+        }
+        const shopQuery = tvShopId ? `&shopId=${tvShopId}` : '';
+        const shopQueryQ = tvShopId ? `?shopId=${tvShopId}` : '';
+
         function updateClock() {
             const now = new Date();
             document.getElementById('clock').innerText = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -540,7 +548,7 @@
 
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            ws = new WebSocket(`${protocol}//${window.location.host}/ws?tv=true`);
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws?tv=true${shopQuery}`);
 
             ws.onopen = function() {
                 document.getElementById('clock').style.color = '#4CAF50'; // Green clock when connected
@@ -768,6 +776,7 @@
         let spotifyPosition = 0;
         let spotifyDuration = 0;
         let lastSpotifyUpdate = 0;
+        let currentTrackUri = null;
 
         function formatTime(ms) {
             const totalSec = Math.floor(ms / 1000);
@@ -814,6 +823,11 @@
                 console.log('Device ID has gone offline', device_id);
             });
 
+            spotifyPlayer.addListener('initialization_error', ({ message }) => { console.error('Spotify Init Error:', message); });
+            spotifyPlayer.addListener('authentication_error', ({ message }) => { console.error('Spotify Auth Error:', message); });
+            spotifyPlayer.addListener('account_error', ({ message }) => { console.error('Spotify Account Error:', message); });
+            spotifyPlayer.addListener('playback_error', ({ message }) => { console.error('Spotify Playback Error:', message); });
+
             spotifyPlayer.addListener('player_state_changed', state => {
                 if (!state) return;
 
@@ -841,23 +855,26 @@
                         document.getElementById("spFsCover").src = coverUrl;
                     }
 
-                    const artistUri = track.artists && track.artists.length > 0 ? track.artists[0].uri : null;
-                    if (artistUri) {
-                        const artistId = artistUri.split(':').pop();
-                        fetch(`https://api.spotify.com/v1/artists/${artistId}`, {
-                            headers: { 'Authorization': 'Bearer ' + currentSpotifyToken }
-                        }).then(res => res.json()).then(artistData => {
-                            if (artistData.images && artistData.images.length > 0) {
-                                document.getElementById("tv-background").style.backgroundImage = `url('${artistData.images[0].url}')`;
-                            } else {
+                    if (currentTrackUri !== track.uri) {
+                        currentTrackUri = track.uri;
+                        const artistUri = track.artists && track.artists.length > 0 ? track.artists[0].uri : null;
+                        if (artistUri) {
+                            const artistId = artistUri.split(':').pop();
+                            fetch(`https://api.spotify.com/v1/artists/${artistId}`, {
+                                headers: { 'Authorization': 'Bearer ' + currentSpotifyToken }
+                            }).then(res => res.json()).then(artistData => {
+                                if (artistData.images && artistData.images.length > 0) {
+                                    document.getElementById("tv-background").style.backgroundImage = `url('${artistData.images[0].url}')`;
+                                } else {
+                                    document.getElementById("tv-background").style.backgroundImage = `url('${coverUrl}')`;
+                                }
+                            }).catch(err => {
+                                console.error('Artist image fetch error:', err);
                                 document.getElementById("tv-background").style.backgroundImage = `url('${coverUrl}')`;
-                            }
-                        }).catch(err => {
-                            console.error('Artist image fetch error:', err);
+                            });
+                        } else if (coverUrl) {
                             document.getElementById("tv-background").style.backgroundImage = `url('${coverUrl}')`;
-                        });
-                    } else if (coverUrl) {
-                        document.getElementById("tv-background").style.backgroundImage = `url('${coverUrl}')`;
+                        }
                     }
 
                     const playPath = spotifyPaused ? "M8 5v14l11-7z" : "M6 19h4V5H6v14zm8-14v14h4V5h-4z";
@@ -883,7 +900,7 @@
 
         async function checkTvSettings() {
             try {
-                const res = await fetch('/spotify/token');
+                const res = await fetch(`/spotify/token${shopQueryQ}`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data.access_token && data.access_token !== currentSpotifyToken) {
@@ -919,7 +936,7 @@
         
         async function fetchDailyTotal() {
             try {
-                const totalRes = await fetch('/daily_total');
+                const totalRes = await fetch(`/daily_total${shopQueryQ}`);
                 if (totalRes.status === 200) {
                     const totalData = await totalRes.json();
                     document.getElementById('dailyTotalText').innerText = parseFloat(totalData.total || 0).toLocaleString('tr-TR') + ' ₺';

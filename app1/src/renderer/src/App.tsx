@@ -6,6 +6,7 @@ import MainPanel from './components/MainPanel'
 import CartPanel from './components/CartPanel'
 import OrderModal from './components/OrderModal'
 import SettingsModal from './components/SettingsModal'
+import FileShareModal from './components/FileShareModal'
 
 import TitleBar from './components/TitleBar'
 
@@ -21,6 +22,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       window.api.login({ username, password }).then((res: any) => {
         setIsAutoLoggingIn(false)
         if (res.success) {
+          if (res.token) localStorage.setItem('pos_token', res.token)
           onLogin()
         }
       })
@@ -34,6 +36,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
     if (res.success) {
       localStorage.setItem('saved_username', username)
       localStorage.setItem('saved_password', password)
+      if (res.token) localStorage.setItem('pos_token', res.token)
       onLogin()
     } else {
       setError(res.error || 'Giriş başarısız')
@@ -185,6 +188,7 @@ function App() {
             <CartPanel />
             <OrderModal />
             <SettingsModal />
+            <FileShareModal />
           </div>
         </div>
       )}

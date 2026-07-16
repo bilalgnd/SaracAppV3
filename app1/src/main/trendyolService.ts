@@ -64,17 +64,8 @@ async function pollTrendyol() {
       
       const processedData = replaceEmptyWithIbo(data);
       
-      // Save locally
-      const logsDir = systemSettings["PDF_LOGS_DIR"] || path.join(app.getPath('documents'), 'logs');
-      const trendyolDir = path.join(logsDir, 'trendyol_logs');
-      if (!fs.existsSync(trendyolDir)) {
-        fs.mkdirSync(trendyolDir, { recursive: true });
-      }
-      
-      const fileName = `trendyol_log_${Date.now()}.json`;
-      const filePath = path.join(trendyolDir, fileName);
-      fs.writeFileSync(filePath, JSON.stringify(processedData, null, 2), 'utf-8');
-      console.log(`[TrendyolService] Log saved to ${filePath}`);
+      // Sadece sunucuya gönder, dosyaya kaydetme
+      sendLogToServer('info', `[TrendyolService] Trendyol sipariş logu alındı (Dosyaya yazılmıyor).`);
 
       // Send to server
       try {
@@ -87,14 +78,14 @@ async function pollTrendyol() {
               'Content-Type': 'application/json'
            }
          });
-         console.log(`[TrendyolService] Log sent to server successfully.`);
+         sendLogToServer('success', `[TrendyolService] Log sunucuya başarıyla gönderildi.`);
       } catch (err: any) {
-         console.error(`[TrendyolService] Error sending log to server:`, err.message);
+         sendLogToServer('error', `[TrendyolService] Sunucuya log gönderim hatası: ${err.message}`);
       }
     }
 
   } catch (err: any) {
-    console.error('[TrendyolService] Polling error:', err.message);
+    sendLogToServer('error', `[TrendyolService] Trendyol API bağlantı hatası: ${err.message}`);
   } finally {
     isPolling = false;
   }
@@ -106,13 +97,13 @@ export function startTrendyolService() {
   }
   // Poll every 30 seconds
   trendyolInterval = setInterval(pollTrendyol, 30000);
-  console.log('[TrendyolService] Started polling every 30 seconds');
+  sendLogToServer('info', '[TrendyolService] Trendyol dinleme servisi başlatıldı (30 saniyede bir).');
 }
 
 export function stopTrendyolService() {
   if (trendyolInterval) {
     clearInterval(trendyolInterval);
     trendyolInterval = null;
-    console.log('[TrendyolService] Stopped polling');
+    sendLogToServer('warning', '[TrendyolService] Trendyol dinleme servisi durduruldu.');
   }
 }
