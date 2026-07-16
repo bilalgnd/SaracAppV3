@@ -45,10 +45,13 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [orderStatus, setOrderStatus] = useState<'idle' | 'submitting' | 'success'>('idle')
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null)
+  const [trackingOrderItems, setTrackingOrderItems] = useState<CartItem[]>([])
+  const [trackingOrderTotal, setTrackingOrderTotal] = useState<number>(0)
 
   // Tracking state
   const [serverOrderStatus, setServerOrderStatus] = useState<string>('')
   const [waiterCalled, setWaiterCalled] = useState(false)
+  const [isTrackingVisible, setIsTrackingVisible] = useState(true)
 
   // Portion & Ingredient Modal state
   const [selectedProduct, setSelectedProduct] = useState<MenuItem | null>(null)
@@ -72,6 +75,12 @@ export default function App() {
     const storedOrderId = localStorage.getItem('qr_active_order_id')
     if (storedOrderId) {
       setTrackingOrderId(storedOrderId)
+      try {
+        const storedItems = localStorage.getItem('qr_active_order_items')
+        if (storedItems) setTrackingOrderItems(JSON.parse(storedItems))
+        const storedTotal = localStorage.getItem('qr_active_order_total')
+        if (storedTotal) setTrackingOrderTotal(Number(storedTotal))
+      } catch (e) {}
     }
 
     // Fetch menu
@@ -190,7 +199,11 @@ export default function App() {
         
         if (data.orderId) {
           localStorage.setItem('qr_active_order_id', data.orderId)
+          localStorage.setItem('qr_active_order_items', JSON.stringify(cart))
+          localStorage.setItem('qr_active_order_total', String(cartTotal))
           setTrackingOrderId(data.orderId)
+          setTrackingOrderItems(cart)
+          setTrackingOrderTotal(cartTotal)
         }
         
       } else {
@@ -208,14 +221,18 @@ export default function App() {
     setTrackingOrderId(null)
     setServerOrderStatus('')
     setOrderStatus('idle')
+    setTrackingOrderItems([])
+    setTrackingOrderTotal(0)
     localStorage.removeItem('qr_active_order_id')
+    localStorage.removeItem('qr_active_order_items')
+    localStorage.removeItem('qr_active_order_total')
   }
 
   const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0)
   const cartItemCount = cart.reduce((acc, item) => acc + item.qty, 0)
 
   // Tracking Screen View
-  if (trackingOrderId && serverOrderStatus) {
+  if (trackingOrderId && serverOrderStatus && isTrackingVisible) {
     const s = serverOrderStatus.toLowerCase()
     
     const isPrep = s.includes('prepared') || s.includes('hazır')
@@ -243,12 +260,10 @@ export default function App() {
     return (
       <div className="tracking-container">
         <div className="tracking-header">
-          {isDone && (
-            <button className="back-btn" onClick={finishTracking}>
-              <ArrowLeft size={20} />
-            </button>
-          )}
-          <h2>Sipariş Takibi</h2>
+          <button className="back-btn" onClick={() => isDone ? finishTracking() : setIsTrackingVisible(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', position: 'absolute', left: '20px', top: '25px' }}>
+            <ArrowLeft size={24} />
+          </button>
+          <h2 style={{ marginTop: '5px' }}>Sipariş Takibi</h2>
           <p>Siparişinizin durumunu canlı izleyebilirsiniz.</p>
         </div>
         
@@ -285,6 +300,25 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        {trackingOrderItems && trackingOrderItems.length > 0 && (
+          <div className="order-summary" style={{ margin: '20px 0', padding: '15px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px' }}>
+            <h4 style={{ marginBottom: '10px', fontSize: '16px', color: 'var(--text)' }}>Sipariş Özeti</h4>
+            {trackingOrderItems.map((item, idx) => (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px', color: 'var(--text-dim)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span>{item.qty}x {item.name} {item.portion !== 'Standart' ? `(${item.portion})` : ''}</span>
+                  {item.notes && <span style={{ fontSize: '12px', color: 'var(--danger)', marginTop: '2px' }}>- {item.notes}</span>}
+                </div>
+                <span>{item.price * item.qty} ₺</span>
+              </div>
+            ))}
+            <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '10px', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: 'var(--primary)' }}>
+              <span>Toplam</span>
+              <span>{trackingOrderTotal} ₺</span>
+            </div>
+          </div>
+        )}
 
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {!isDone && (
@@ -335,6 +369,15 @@ export default function App() {
   const currentCategory = categories.find(c => c.id === activeCategoryId)
   const currentItems = currentCategory?.items || []
 
+  const getDisplayStatus = (status: string) => {
+    const s = status.toLowerCase();
+    if (s.includes('prep') || s.includes('hazır')) return 'Hazırlanıyor';
+    if (s.includes('served') || s.includes('yola')) return 'Servis Yapıldı';
+    if (s.includes('tamam') || s.includes('done') || s.includes('iptal')) return 'Tamamlandı';
+    if (s.includes('waiting') || s.includes('bekliyor') || s.includes('yeni')) return 'Onay Bekliyor';
+    return status;
+  }
+
   return (
     <>
       <div className="app-header">
@@ -343,8 +386,17 @@ export default function App() {
           <button 
             onClick={() => {
               localStorage.removeItem('qr_customer_name');
+              localStorage.removeItem('qr_active_order_id');
+              localStorage.removeItem('qr_active_order_items');
+              localStorage.removeItem('qr_active_order_total');
               setCustomerName('');
               setIsNameSet(false);
+              setTrackingOrderId(null);
+              setTrackingOrderItems([]);
+              setTrackingOrderTotal(0);
+              setCart([]);
+              setServerOrderStatus('');
+              setOrderStatus('idle');
             }}
             style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#aaa', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
           >
@@ -382,7 +434,14 @@ export default function App() {
                 <span className="item-price">{minPrice} ₺</span>
                 <button 
                   className="add-btn" 
-                  onClick={() => openProductModal(item)}
+                  onClick={() => {
+                    if (trackingOrderId) {
+                      alert('Mevcut siparişiniz sonuçlanmadan yeni sipariş ekleyemezsiniz.');
+                      return;
+                    }
+                    openProductModal(item);
+                  }}
+                  style={trackingOrderId ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                 >
                   <Plus size={20} />
                 </button>
@@ -392,13 +451,22 @@ export default function App() {
         })}
       </div>
 
-      {cartItemCount > 0 && (
+      {!trackingOrderId && cartItemCount > 0 && (
         <div className="cart-fab" onClick={() => setIsCartOpen(true)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <ShoppingBag />
             <span>{cartItemCount} Ürün</span>
           </div>
           <span>{cartTotal} ₺</span>
+        </div>
+      )}
+
+      {trackingOrderId && serverOrderStatus && !isTrackingVisible && (
+        <div className="cart-fab" onClick={() => setIsTrackingVisible(true)} style={{ bottom: cartItemCount > 0 ? '90px' : '20px', backgroundColor: '#3b82f6', zIndex: 99 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Clock />
+            <span>Siparişim ({getDisplayStatus(serverOrderStatus)})</span>
+          </div>
         </div>
       )}
 
