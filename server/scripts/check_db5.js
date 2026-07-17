@@ -1,1 +1,0 @@
-﻿require('dotenv').config(); const mongoose = require('mongoose'); async function run() { await mongoose.connect(process.env.MONGODB_URI); const doc = await mongoose.connection.db.collection('datas').findOne({ key: 'customMenu' }); console.log(JSON.stringify(doc).substring(0, 500)); process.exit(0); } run();

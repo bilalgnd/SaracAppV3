@@ -1,1 +1,0 @@
-﻿require('dotenv').config(); const mongoose = require('mongoose'); async function run() { await mongoose.connect(process.env.MONGODB_URI); const datas = await mongoose.connection.db.collection('datas').find().toArray(); console.log(datas.map(d => d.key)); process.exit(0); } run();

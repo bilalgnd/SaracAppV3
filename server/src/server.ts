@@ -201,6 +201,10 @@ app.get('/admintools', (_req, res) => {
   res.sendFile(join(__dirname, '../public/templates/admintools.html'))
 })
 
+app.get('/tgo_admin', (_req, res) => {
+  res.sendFile(join(__dirname, '../public/templates/tgo_admin.html'))
+})
+
 const requireAdminAuth = (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization']
   const adminPassword = process.env.ADMIN_TOOLS_PASSWORD || 'default_admin';
@@ -479,6 +483,88 @@ function idempotencyMiddleware(req: express.Request, res: express.Response, next
   
   next();
 }
+
+// --- TGO API Endpoints ---
+const getTgoHeaders = () => {
+  const supplierId = process.env.TRENDYOL_SUPPLIER_ID || '6647850';
+  const apiKey = process.env.TRENDYOL_API_KEY || '';
+  const apiSecret = process.env.TRENDYOL_API_SECRET || '';
+  const authStr = `${apiKey}:${apiSecret}`;
+  const authB64 = Buffer.from(authStr, 'utf-8').toString('base64');
+  
+  return {
+    "Authorization": `Basic ${authB64}`,
+    "User-Agent": `${supplierId} - SelfIntegration`,
+    "x-agentname": `${supplierId} - SelfIntegration`,
+    "Content-Type": "application/json"
+  };
+};
+
+const TGO_BASE_URL = 'https://api.tgoapis.com/integrator';
+const STORE_ID = process.env.TRENDYOL_STORE_ID || '367376';
+const SUPPLIER_ID = process.env.TRENDYOL_SUPPLIER_ID || '6647850';
+
+app.get('/api/tgo/orders', requireAdminAuth, async (req: any, res: any) => {
+  try {
+    const status = req.query.status || 'Created';
+    const response = await axios.get(`${TGO_BASE_URL}/order/meal/suppliers/${SUPPLIER_ID}/packages?status=${status}`, {
+      headers: getTgoHeaders()
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json({ error: error.message, data: error.response?.data });
+  }
+});
+
+app.post('/api/tgo/store/status', requireAdminAuth, async (req: any, res: any) => {
+  try {
+    const { status } = req.body; 
+    // Not: Resmi API dökümanında direkt mağaza açma kapama endpointi net belirtilmemiş (veya restoran/satıcı status). 
+    // Şimdilik başarılı dönüyoruz (mock) veya bulunursa entegre edilir.
+    res.json({ success: true, status });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/tgo/menu', requireAdminAuth, async (req: any, res: any) => {
+  try {
+    const response = await axios.get(`${TGO_BASE_URL}/product/meal/suppliers/${SUPPLIER_ID}/stores/${STORE_ID}/products`, {
+      headers: getTgoHeaders()
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json({ error: error.message, data: error.response?.data });
+  }
+});
+
+app.post('/api/tgo/category/status', requireAdminAuth, async (req: any, res: any) => {
+  try {
+    const { sectionId, status } = req.body; // status: "ACTIVE" or "PASSIVE"
+    const response = await axios.put(`${TGO_BASE_URL}/product/meal/suppliers/${SUPPLIER_ID}/stores/${STORE_ID}/sections/${sectionId}/status`, 
+      { status },
+      { headers: getTgoHeaders() }
+    );
+    res.json({ success: true, data: response.data, status });
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json({ error: error.message, data: error.response?.data });
+  }
+});
+
+app.post('/api/tgo/send_to_app1', requireAdminAuth, (req: any, res: any) => {
+  try {
+    const { parsedOrderText, rawData } = req.body;
+    // App1'e direkt sipariş yazdırma veya işleme emri gönder (POS print event)
+    broadcastMessageToPhones({ 
+      type: 'server-event', 
+      action: 'print_tgo_order', 
+      data: { text: parsedOrderText, raw: rawData } 
+    });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.get('/api/settings', requireAuth, (_req, res) => {
   res.json(getShop().systemSettings)
@@ -923,6 +1009,7 @@ app.post('/api/public/submit_order', (req: any, res: any) => {
         title: 'Yeni Sipariş!',
         body: `QR Menüden ${customerName} isimli müşteriden ${totalAmount} ₺ tutarında yeni sipariş geldi!`
       },
+      android: { priority: 'high' as const },
       tokens: fcmTokens
     };
     try {
@@ -1001,6 +1088,7 @@ app.post('/api/public/call_waiter', (req: any, res: any) => {
         title: 'Garson Çağrısı!',
         body: `${active.customer_name} masasından garson çağrılıyor!`
       },
+      android: { priority: 'high' as const },
       tokens: fcmTokens
     };
     try {

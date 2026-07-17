@@ -1,1 +1,0 @@
-﻿require('dotenv').config(); const mongoose = require('mongoose'); const { ShopState } = require('./dist/models'); async function run() { await mongoose.connect(process.env.MONGODB_URI); const shop = new ShopState('admin'); await shop.initialize(); console.log('API_TOKEN:', shop.systemSettings.API_TOKEN); process.exit(0); } run();

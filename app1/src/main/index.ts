@@ -971,13 +971,12 @@ async function checkTargetPages() {
               
               // 3. Read txt
               if (fs.existsSync(tempTxtPath)) {
-                const textContent = fs.readFileSync(tempTxtPath, 'utf8');
+                let textContent = fs.readFileSync(tempTxtPath, 'utf8');
                 
-                // --- DEBUG: Save to desktop (IPTAL EDILDI) ---
-                try {
-                  // Masaüstüne debug kaydı yapılmıyor
-                } catch(e) {}
-                // ------------------------------
+                // Çok uzun metinlerin uygulamayı kitlemesini engelle (Catastrophic Backtracking)
+                if (textContent && textContent.length > 5000) {
+                  textContent = textContent.substring(0, 5000);
+                }
                 
                 const newOrder = parseOrderText(textContent);
                 if (newOrder) {
@@ -986,6 +985,13 @@ async function checkTargetPages() {
                 } else {
                   const preview = textContent.replace(/\s+/g, ' ').substring(0, 100);
                   sendLogToServer('warning', `Print yakalama (PDF Reader): Format anlaşılamadı. Alınan: "${preview}..."`);
+                  
+                  // Anlaşılamayan metni logla ki tasarım değişikliği görülüp Regex düzeltilebilsin
+                  try {
+                    const unparsedDir = path.join(logDir, 'unparsed_orders');
+                    if (!fs.existsSync(unparsedDir)) fs.mkdirSync(unparsedDir, { recursive: true });
+                    fs.writeFileSync(path.join(unparsedDir, `unparsed_${timestamp}.txt`), textContent);
+                  } catch (e) {}
                 }
                 
                 // Cleanup (sadece txt dosyasını siliyoruz, pdf kalıcı oluyor)
@@ -1023,15 +1029,20 @@ async function checkTargetPages() {
         }
 
         const injectScript = () => {
+          // Yemeksepeti/Trendyol Anti-Bot (Cloudflare/DataDome) Robot Doğrulamasını Atlatma
+          try {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] }); // Sahte eklentiler göster
+          } catch(e) {}
+
           if (!(window as any).__print_intercepted) {
             (window as any).__print_intercepted = true;
             const originalPrint = window.print;
             window.print = async () => {
               try {
                 const receiptText = document.body.innerText || document.documentElement.innerText;
-                if (window.top && (window.top as any).sendRawTextToKasa) {
-                  await (window.top as any).sendRawTextToKasa(receiptText);
-                } else if (window.top && (window.top as any).triggerPdfExtraction) {
+                // 1. Yöntem iptal edildi, sadece PDF okuma kullanılacak
+                if (window.top && (window.top as any).triggerPdfExtraction) {
                   await (window.top as any).triggerPdfExtraction();
                 }
               } finally {
