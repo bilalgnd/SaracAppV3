@@ -2,7 +2,9 @@ const fs = require('fs');
 const path = require('path');
 
 const projects = ['app1', 'app2', 'qr-app', 'server'];
-const outDir = 'C:\\Users\\bilal\\SARACAPP\\SARACAPPV3\\backs\\1707_0150';
+const d = new Date();
+const dateStr = String(d.getDate()).padStart(2,'0') + String(d.getMonth()+1).padStart(2,'0') + '_' + String(d.getHours()).padStart(2,'0') + String(d.getMinutes()).padStart(2,'0');
+const outDir = 'C:\\Users\\bilal\\SARACAPP\\SARACAPPV3\\backs\\' + dateStr;
 const rootDir = 'C:\\Users\\bilal\\SARACAPP\\SARACAPPV3';
 
 if (!fs.existsSync(outDir)) {

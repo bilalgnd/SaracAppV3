@@ -1,8 +1,8 @@
 appId: com.saracoglu.pos
-productName: SaracAppv6.0.13
+productName: SaracAppv6.0.14
 directories:
   buildResources: build
-  output: "../exe-apk dist"
+  output: "dist"
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -19,7 +19,7 @@ extraResources:
   - from: "bin"
     to: "bin"
 win:
-  executableName: SaracAppv6.0.13
+  executableName: SaracAppv6.0.14
   icon: resources/icon.png
 nsis:
   artifactName: ${name}-${version}-setup.${ext}

@@ -98,12 +98,84 @@ function PriceEditModal({ item, onClose }: { item: any, onClose: () => void }) {
   )
 }
 
+const processTgoRawData = (rawData: any, currentOrders: any[], saveFn: any, setFn: any) => {
+  try {
+    const tgoItems: any[] = [];
+    if (rawData && rawData.lines) {
+        rawData.lines.forEach((l: any) => {
+            const qty = l.items ? l.items.length : 1;
+            for (let j = 0; j < qty; j++) {
+                let notes = '';
+                if (l.modifierProducts && l.modifierProducts.length > 0) {
+                   notes = l.modifierProducts.map((m: any) => m.name).join(', ');
+                }
+                tgoItems.push({
+                    name: l.name,
+                    portion: '',
+                    price: l.price,
+                    notes: notes
+                });
+            }
+        });
+    }
+    let finalNote = rawData ? (rawData.customerNote || '') : '';
+    if (rawData && rawData.address) {
+      const a = rawData.address;
+      const addrParts: string[] = [];
+      if (a.neighborhood) addrParts.push(a.neighborhood);
+      if (a.address1) addrParts.push(a.address1.trim());
+      if (a.address2) addrParts.push(a.address2.trim());
+      if (a.apartmentNumber) addrParts.push(`Apt: ${a.apartmentNumber}`);
+      if (a.doorNumber) addrParts.push(`No: ${a.doorNumber.trim()}`);
+      if (a.floor) addrParts.push(`Kat: ${a.floor}`);
+      if (a.addressDescription) addrParts.push(`Tarif: ${a.addressDescription}`);
+      if (a.phone) addrParts.push(`Tel: ${a.phone}`);
+      
+      const addressStr = addrParts.filter(Boolean).join(', ');
+      finalNote = finalNote ? `${finalNote}\n[Adres: ${addressStr}]` : `[Adres: ${addressStr}]`;
+    }
+
+    const tgoCustomerName = (rawData && rawData.customer) ? `${rawData.customer.firstName} ${rawData.customer.lastName} (TGO)` : 'Bilinmeyen (TGO)';
+    const newApp1Order: any = {
+        id: (rawData && rawData.orderNumber) ? rawData.orderNumber.toString() : Date.now().toString(),
+        customer_name: tgoCustomerName,
+        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        items: tgoItems,
+        total_amount: rawData ? rawData.totalPrice : 0,
+        status: 'waiting',
+        order_note: finalNote
+    };
+    
+    const exists = currentOrders.find(o => String(o.id) === String(newApp1Order.id));
+    if (!exists) {
+       const newOrders = [newApp1Order, ...currentOrders];
+       saveFn(newOrders);
+       setFn(newOrders);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('JSON parse hatası: ' + err);
+  }
+};
+
 function TablesGrid() {
   const { orders, setEditingOrder, editingOrderIndex, setOrders, clearCart } = useStore()
   const longPressTimer = useRef<any>(null)
   const isDragging = useRef(false)
   const hasLongPressed = useRef(false)
   const startY = useRef(0)
+
+  React.useEffect(() => {
+    if (!window.api || !window.api.onServerEvent) return;
+    const unsub = window.api.onServerEvent((action: string, data: any) => {
+      if (action === 'tgo_add_order' && data) {
+        processTgoRawData(data, useStore.getState().orders, window.api.saveOrders, setOrders);
+      }
+    });
+    return () => {
+      if (window.api && window.api.offServerEvent) window.api.offServerEvent(unsub);
+    };
+  }, [setOrders]);
 
   if (orders.length === 0) {
     return (
@@ -164,7 +236,33 @@ function TablesGrid() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10, gap: '10px' }}>
+        <input 
+          type="file" 
+          accept=".json" 
+          style={{ display: 'none' }} 
+          id="tgo-json-upload" 
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+              const text = await file.text();
+              const rawData = JSON.parse(text);
+              processTgoRawData(rawData, useStore.getState().orders, window.api.saveOrders, setOrders);
+            } catch (err) {
+              console.error(err);
+              alert('JSON okunamadı veya parse edilemedi!');
+            }
+            e.target.value = '';
+          }}
+        />
+        <button 
+          className="btn" 
+          style={{ height: 40, padding: '0 20px', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }} 
+          onClick={() => document.getElementById('tgo-json-upload')?.click()}
+        >
+          TGO Ekle
+        </button>
         <button className="btn btn-danger" style={{ height: 40, padding: '0 20px' }} onClick={handleDeleteAll}>
           Tümünü Sil
         </button>
