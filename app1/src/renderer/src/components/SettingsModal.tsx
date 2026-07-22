@@ -419,8 +419,7 @@ export default function SettingsModal() {
           <button className={`settings-tab ${activeTab === 'menu' ? 'active' : ''}`} onClick={() => setActiveTab('menu')}>Menü Yönetimi</button>
           <button className={`settings-tab ${activeTab === 'past_orders' ? 'active' : ''}`} onClick={() => { setActiveTab('past_orders'); fetchPastOrders(); }}>Geçmiş Siparişler</button>
           <button className={`settings-tab ${activeTab === 'printer' ? 'active' : ''}`} onClick={() => { setActiveTab('printer'); loadPrinters(); }}>Yazıcı</button>
-          <button className={`settings-tab ${activeTab === 'spotify' ? 'active' : ''}`} onClick={() => setActiveTab('spotify')}>API Keys</button>
-          <button className={`settings-tab ${activeTab === 'trendyol' ? 'active' : ''}`} onClick={() => setActiveTab('trendyol')}>Trendyol (tryol)</button>
+          <button className={`settings-tab ${['integrations', 'spotify', 'trendyol'].includes(activeTab) ? 'active' : ''}`} onClick={() => setActiveTab('integrations')}>Integrations</button>
           <button className={`settings-tab ${activeTab === 'updates' ? 'active' : ''}`} onClick={() => { setActiveTab('updates'); checkUpdates(); }}>Güncellemeler</button>
         </div>
 
@@ -833,8 +832,6 @@ export default function SettingsModal() {
             </div>
           )}
 
-
-
           {activeTab === 'printer' && (
             <div>
               <div className="settings-section-title">Yazıcı Ayarları</div>
@@ -851,10 +848,10 @@ export default function SettingsModal() {
             </div>
           )}
 
-          {activeTab === 'spotify' && (
+          {['integrations', 'spotify', 'trendyol'].includes(activeTab) && (
             <div>
               <div className="settings-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>API Keys (Spotify)</span>
+                <span>Integrations</span>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button className="settings-btn" style={{ padding: '8px 15px', fontSize: 13, backgroundColor: '#2a2a2a' }} onClick={async () => {
                     const result = await window.api.importApiKeys()
@@ -877,7 +874,7 @@ export default function SettingsModal() {
               </div>
               
               <div className="settings-card">
-                <div className="settings-card-title">API Keys</div>
+                <div className="settings-card-title">Spotify Entegrasyonu (API Keys)</div>
                 <label style={{ display: 'block', fontSize: 12, color: 'gray', marginBottom: 5 }}>Client ID</label>
                 <input className="settings-input" value={settings.SPOTIFY_CLIENT_ID || ''} onChange={e => handleSettingChange('SPOTIFY_CLIENT_ID', e.target.value)} />
                 
@@ -889,21 +886,15 @@ export default function SettingsModal() {
                   <button className="settings-btn success" onClick={triggerSpotifyLogin}>Spotify'ı Yetkilendir (Login)</button>
                 </div>
               </div>
-            </div>
-          )}
 
-          {activeTab === 'trendyol' && (
-            <div>
-              <div className="settings-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Trendyol (tryol) Entegrasyonu</span>
-              </div>
-              <div className="settings-card">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div className="settings-card" style={{ marginTop: 20 }}>
+                <div className="settings-card-title">Trendyol (TGO) Entegrasyonu</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: 15 }}>
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
                     <div>
-                      <div style={{ fontWeight: 'bold', color: '#fff' }}>Trendyol Log Alma Servisi</div>
-                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>Sipariş paketlerini çeker ve loglar.</div>
+                      <div style={{ fontWeight: 'bold', color: '#fff' }}>Trendyol Sipariş Servisi (API)</div>
+                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>Trendyol API üzerinden gelen siparişleri otomatik olarak çeker ve kasaya aktarır.</div>
                     </div>
                     <button 
                       className={`settings-btn ${settings.ENABLE_TRENDYOL ? 'success' : 'danger'}`}
@@ -987,9 +978,6 @@ export default function SettingsModal() {
                   <div style={{ marginTop: 20 }}>
                     <button className="settings-btn success" onClick={handleSaveSettings}>
                       Ayarları Kaydet
-                    </button>
-                    <button className="settings-btn" style={{ marginLeft: 10 }} onClick={() => window.api.openTrendyolLogs()}>
-                      Log Klasörünü Aç
                     </button>
                   </div>
 

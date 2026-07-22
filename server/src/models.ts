@@ -139,6 +139,16 @@ export class ShopState {
       changed = true;
     }
 
+    const existingStoreId = this.systemSettings.trendyolStoreId || this.systemSettings.TRENDYOL_STORE_ID;
+    if (existingStoreId) {
+      this.systemSettings.trendyolStoreId = existingStoreId;
+      this.systemSettings.TRENDYOL_STORE_ID = existingStoreId;
+    } else if (process.env.TRENDYOL_STORE_ID) {
+      this.systemSettings.trendyolStoreId = process.env.TRENDYOL_STORE_ID;
+      this.systemSettings.TRENDYOL_STORE_ID = process.env.TRENDYOL_STORE_ID;
+      changed = true;
+    }
+
     if (!this.systemSettings['API_TOKEN']) {
       this.systemSettings['API_TOKEN'] = '123456';
       changed = true;

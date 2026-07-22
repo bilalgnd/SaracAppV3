@@ -180,6 +180,9 @@ interface KasaApi {
     @retrofit2.http.POST("set_tv_screensaver")
     suspend fun setTvScreensaver(@retrofit2.http.Body request: Map<String, String>): retrofit2.Response<Void>
 
+    @retrofit2.http.POST("set_tv_audio")
+    suspend fun setTvAudio(@retrofit2.http.Body request: Map<String, String>): retrofit2.Response<Void>
+
     @retrofit2.http.GET("api/daily_report")
     suspend fun gunlukRaporGetir(@retrofit2.http.Query("date") date: String? = null): retrofit2.Response<DailyReportResponse>
 
@@ -1189,6 +1192,77 @@ fun AnaEkran() {
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(label, color = if (isSelected) Color(0xFF4CAF50) else Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                }
+
+                                Spacer(Modifier.height(24.dp))
+                                Text("TV SES KAYNAĞI & RADYO", color = Color(0xFFAAAAAA), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                var selectedAudioSource by remember { mutableStateOf("spotify") }
+                                var selectedRadioStation by remember { mutableStateOf("powerturk") }
+
+                                @OptIn(ExperimentalLayoutApi::class)
+                                FlowRow(modifier = Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    listOf("spotify" to "🟢 Spotify", "radio" to "📻 Canlı Radyo").forEach { (src, label) ->
+                                        val isSelected = selectedAudioSource == src
+                                        Box(
+                                            modifier = Modifier
+                                                .background(if (isSelected) Color(0x33FF9800) else Color(0x1AFFFFFF), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                                .border(1.dp, if (isSelected) Color(0xFFFF9800) else Color(0x1AFFFFFF), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                                .clickable {
+                                                    selectedAudioSource = src
+                                                    CoroutineScope(Dispatchers.IO).launch {
+                                                        try {
+                                                            ApiClient.getApi(hafiza.kasaIpOku(), hafiza.kasaTokenOku()).setTvAudio(mapOf("source" to src, "station" to selectedRadioStation))
+                                                        } catch (e: Exception) {}
+                                                    }
+                                                }
+                                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(label, color = if (isSelected) Color(0xFFFF9800) else Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                }
+
+                                if (selectedAudioSource == "radio") {
+                                    Spacer(Modifier.height(14.dp))
+                                    Text("CANLI RADYO KANALI", color = Color(0xFFAAAAAA), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                    @OptIn(ExperimentalLayoutApi::class)
+                                    FlowRow(modifier = Modifier.padding(top = 8.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        listOf(
+                                            "powerturk" to "⚡ Power Türk",
+                                            "number1fm" to "⚡ Number1 FM",
+                                            "number1turk" to "⚡ Number1 Türk",
+                                            "virginradio" to "⚡ Virgin Radio",
+                                            "slowturk" to "Slow Türk",
+                                            "superfm" to "Süper FM",
+                                            "kralfm" to "Kral FM",
+                                            "radyo7" to "Radyo 7",
+                                            "trtturku" to "TRT Türkü",
+                                            "alemfm" to "Alem FM",
+                                            "kafaradyo" to "Kafa Radyo"
+                                        ).forEach { (stKey, stName) ->
+                                            val isStSelected = selectedRadioStation == stKey
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(if (isStSelected) Color(0x44FF9800) else Color(0x15FFFFFF), androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                                                    .border(1.dp, if (isStSelected) Color(0xFFFF9800) else Color(0x20FFFFFF), androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                                                    .clickable {
+                                                        selectedRadioStation = stKey
+                                                        CoroutineScope(Dispatchers.IO).launch {
+                                                            try {
+                                                                ApiClient.getApi(hafiza.kasaIpOku(), hafiza.kasaTokenOku()).setTvAudio(mapOf("source" to "radio", "station" to stKey))
+                                                            } catch (e: Exception) {}
+                                                        }
+                                                    }
+                                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(stName, color = if (isStSelected) Color(0xFFFF9800) else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                            }
                                         }
                                     }
                                 }

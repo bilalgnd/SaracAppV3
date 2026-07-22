@@ -550,7 +550,33 @@ const getTrendyolSupplierId = () => {
 const getTrendyolStoreId = () => {
   const shop = getShop();
   const settings = shop?.systemSettings || {};
-  return settings.trendyolStoreId || process.env.TRENDYOL_STORE_ID || '367376';
+  return settings.trendyolStoreId || settings.TRENDYOL_STORE_ID || process.env.TRENDYOL_STORE_ID || '367376';
+};
+
+const resolveTrendyolStoreId = async () => {
+  const shop = getShop();
+  const settings = shop?.systemSettings || {};
+  if (settings.trendyolStoreId || settings.TRENDYOL_STORE_ID) {
+    return settings.trendyolStoreId || settings.TRENDYOL_STORE_ID;
+  }
+  if (process.env.TRENDYOL_STORE_ID) {
+    return process.env.TRENDYOL_STORE_ID;
+  }
+  try {
+    const supplierId = getTrendyolSupplierId();
+    const response = await axios.get(`${getTgoBaseUrl()}/store/meal/suppliers/${supplierId}/stores`, {
+      headers: getTgoHeaders()
+    });
+    if (response.data) {
+      const stores = response.data.restaurants || response.data.stores || response.data;
+      if (Array.isArray(stores) && stores.length > 0 && stores[0].id) {
+        return String(stores[0].id);
+      }
+    }
+  } catch (e: any) {
+    console.error('Failed to auto-discover Trendyol storeId:', e.message);
+  }
+  return '367376';
 };
 
 const getTgoHeaders = () => {
@@ -791,25 +817,73 @@ app.post('/api/tgo/store/status', requireAdminAuth, async (req: any, res: any) =
   try {
     const status = req.body.status; // 'OPEN' or 'CLOSED'
     const supplierId = getTrendyolSupplierId();
-    const storeId = getTrendyolStoreId();
-    const response = await axios.put(`${getTgoBaseUrl()}/store/meal/suppliers/${supplierId}/stores/${storeId}/status`, 
-      { status: status },
-      { headers: getTgoHeaders() }
-    );
-    res.json({ success: true, data: response.data, status });
+    const storeId = await resolveTrendyolStoreId();
+    
+    let responseData: any = null;
+    try {
+      const response = await axios.put(`${getTgoBaseUrl()}/store/meal/suppliers/${supplierId}/stores/${storeId}/status`, 
+        { status: status, workingStatus: status, isOpen: status === 'OPEN' },
+        { headers: getTgoHeaders() }
+      );
+      responseData = response.data;
+    } catch (primaryErr: any) {
+      try {
+        const fallbackRes = await axios.put(`${getTgoBaseUrl()}/store/meal/suppliers/${supplierId}/stores/${storeId}`, 
+          { status: status, workingStatus: status, isOpen: status === 'OPEN' },
+          { headers: getTgoHeaders() }
+        );
+        responseData = fallbackRes.data;
+      } catch (fallbackErr) {
+        throw primaryErr;
+      }
+    }
+    
+    res.json({ success: true, storeId, status, data: responseData });
   } catch (error: any) {
-    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message, data: error.response?.data });
+    const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message;
+    console.error('Trendyol store status error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({ error: errorMsg, data: error.response?.data });
   }
 });
 
 app.get('/api/tgo/store', requireAdminAuth, async (req: any, res: any) => {
   try {
     const supplierId = getTrendyolSupplierId();
-    const storeId = getTrendyolStoreId();
-    const response = await axios.get(`${getTgoBaseUrl()}/store/meal/suppliers/${supplierId}/stores/${storeId}`, {
-      headers: getTgoHeaders()
+    const storeId = await resolveTrendyolStoreId();
+    
+    let storeData: any = null;
+    try {
+      const response = await axios.get(`${getTgoBaseUrl()}/store/meal/suppliers/${supplierId}/stores/${storeId}`, {
+        headers: getTgoHeaders()
+      });
+      storeData = response.data;
+    } catch (err: any) {
+      const response = await axios.get(`${getTgoBaseUrl()}/store/meal/suppliers/${supplierId}/stores`, {
+        headers: getTgoHeaders()
+      });
+      storeData = response.data;
+    }
+
+    let workingStatus = 'CLOSED';
+    if (storeData) {
+      let target = storeData.data || storeData;
+      if (target.restaurants && Array.isArray(target.restaurants) && target.restaurants.length > 0) {
+        target = target.restaurants[0];
+      } else if (Array.isArray(target) && target.length > 0) {
+        target = target[0];
+      }
+      workingStatus = target.workingStatus || target.status || (target.isOpen ? 'OPEN' : 'CLOSED');
+    }
+
+    const isOpen = (workingStatus === 'OPEN' || workingStatus === 'ACTIVE');
+    res.json({
+      success: true,
+      storeId,
+      status: isOpen ? 'OPEN' : 'CLOSED',
+      workingStatus,
+      isOpen,
+      data: storeData
     });
-    res.json(response.data);
   } catch (error: any) {
     res.status(error.response?.status || 500).json({ error: error.message, data: error.response?.data });
   }
@@ -1519,7 +1593,7 @@ app.get('/api/admin/dashboard_stats', requireAdminAuth, async (req: any, res: an
 
   let itemSales: Record<string, number> = {}
   let itemRevenue: Record<string, number> = {}
-  let categorySales: Record<string, number> = { 'Et Döner': 0, 'Tavuk Döner': 0, 'İçecekler': 0, 'Diğer': 0 }
+  let categorySales: Record<string, number> = { 'Et Döner': 0, 'Tavuk Döner': 0, 'İçecekler': 0, 'Tatlı & Yan Ürünler': 0, 'Diğer': 0 }
 
   const trendDataMap = new Map<string, { label: string, val: number, ts: number }>()
 
@@ -1563,7 +1637,7 @@ app.get('/api/admin/dashboard_stats', requireAdminAuth, async (req: any, res: an
 
         // For "Bugün Satılan Döner" fixed stats
         if (oDate >= todayStart && oDate <= now) {
-          if (iName.includes('et') || iName.includes('iskender') || iName.includes('beyti')) {
+          if (iName.includes('et') || iName.includes('iskender') || iName.includes('beyti') || iName.includes('biftek')) {
              todayEtDonerQty += qty
           } else if (iName.includes('tavuk')) {
              todayTavukDonerQty += qty
@@ -1575,12 +1649,14 @@ app.get('/api/admin/dashboard_stats', requireAdminAuth, async (req: any, res: an
           itemSales[name] = (itemSales[name] || 0) + qty
           itemRevenue[name] = (itemRevenue[name] || 0) + (price * qty)
 
-          if (iName.includes('et') || iName.includes('iskender') || iName.includes('beyti')) {
+          if (iName.includes('et') || iName.includes('iskender') || iName.includes('beyti') || iName.includes('biftek')) {
             categorySales['Et Döner'] += qty
           } else if (iName.includes('tavuk')) {
             categorySales['Tavuk Döner'] += qty
-          } else if (iName.includes('ayran') || iName.includes('kola') || iName.includes('şalgam') || iName.includes('su') || iName.includes('fanta') || iName.includes('sprite')) {
+          } else if (iName.includes('ayran') || iName.includes('kola') || iName.includes('coca') || iName.includes('fanta') || iName.includes('sprite') || iName.includes('gazoz') || iName.includes('şalgam') || iName.includes('su') || iName.includes('soda') || iName.includes('fuse') || iName.includes('cappy') || iName.includes('ice tea') || iName.includes('icetea') || iName.includes('meyve')) {
             categorySales['İçecekler'] += qty
+          } else if (iName.includes('patates') || iName.includes('künefe') || iName.includes('tatlı') || iName.includes('sütlaç') || iName.includes('baklava') || iName.includes('çorba') || iName.includes('salata') || iName.includes('sos') || iName.includes('nugget') || iName.includes('soğan halka') || iName.includes('menü')) {
+            categorySales['Tatlı & Yan Ürünler'] += qty
           } else {
             categorySales['Diğer'] += qty
           }

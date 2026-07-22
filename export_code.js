@@ -20,7 +20,7 @@ function walkSync(dir, filelist = []) {
       if (['node_modules', 'dist', 'build', 'out', '.git', '.gradle', 'idea', 'app/build'].includes(file)) continue;
       filelist = walkSync(filepath, filelist);
     } else {
-      if (file.endsWith('.ts') || file.endsWith('.tsx') || file.endsWith('.js') || file.endsWith('.jsx') || file.endsWith('.kt') || file.endsWith('.css') || file.endsWith('.json')) {
+      if (file.endsWith('.ts') || file.endsWith('.tsx') || file.endsWith('.js') || file.endsWith('.jsx') || file.endsWith('.kt') || file.endsWith('.css') || file.endsWith('.json') || file.endsWith('.html') || file.endsWith('.xml')) {
         filelist.push(filepath);
       }
     }
