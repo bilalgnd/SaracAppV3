@@ -1,5 +1,5 @@
 appId: com.saracoglu.pos
-productName: SaracAppv6.0.14
+productName: SaracAppv6.0.15
 directories:
   buildResources: build
   output: "dist"
@@ -19,7 +19,7 @@ extraResources:
   - from: "bin"
     to: "bin"
 win:
-  executableName: SaracAppv6.0.14
+  executableName: SaracAppv6.0.15
   icon: resources/icon.png
 nsis:
   artifactName: ${name}-${version}-setup.${ext}

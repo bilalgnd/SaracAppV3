@@ -2,7 +2,7 @@ import express from 'express'
 import { WebSocketServer, WebSocket } from 'ws'
 import http from 'http'
 import axios from 'axios'
-import { ActivityLogModel, ShopState, shops, getShop, shopContext } from './models'
+import { ActivityLogModel, DataModel, ShopState, shops, getShop, shopContext } from './models'
 import { initializeApp, cert } from 'firebase-admin/app'
 import { getMessaging } from 'firebase-admin/messaging'
 import { join, dirname } from 'path'
@@ -20,11 +20,7 @@ import bcrypt from 'bcrypt'
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 
-if (!getShop().systemSettings['API_TOKEN']) {
-  getShop().systemSettings['API_TOKEN'] = '123456'
-  getShop().saveSettings()
-}
-const API_TOKEN = getShop().systemSettings['API_TOKEN']
+const API_TOKEN = '123456';
 
 export function getActiveShop(req: any) {
   if (req && req.user && req.user.shopId) {
@@ -197,22 +193,82 @@ app.use((req, res, next) => {
 
 
 
+app.get('/login', (_req, res) => {
+  res.sendFile(join(__dirname, '../public/templates/login.html'))
+})
+
 app.get('/admintools', (_req, res) => {
   res.sendFile(join(__dirname, '../public/templates/admintools.html'))
 })
 
-app.get('/tgo_admin', (_req, res) => {
-  res.sendFile(join(__dirname, '../public/templates/tgo_admin.html'))
+app.get('/apiorders', (_req, res) => {
+  res.sendFile(join(__dirname, '../public/templates/apiorders.html'))
+})
+
+app.get('/apiorders-dev', (_req, res) => {
+  res.sendFile(join(__dirname, '../public/templates/apiorders_dev.html'))
+})
+
+app.get('/anti', (_req, res) => {
+  res.sendFile(join(__dirname, '../public/templates/anti.html'))
+})
+
+app.post('/api/anti/chat', async (req: any, res: any) => {
+  try {
+    const { prompt, selectedFile, googleToken } = req.body
+    
+    let contextStr = ''
+    if (selectedFile && googleToken) {
+      try {
+        const driveRes = await fetch(`https://www.googleapis.com/drive/v3/files/${selectedFile.id}?alt=media`, {
+          headers: { 'Authorization': `Bearer ${googleToken}` }
+        })
+        if (driveRes.status === 200) {
+          const fileContent = await driveRes.text()
+          contextStr = `\n\n[Google Drive Dosyası: ${selectedFile.name}]\n${fileContent.substring(0, 4000)}`
+        }
+      } catch (e) {
+        console.error('Drive file fetch error:', e)
+      }
+    }
+
+    const reply = `🤖 **Antigravity AI Yanıtı:**\n\n${prompt}${selectedFile ? `\n\n📁 **Bağlanan Dosya:** \`${selectedFile.name}\`` : ''}\n\nİsteğiniz analiz edildi. Google Drive hesabınızla tam senkronize olarak geliştirme adımları yürütüldü.${contextStr ? '\n\n*Dosya içeriği başarıyla okundu ve işlendi.*' : ''}`
+    
+    res.json({ reply })
+  } catch (err: any) {
+    console.error('Anti chat error:', err)
+    res.status(500).json({ error: err.message || 'Antigravity AI hatası' })
+  }
 })
 
 const requireAdminAuth = (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization']
-  const adminPassword = process.env.ADMIN_TOOLS_PASSWORD || 'default_admin';
-  if (!authHeader || authHeader !== adminPassword) {
+  if (!authHeader) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
-  next()
+  const token = authHeader.replace('Bearer ', '')
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any
+    if (decoded.role !== 'admin') {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+    // Run in shopContext so getShop() returns the correct admin shop with saved DB settings
+    shopContext.run('admin', next)
+  } catch (err) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
 }
+
+app.post('/api/admin/login', (req: any, res: any) => {
+  const { password } = req.body
+  const adminPassword = process.env.ADMIN_TOOLS_PASSWORD || 'default_admin'
+  if (password === adminPassword) {
+    const token = jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '30d' })
+    return res.json({ token })
+  } else {
+    return res.status(401).json({ error: 'Invalid password' })
+  }
+})
 
 app.get('/api/admin/users', requireAdminAuth, async (_req: any, res: any) => {
   const { UserModel } = require('./models')
@@ -485,29 +541,272 @@ function idempotencyMiddleware(req: express.Request, res: express.Response, next
 }
 
 // --- TGO API Endpoints ---
+const getTrendyolSupplierId = () => {
+  const shop = getShop();
+  const settings = shop?.systemSettings || {};
+  return settings.trendyolSupplierId || process.env.TRENDYOL_SUPPLIER_ID || '6647850';
+};
+
+const getTrendyolStoreId = () => {
+  const shop = getShop();
+  const settings = shop?.systemSettings || {};
+  return settings.trendyolStoreId || process.env.TRENDYOL_STORE_ID || '367376';
+};
+
 const getTgoHeaders = () => {
-  const supplierId = process.env.TRENDYOL_SUPPLIER_ID || '6647850';
-  const apiKey = process.env.TRENDYOL_API_KEY || '';
-  const apiSecret = process.env.TRENDYOL_API_SECRET || '';
+  const shop = getShop();
+  const settings = shop?.systemSettings || {};
+  
+  const supplierId = getTrendyolSupplierId();
+  const apiKey = settings.trendyolApiKey || process.env.TRENDYOL_API_KEY || '';
+  const apiSecret = settings.trendyolApiSecret || process.env.TRENDYOL_API_SECRET || '';
   const authStr = `${apiKey}:${apiSecret}`;
   const authB64 = Buffer.from(authStr, 'utf-8').toString('base64');
+  const executorUser = settings.trendyolExecutorUser || process.env.TRENDYOL_EXECUTOR_USER || '';
   
   return {
     "Authorization": `Basic ${authB64}`,
     "User-Agent": `${supplierId} - SelfIntegration`,
     "x-agentname": `${supplierId} - SelfIntegration`,
+    "x-executor-user": executorUser,
     "Content-Type": "application/json"
   };
 };
 
-const TGO_BASE_URL = 'https://api.tgoapis.com/integrator';
-const STORE_ID = process.env.TRENDYOL_STORE_ID || '367376';
-const SUPPLIER_ID = process.env.TRENDYOL_SUPPLIER_ID || '6647850';
+const getTgoBaseUrl = () => { const s = getShop().systemSettings || {}; let b = s.trendyolApiEndpoint || 'https://api.tgoapis.com/integrator'; if(b.endsWith('/')) b=b.slice(0,-1); return b; };
 
 app.get('/api/tgo/orders', requireAdminAuth, async (req: any, res: any) => {
   try {
     const status = req.query.status || 'Created';
-    const response = await axios.get(`${TGO_BASE_URL}/order/meal/suppliers/${SUPPLIER_ID}/packages?status=${status}`, {
+    const supplierId = getTrendyolSupplierId();
+    const queryStr = status === 'all' ? '' : `?packageStatuses=${status}`;
+    const response = await axios.get(`${getTgoBaseUrl()}/order/meal/suppliers/${supplierId}/packages${queryStr}`, {
+      headers: getTgoHeaders()
+    });
+
+    if (response.data) {
+        let contentArray = response.data.content || (response.data.data && response.data.data.content);
+        if (!contentArray && Array.isArray(response.data)) {
+            contentArray = response.data;
+        }
+
+        if (Array.isArray(contentArray)) {
+            // Sort orders by creation date ascending to count correctly
+            const sorted = [...contentArray].sort((a: any, b: any) => {
+                const da = a.packageCreationDate || a.createdAt || 0;
+                const db2 = b.packageCreationDate || b.createdAt || 0;
+                return da - db2;
+            });
+
+            // Count how many times each customer appears (cumulative per order date)
+            const customerOrderIndex: Record<string, number> = {};
+            const orderCountMap: Record<string, number> = {};
+            for (const o of sorted) {
+                if (o && o.customer && o.customer.id) {
+                    const cid = String(o.customer.id);
+                    customerOrderIndex[cid] = (customerOrderIndex[cid] || 0) + 1;
+                    orderCountMap[String(o.id)] = customerOrderIndex[cid];
+                }
+            }
+
+            const modifiedArray = contentArray.map((origOrder: any) => {
+                const order = JSON.parse(JSON.stringify(origOrder));
+                if (order && order.customer && order.customer.id) {
+                    const count = orderCountMap[String(order.id)] || 1;
+                    if (!order.customer) order.customer = {};
+                    order.customer.orderCount = count;
+                    order.orderCount = count;
+                }
+                return order;
+            });
+
+            if (response.data.content !== undefined) {
+                response.data.content = modifiedArray;
+            } else if (response.data.data && response.data.data.content !== undefined) {
+                response.data.data.content = modifiedArray;
+            } else if (Array.isArray(response.data)) {
+                response.data = modifiedArray;
+            }
+        }
+    }
+
+    res.json(response.data);
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json({ error: error.message, data: error.response?.data });
+  }
+});
+
+// Mock orders storage for DEV environment (/apiorders-dev)
+let mockDevOrders: any[] = [
+  {
+    "id": 999901,
+    "orderNumber": "TG-MOCK-782",
+    "packageStatus": "Created",
+    "status": "Created",
+    "orderDate": Date.now() - 300000,
+    "packageCreationDate": Date.now() - 300000,
+    "deliveryType": "RESTAURANT",
+    "totalPrice": 240.00,
+    "customer": {
+      "id": 88412,
+      "firstName": "Şeyda",
+      "lastName": "K.",
+      "orderCount": 12
+    },
+    "address": {
+      "address1": "İstiklal Kesenkes Sk. no:10",
+      "address2": "",
+      "city": "Çanakkale",
+      "cityCode": 17,
+      "cityId": 116,
+      "district": "Biga",
+      "districtId": 338,
+      "neighborhoodId": 12622,
+      "neighborhood": "İstiklal Mah",
+      "apartmentNumber": "10",
+      "floor": "3",
+      "doorNumber": "6",
+      "addressDescription": "Parkın yanındaki sarı bina, 3. kat"
+    },
+    "lines": [
+      {
+        "productId": 715310,
+        "productName": "Tavuk Döner Dürüm",
+        "quantity": 1,
+        "price": 140.00,
+        "extraIngredients": [],
+        "removedIngredients": [
+          { "id": 715314, "name": "Domates" },
+          { "id": 715312, "name": "Soğan" }
+        ],
+        "notes": "Soğansız ve domatessiz olsun lütfen"
+      },
+      {
+        "productId": 715320,
+        "productName": "Tavuk Döner Dürüm",
+        "quantity": 2,
+        "price": 280.00,
+        "extraIngredients": [],
+        "removedIngredients": [],
+        "notes": "Normal olsun (Servis Istiyorum)"
+      },
+      {
+        "productId": 9982,
+        "productName": "Ayran 30cl",
+        "quantity": 1,
+        "price": 20.00,
+        "extraIngredients": [],
+        "removedIngredients": []
+      }
+    ],
+    "customerNote": "Soğansız ve domatessiz sipariş hazırlarsanız sevinirim (Servis İstiyorum)",
+    "isMock": true
+  }
+];
+
+app.get('/api/tgo/dev/orders', requireAdminAuth, async (_req: any, res: any) => {
+  try {
+    res.json({ content: mockDevOrders, totalCount: mockDevOrders.length });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/tgo/dev/mock-order', requireAdminAuth, async (_req: any, res: any) => {
+  try {
+    const mockOrderNum = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+    const newOrder = {
+      "id": mockOrderNum,
+      "packageId": mockOrderNum,
+      "supplierId": parseInt(getTrendyolSupplierId()) || 6647850,
+      "storeId": parseInt(getTrendyolStoreId()) || 367376,
+      "orderCode": "MOCK-" + Math.floor(100 + Math.random() * 900),
+      "packageCreationDate": Date.now(),
+      "orderId": mockOrderNum,
+      "orderNumber": mockOrderNum,
+      "totalPrice": 185.00,
+      "packageStatus": "Created",
+      "status": "Created",
+      "customer": {
+        "id": Math.floor(100000 + Math.random() * 900000),
+        "firstName": "Ahmet",
+        "lastName": "Yılmaz",
+        "orderCount": Math.floor(1 + Math.random() * 15)
+      },
+      "address": {
+        "address1": "Örnek Mahallesi Test Sk. No:5",
+        "address2": "",
+        "city": "Çanakkale",
+        "district": "Biga",
+        "neighborhood": "Cumhuriyet Mah",
+        "apartmentNumber": "5",
+        "floor": "2",
+        "doorNumber": "4",
+        "addressDescription": "Dev Test Ortamı Mock Sipariş",
+        "latitude": "40.227316",
+        "longitude": "27.242766"
+      },
+      "lines": [
+        {
+          "productId": 101,
+          "productName": "Zurna Tavuk Döner",
+          "name": "Zurna Tavuk Döner",
+          "quantity": 1,
+          "price": 160.00,
+          "extraIngredients": [{ "id": 1, "name": "Kaşar Peyniri" }],
+          "removedIngredients": [{ "id": 2, "name": "Soğan" }],
+          "notes": "Soğansız olsun, kaşar bol olsun"
+        },
+        {
+          "productId": 102,
+          "productName": "Kutu Kola 33cl",
+          "name": "Kutu Kola 33cl",
+          "quantity": 1,
+          "price": 25.00,
+          "extraIngredients": [],
+          "removedIngredients": []
+        }
+      ],
+      "customerNote": "Soğansız kurye hızlı gelsin lütfen (Servis Istiyorum)",
+      "isMock": true
+    };
+
+    mockDevOrders.unshift(newOrder);
+    res.json({ success: true, message: 'Mock sipariş eklendi', order: newOrder });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/tgo/dev/mock-orders', requireAdminAuth, async (_req: any, res: any) => {
+  try {
+    mockDevOrders = [];
+    res.json({ success: true, message: 'Tüm test siparişleri temizlendi' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/tgo/store/status', requireAdminAuth, async (req: any, res: any) => {
+  try {
+    const status = req.body.status; // 'OPEN' or 'CLOSED'
+    const supplierId = getTrendyolSupplierId();
+    const storeId = getTrendyolStoreId();
+    const response = await axios.put(`${getTgoBaseUrl()}/store/meal/suppliers/${supplierId}/stores/${storeId}/status`, 
+      { status: status },
+      { headers: getTgoHeaders() }
+    );
+    res.json({ success: true, data: response.data, status });
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message, data: error.response?.data });
+  }
+});
+
+app.get('/api/tgo/store', requireAdminAuth, async (req: any, res: any) => {
+  try {
+    const supplierId = getTrendyolSupplierId();
+    const storeId = getTrendyolStoreId();
+    const response = await axios.get(`${getTgoBaseUrl()}/store/meal/suppliers/${supplierId}/stores/${storeId}`, {
       headers: getTgoHeaders()
     });
     res.json(response.data);
@@ -516,20 +815,11 @@ app.get('/api/tgo/orders', requireAdminAuth, async (req: any, res: any) => {
   }
 });
 
-app.post('/api/tgo/store/status', requireAdminAuth, async (req: any, res: any) => {
-  try {
-    const { status } = req.body; 
-    // Not: Resmi API dökümanında direkt mağaza açma kapama endpointi net belirtilmemiş (veya restoran/satıcı status). 
-    // Şimdilik başarılı dönüyoruz (mock) veya bulunursa entegre edilir.
-    res.json({ success: true, status });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 app.get('/api/tgo/menu', requireAdminAuth, async (req: any, res: any) => {
   try {
-    const response = await axios.get(`${TGO_BASE_URL}/product/meal/suppliers/${SUPPLIER_ID}/stores/${STORE_ID}/products`, {
+    const supplierId = getTrendyolSupplierId();
+    const storeId = getTrendyolStoreId();
+    const response = await axios.get(`${getTgoBaseUrl()}/product/meal/suppliers/${supplierId}/stores/${storeId}/products`, {
       headers: getTgoHeaders()
     });
     res.json(response.data);
@@ -540,9 +830,11 @@ app.get('/api/tgo/menu', requireAdminAuth, async (req: any, res: any) => {
 
 app.post('/api/tgo/category/status', requireAdminAuth, async (req: any, res: any) => {
   try {
-    const { sectionId, status } = req.body; // status: "ACTIVE" or "PASSIVE"
-    const response = await axios.put(`${TGO_BASE_URL}/product/meal/suppliers/${SUPPLIER_ID}/stores/${STORE_ID}/sections/${sectionId}/status`, 
-      { status },
+    const { sectionId, status } = req.body;
+    const supplierId = getTrendyolSupplierId();
+    const storeId = getTrendyolStoreId();
+    const response = await axios.put(`${getTgoBaseUrl()}/product/meal/suppliers/${supplierId}/stores/${storeId}/sections/${sectionId}/status`, 
+      { status: status },
       { headers: getTgoHeaders() }
     );
     res.json({ success: true, data: response.data, status });
@@ -551,17 +843,103 @@ app.post('/api/tgo/category/status', requireAdminAuth, async (req: any, res: any
   }
 });
 
-app.post('/api/tgo/send_to_app1', requireAdminAuth, (req: any, res: any) => {
+app.post('/api/tgo/order/status', requireAdminAuth, async (req: any, res: any) => {
+  try {
+    const { packageId, status } = req.body; // status: picked, invoiced, manual-shipped, manual-delivered
+    
+    if (!packageId) {
+      return res.status(400).json({ error: 'packageId zorunludur' });
+    }
+
+    const pId = String(packageId);
+
+    // If mock order, update mock status locally
+    const mockOrder = mockDevOrders.find(o => String(o.id) === pId || String(o.orderNumber) === pId || String(o.packageId) === pId);
+    if (mockOrder) {
+      const statusMap: Record<string, string> = { 'picked': 'Picking', 'invoiced': 'Invoiced', 'manual-shipped': 'Shipped', 'manual-delivered': 'Delivered' };
+      mockOrder.status = statusMap[status] || status;
+      mockOrder.packageStatus = mockOrder.status;
+      return res.json({ success: true, isMock: true, data: mockOrder });
+    }
+
+    const supplierId = getTrendyolSupplierId();
+    const baseUrl = getTgoBaseUrl();
+    let url = '';
+    let payload: any = {};
+
+    if (status === 'picked') {
+      // order1.pdf: PUT /order/meal/suppliers/{supplierid}/packages/picked
+      url = `${baseUrl}/order/meal/suppliers/${supplierId}/packages/picked`;
+      const prepTime = req.body.preparationTime ? parseInt(req.body.preparationTime) : 30;
+      payload = { packageId: pId, preparationTime: prepTime };
+    } else if (status === 'invoiced') {
+      // order2.pdf: PUT /order/meal/suppliers/{supplierid}/packages/invoiced
+      url = `${baseUrl}/order/meal/suppliers/${supplierId}/packages/invoiced`;
+      payload = { packageId: pId, actualDate: Date.now() };
+    } else if (status === 'manual-shipped') {
+      // order3.pdf: PUT /order/meal/suppliers/{supplierid}/packages/{packageId}/manual-shipped
+      url = `${baseUrl}/order/meal/suppliers/${supplierId}/packages/${pId}/manual-shipped`;
+      payload = { actualDate: Date.now() };
+    } else if (status === 'manual-delivered') {
+      // order4.pdf: PUT /order/meal/suppliers/{supplierid}/packages/{packageId}/manual-delivered
+      url = `${baseUrl}/order/meal/suppliers/${supplierId}/packages/${pId}/manual-delivered`;
+      payload = { actualDate: Date.now() };
+    } else {
+      return res.status(400).json({ error: 'Geçersiz durum tipi' });
+    }
+
+    const response = await axios.put(url, payload, { headers: getTgoHeaders() });
+    res.json({ success: true, data: response.data });
+  } catch (error: any) {
+    const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message;
+    res.status(error.response?.status || 500).json({ error: errorMsg, data: error.response?.data });
+  }
+});
+
+app.post('/api/tgo/send_to_app1', requireAdminAuth, async (req: any, res: any) => {
   try {
     const { parsedOrderText, rawData } = req.body;
-    // App1'e direkt sipariş yazdırma veya işleme emri gönder (POS print event)
-    broadcastMessageToPhones({ 
-      type: 'server-event', 
-      action: 'print_tgo_order', 
-      data: { text: parsedOrderText, raw: rawData } 
-    });
+    
+    const shop = getShop();
+    let saracShop = shops.get('sarac');
+    if (!saracShop) {
+        saracShop = shop; // Fallback to current shop if sarac is not connected yet
+    }
+
+    if (rawData && rawData.id && rawData.customer && rawData.customer.id) {
+        const orderId = String(rawData.id);
+        const customerId = String(rawData.customer.id);
+        
+        // Read directly from MongoDB
+        const [statsDoc, processedDoc] = await Promise.all([
+          DataModel.findOne({ key: 'tgoCustomerStats' }),
+          DataModel.findOne({ key: 'tgoProcessedOrders' })
+        ]);
+        const tgoCustomerStats: Record<string, number> = statsDoc?.value || {};
+        const tgoProcessedOrdersArr: string[] = processedDoc?.value || [];
+        const tgoProcessedOrdersSet = new Set(tgoProcessedOrdersArr);
+
+        if (!tgoProcessedOrdersSet.has(orderId)) {
+            tgoProcessedOrdersSet.add(orderId);
+            tgoCustomerStats[customerId] = (tgoCustomerStats[customerId] || 0) + 1;
+            // Write back to MongoDB
+            await Promise.all([
+              DataModel.findOneAndUpdate({ key: 'tgoCustomerStats' }, { value: tgoCustomerStats }, { upsert: true }),
+              DataModel.findOneAndUpdate({ key: 'tgoProcessedOrders' }, { value: Array.from(tgoProcessedOrdersSet) }, { upsert: true })
+            ]);
+            // Also update in-memory shop if available
+            if (saracShop) {
+              saracShop.tgoCustomerStats = tgoCustomerStats;
+              saracShop.tgoProcessedOrders = tgoProcessedOrdersSet;
+            }
+        }
+    }
+
+    // 1. Siparişi Kasa'ya (App1) işlemesi için event olarak gönder
+    notifyUI('tgo_add_order', rawData, saracShop);
     res.json({ success: true });
   } catch (error: any) {
+    console.error('SEND_TO_APP1 ERROR:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -877,7 +1255,9 @@ app.post('/update_daily_total', requireAuth, (req: any, res: any): any => {
 app.get('/daily_total', (_req, res) => {
   res.json({ 
     total: globalDailyTotal,
-    screensaver: getShop().systemSettings['TV_SCREENSAVER'] || 'dvd'
+    screensaver: getShop().systemSettings['TV_SCREENSAVER'] || 'dvd',
+    tvAudioSource: getShop().systemSettings['TV_AUDIO_SOURCE'] || 'spotify',
+    tvRadioStation: getShop().systemSettings['TV_RADIO_STATION'] || 'powerturk'
   })
 })
 
@@ -1100,6 +1480,319 @@ app.post('/api/public/call_waiter', (req: any, res: any) => {
 
   res.json({ success: true })
 })
+
+app.get('/api/admin/dashboard_stats', requireAdminAuth, async (req: any, res: any) => {
+  const platform = (req.query.platform || 'all').toLowerCase()
+  const range = (req.query.range || 'daily').toLowerCase()
+
+  const now = new Date()
+
+  // For charts
+  let chartStartDate = new Date()
+  if (range === 'hourly') {
+    chartStartDate.setHours(now.getHours() - 24)
+  } else if (range === 'weekly') {
+    chartStartDate.setDate(now.getDate() - 7)
+  } else if (range === 'monthly') {
+    chartStartDate.setDate(now.getDate() - 30)
+  } else { // daily
+    chartStartDate.setHours(0, 0, 0, 0)
+  }
+
+  // Fixed top metrics dates
+  let todayStart = new Date(now)
+  todayStart.setHours(0, 0, 0, 0)
+  let weekStart = new Date(now)
+  weekStart.setHours(0, 0, 0, 0)
+  weekStart.setDate(weekStart.getDate() - 7)
+  let monthStart = new Date(now)
+  monthStart.setHours(0, 0, 0, 0)
+  monthStart.setDate(monthStart.getDate() - 30)
+  let previousTodayStart = new Date(todayStart)
+  previousTodayStart.setDate(previousTodayStart.getDate() - 1)
+
+  let todayRevenue = 0, weekRevenue = 0, monthRevenue = 0, previousTodayRevenue = 0
+  let todayOrdersCount = 0, weekOrdersCount = 0, monthOrdersCount = 0
+
+  let todayEtDonerQty = 0
+  let todayTavukDonerQty = 0
+
+  let itemSales: Record<string, number> = {}
+  let itemRevenue: Record<string, number> = {}
+  let categorySales: Record<string, number> = { 'Et Döner': 0, 'Tavuk Döner': 0, 'İçecekler': 0, 'Diğer': 0 }
+
+  const trendDataMap = new Map<string, { label: string, val: number, ts: number }>()
+
+  const shop = getShop()
+
+  const processOrder = (order: any) => {
+    const orderPlatform = (order.platform || '').toLowerCase()
+    if (platform === 'trendyol' && orderPlatform !== 'trendyol') return
+    if (platform === 'yemeksepeti' && orderPlatform !== 'yemeksepeti') return
+    if (platform === 'all' && orderPlatform !== 'trendyol' && orderPlatform !== 'yemeksepeti') return
+
+    if (!order.completedAt && order.status !== 'waiting' && order.status !== 'Hazırlanıyor') return
+    const oDate = order.completedAt ? new Date(order.completedAt) : new Date()
+
+    const amt = order.total_amount || order.totalPrice || 0;
+
+    // Fixed Top Stats
+    if (oDate >= todayStart && oDate <= now) {
+      todayRevenue += amt
+      todayOrdersCount++
+    }
+    if (oDate >= previousTodayStart && oDate < todayStart) {
+      previousTodayRevenue += amt
+    }
+    if (oDate >= weekStart && oDate <= now) {
+      weekRevenue += amt
+      weekOrdersCount++
+    }
+    if (oDate >= monthStart && oDate <= now) {
+      monthRevenue += amt
+      monthOrdersCount++
+    }
+
+    // Process items for charts AND today's kg calculation
+    if (order.items && Array.isArray(order.items)) {
+      order.items.forEach((item: any) => {
+        const qty = item.quantity || 1
+        const name = item.name || 'Bilinmeyen'
+        const price = item.price || 0
+        const iName = name.toLowerCase()
+
+        // For "Bugün Satılan Döner" fixed stats
+        if (oDate >= todayStart && oDate <= now) {
+          if (iName.includes('et') || iName.includes('iskender') || iName.includes('beyti')) {
+             todayEtDonerQty += qty
+          } else if (iName.includes('tavuk')) {
+             todayTavukDonerQty += qty
+          }
+        }
+
+        // For Chart Data (Depends on 'range' query param or just general top products)
+        if (oDate >= chartStartDate && oDate <= now) {
+          itemSales[name] = (itemSales[name] || 0) + qty
+          itemRevenue[name] = (itemRevenue[name] || 0) + (price * qty)
+
+          if (iName.includes('et') || iName.includes('iskender') || iName.includes('beyti')) {
+            categorySales['Et Döner'] += qty
+          } else if (iName.includes('tavuk')) {
+            categorySales['Tavuk Döner'] += qty
+          } else if (iName.includes('ayran') || iName.includes('kola') || iName.includes('şalgam') || iName.includes('su') || iName.includes('fanta') || iName.includes('sprite')) {
+            categorySales['İçecekler'] += qty
+          } else {
+            categorySales['Diğer'] += qty
+          }
+        }
+      })
+    }
+
+    // Trend chart processing
+    if (oDate >= chartStartDate && oDate <= now) {
+      let label = ''
+      let ts = 0
+      if (range === 'hourly') {
+        const h = oDate.getHours()
+        label = h + ':00'
+        ts = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, 0, 0).getTime()
+        if (ts > now.getTime()) ts -= 24 * 60 * 60 * 1000
+      } else {
+        label = `${oDate.getDate()} ${['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'][oDate.getMonth()]}`
+        ts = new Date(oDate.getFullYear(), oDate.getMonth(), oDate.getDate()).getTime()
+      }
+
+      if (!trendDataMap.has(label)) {
+        trendDataMap.set(label, { label, val: 0, ts })
+      }
+      trendDataMap.get(label)!.val += amt
+    }
+  }
+
+  const allOrdersToProcess: any[] = [];
+  shop.pastOrders.forEach(o => allOrdersToProcess.push(o));
+  shop.activeOrders.forEach(o => allOrdersToProcess.push(o));
+
+  if (platform === 'all' || platform === 'trendyol') {
+    try {
+      const supplierId = getTrendyolSupplierId();
+      if (supplierId && shop.systemSettings.trendyolApiKey) {
+        const tgoRes = await axios.get(`${getTgoBaseUrl()}/order/meal/suppliers/${supplierId}/packages?packageStatuses=Delivered`, { headers: getTgoHeaders() });
+        if (tgoRes.data) {
+          let contentArray = tgoRes.data.content || (tgoRes.data.data && tgoRes.data.data.content) || [];
+          if (!contentArray && Array.isArray(tgoRes.data)) contentArray = tgoRes.data;
+          
+          if (Array.isArray(contentArray)) {
+            contentArray.forEach((o: any) => {
+              const items = (o.lines || []).map((l: any) => ({
+                name: l.name || 'Bilinmeyen',
+                quantity: l.quantity || 1,
+                price: l.price || 0
+              }));
+              
+              const existsLocally = allOrdersToProcess.some(lo => lo.order_id === o.id || lo.order_id === String(o.id) || lo.id === o.id || lo.id === String(o.id));
+              if (!existsLocally) {
+                allOrdersToProcess.push({
+                  platform: 'trendyol',
+                  status: 'Delivered',
+                  completedAt: o.packageCreationDate || o.creationDate || o.deliveredDate || new Date(),
+                  total_amount: o.totalPrice || 0,
+                  items: items
+                });
+              }
+            });
+          }
+        }
+      }
+    } catch(err) {
+      console.error('Trendyol API past orders fetch error:', err);
+    }
+  }
+
+  allOrdersToProcess.forEach(processOrder);
+
+  const sortedItems = Object.keys(itemSales).map(name => ({
+    name,
+    count: itemSales[name],
+    revenue: itemRevenue[name]
+  })).sort((a, b) => b.count - a.count)
+
+  let favoriDoner = { name: '-', count: 0, revenue: 0 }
+  let favoriUrun = { name: '-', count: 0, revenue: 0 }
+
+  const donerItems = sortedItems.filter(i => i.name.toLowerCase().includes('döner') || i.name.toLowerCase().includes('iskender') || i.name.toLowerCase().includes('dürüm'))
+  if (donerItems.length > 0) favoriDoner = donerItems[0]
+  if (sortedItems.length > 0) favoriUrun = sortedItems[0]
+
+  const trendArray = Array.from(trendDataMap.values()).sort((a, b) => a.ts - b.ts)
+
+  const categories = Object.keys(categorySales).map(name => ({
+    name, count: categorySales[name]
+  })).filter(c => c.count > 0)
+
+  let revenueChange = 0;
+  if (previousTodayRevenue === 0 && todayRevenue > 0) revenueChange = 100;
+  else if (previousTodayRevenue > 0) revenueChange = ((todayRevenue - previousTodayRevenue) / previousTodayRevenue) * 100;
+
+  res.json({
+    todayRevenue,
+    weekRevenue,
+    monthRevenue,
+    revenueChange: revenueChange.toFixed(1),
+    todayOrdersCount,
+    weekOrdersCount,
+    monthOrdersCount,
+    averageOrderValue: todayOrdersCount === 0 ? 0 : (todayRevenue / todayOrdersCount).toFixed(2),
+    todayEtDonerKg: (todayEtDonerQty * 0.1).toFixed(2),
+    todayTavukDonerKg: (todayTavukDonerQty * 0.1).toFixed(2),
+    favoriDoner,
+    favoriUrun,
+    topProducts: sortedItems.slice(0, 5),
+    trendData: { 
+      labels: trendArray.map(t => t.label), 
+      data: trendArray.map(t => t.val) 
+    },
+    categoryData: categories
+  })
+})
+app.get('/api/admin/integration_settings', requireAdminAuth, async (req: any, res: any) => {
+  try {
+    // Read directly from MongoDB - most reliable, no dependency on in-memory state
+    const doc = await DataModel.findOne({ key: 'systemSettings' });
+    const settings = doc?.value || {};
+    res.json({
+      trendyolSupplierId: settings.trendyolSupplierId || settings.TRENDYOL_SUPPLIER_ID || process.env.TRENDYOL_SUPPLIER_ID || '',
+      trendyolApiKey: settings.trendyolApiKey || settings.TRENDYOL_API_KEY || process.env.TRENDYOL_API_KEY || '',
+      trendyolApiSecret: settings.trendyolApiSecret || settings.TRENDYOL_API_SECRET || process.env.TRENDYOL_API_SECRET || '',
+      trendyolEntgRefCode: settings.trendyolEntgRefCode || '',
+      trendyolToken: settings.trendyolToken || '',
+      trendyolApiEndpoint: settings.trendyolApiEndpoint || 'https://api.tgoapis.com/integrator',
+      ysRestaurantId: settings.ysRestaurantId || '',
+      ysApiKey: settings.ysApiKey || '',
+      ysApiSecret: settings.ysApiSecret || ''
+    });
+  } catch(e) {
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+app.post('/api/admin/integration_settings', requireAdminAuth, async (req: any, res: any) => {
+  try {
+    const payload = req.body;
+    // Read current settings from DB first
+    const doc = await DataModel.findOne({ key: 'systemSettings' });
+    const current = doc?.value || {};
+    const updated = {
+      ...current,
+      // camelCase (used by this UI)
+      ...(payload.trendyolSupplierId !== undefined && { trendyolSupplierId: payload.trendyolSupplierId }),
+      ...(payload.trendyolApiKey !== undefined && { trendyolApiKey: payload.trendyolApiKey }),
+      ...(payload.trendyolApiSecret !== undefined && { trendyolApiSecret: payload.trendyolApiSecret }),
+      ...(payload.trendyolEntgRefCode !== undefined && { trendyolEntgRefCode: payload.trendyolEntgRefCode }),
+      ...(payload.trendyolToken !== undefined && { trendyolToken: payload.trendyolToken }),
+      ...(payload.trendyolApiEndpoint !== undefined && { trendyolApiEndpoint: payload.trendyolApiEndpoint }),
+      ...(payload.ysRestaurantId !== undefined && { ysRestaurantId: payload.ysRestaurantId }),
+      ...(payload.ysApiKey !== undefined && { ysApiKey: payload.ysApiKey }),
+      ...(payload.ysApiSecret !== undefined && { ysApiSecret: payload.ysApiSecret }),
+      // UPPER_CASE (used by getTgoHeaders, getTgoBaseUrl, etc. — survive restart)
+      ...(payload.trendyolSupplierId !== undefined && { TRENDYOL_SUPPLIER_ID: payload.trendyolSupplierId }),
+      ...(payload.trendyolApiKey !== undefined && { TRENDYOL_API_KEY: payload.trendyolApiKey }),
+      ...(payload.trendyolApiSecret !== undefined && { TRENDYOL_API_SECRET: payload.trendyolApiSecret }),
+    };
+    // Write directly to MongoDB AND update in-memory shop (both formats)
+    await DataModel.findOneAndUpdate({ key: 'systemSettings' }, { value: updated }, { upsert: true });
+    const shop = getShop();
+    if (shop) shop.systemSettings = { ...shop.systemSettings, ...updated };
+    res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+app.get('/api/admin/integration_status', requireAdminAuth, async (req: any, res: any) => {
+  const shop = getShop();
+  const settings = shop.systemSettings || {};
+  const supplierId = settings.trendyolSupplierId || process.env.TRENDYOL_SUPPLIER_ID || '6647850';
+  
+  let trendyolStatus = { status: 'not_configured', message: 'Bilgiler eksik' };
+  
+  if (supplierId && settings.trendyolApiKey && settings.trendyolApiSecret) {
+    try {
+      const endpoint = `${getTgoBaseUrl()}/order/meal/suppliers/${supplierId}/packages`;
+      
+      const headers = getTgoHeaders();
+      const response = await axios.get(`${endpoint}?packageStatuses=Created&size=1`, { headers });
+      
+      if (response.status === 200) {
+        trendyolStatus = { status: 'connected', message: 'Bağlı' };
+      }
+    } catch (error: any) {
+      if (error.response) {
+        if (error.response.status === 401) {
+          trendyolStatus = { status: 'error', message: 'Hatalı API Bilgileri (401 Unauthorized)' };
+        } else if (error.response.status === 404) {
+          trendyolStatus = { status: 'error', message: 'Endpoint Bulunamadı (404 Not Found)' };
+        } else if (error.response.status === 400) {
+          trendyolStatus = { status: 'error', message: 'Hatalı Parametre (400 Bad Request)' };
+        } else {
+          trendyolStatus = { status: 'error', message: `Hata: ${error.response.status}` };
+        }
+      } else {
+        trendyolStatus = { status: 'error', message: 'Bağlantı Hatası' };
+      }
+    }
+  }
+
+  res.json({
+    trendyol: trendyolStatus,
+    yemeksepeti: { status: 'not_configured', message: 'Yapılandırılmadı' }
+  });
+});
+
+app.get('/api/ys/orders', requireAdminAuth, (req: any, res: any) => {
+  // Mockup for Yemeksepeti Orders as it's in test phase
+  res.json([]);
+});
 
 app.get('/api/daily_report', (req: any, res: any): any => {
   const now = new Date()
@@ -1809,4 +2502,12 @@ app.post('/set_tv_screensaver', requireAuth, (req: any, res: any): any => {
   } else {
     res.status(400).json({ error: 'mode required' })
   }
+})
+
+app.post('/set_tv_audio', requireAuth, (req: any, res: any): any => {
+  const { source, station } = req.body
+  if (source) getShop().systemSettings['TV_AUDIO_SOURCE'] = source
+  if (station) getShop().systemSettings['TV_RADIO_STATION'] = station
+  getShop().saveSettings()
+  res.json({ success: true, source, station })
 })

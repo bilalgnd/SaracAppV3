@@ -36,6 +36,7 @@ interface Api {
     onUpdaterEvent: (callback: (action: string, data?: any) => void) => any
     offUpdaterEvent: (subscription: any) => void
     logSystemEvent: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void
+    updateTgoOrderStatus: (packageId: string, statusType: string) => Promise<{success: boolean, error?: string}>
 }
 
 interface Window {

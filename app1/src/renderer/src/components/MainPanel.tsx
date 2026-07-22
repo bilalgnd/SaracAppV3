@@ -138,6 +138,7 @@ const processTgoRawData = (rawData: any, currentOrders: any[], saveFn: any, setF
     const tgoCustomerName = (rawData && rawData.customer) ? `${rawData.customer.firstName} ${rawData.customer.lastName} (TGO)` : 'Bilinmeyen (TGO)';
     const newApp1Order: any = {
         id: (rawData && rawData.orderNumber) ? rawData.orderNumber.toString() : Date.now().toString(),
+        packageId: (rawData && (rawData.id || rawData.packageId || rawData.orderNumber)) ? String(rawData.id || rawData.packageId || rawData.orderNumber) : '',
         customer_name: tgoCustomerName,
         time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
         items: tgoItems,
@@ -164,6 +165,7 @@ function TablesGrid() {
   const isDragging = useRef(false)
   const hasLongPressed = useRef(false)
   const startY = useRef(0)
+  const [tgoOrderAction, setTgoOrderAction] = React.useState<any>(null)
 
   React.useEffect(() => {
     if (!window.api || !window.api.onServerEvent) return;
@@ -282,6 +284,15 @@ function TablesGrid() {
               {order.status === 'prepared' && (
                 <div style={{ position: 'absolute', top: 10, left: 10, fontSize: 24, color: 'var(--success)' }}>✔</div>
               )}
+              {order.customer_name && order.customer_name.includes('(TGO)') && (
+                <button 
+                  className="btn btn-primary" 
+                  style={{ position: 'absolute', top: 5, left: '50%', transform: 'translateX(-50%)', padding: '2px 8px', fontSize: 11, borderRadius: 12 }}
+                  onClick={(e) => { e.stopPropagation(); setTgoOrderAction(order); }}
+                >
+                  TGO İşlemleri
+                </button>
+              )}
               {isEditing && (
                 <button 
                   style={{ position: 'absolute', top: 10, right: 10, background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer' }}
@@ -326,6 +337,9 @@ function TablesGrid() {
           )
         })}
       </div>
+      {tgoOrderAction && (
+        <TgoStatusModal order={tgoOrderAction} onClose={() => setTgoOrderAction(null)} />
+      )}
     </div>
   )
 }
@@ -617,6 +631,56 @@ function MenuGrid({ onEditPrice }: { onEditPrice: (item: any) => void }) {
           />
         </div>
       )}
+    </div>
+  )
+}
+
+function TgoStatusModal({ order, onClose }: { order: any, onClose: () => void }) {
+  const handleAction = async (statusType: 'picked' | 'invoiced' | 'shipped' | 'delivered', label: string) => {
+    if (await customConfirm(`Siparişi "${label}" olarak işaretlemek istediğinize emin misiniz?`)) {
+      try {
+        const pkgId = order.packageId || order.id;
+        const res = await window.api.updateTgoOrderStatus(pkgId, statusType);
+        if (res && res.success) {
+          customAlert("TGO Sipariş Durumu güncellendi!", "success");
+        } else {
+          customAlert("TGO güncelleme hatası: " + (res?.error || "Bilinmeyen hata"), "error");
+        }
+      } catch (err: any) {
+        customAlert("Hata oluştu: " + err.message, "error");
+      }
+      onClose();
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+      <div style={{ backgroundColor: 'var(--bg-panel)', padding: 30, borderRadius: 12, minWidth: 400, border: '1px solid var(--border-color)' }}>
+        <h2 style={{ marginTop: 0, marginBottom: 20 }}>TGO Sipariş İşlemleri</h2>
+        <div style={{ marginBottom: 20, color: '#aaa', fontSize: 14 }}>
+          Müşteri: <strong style={{ color: '#fff' }}>{order.customer_name}</strong><br/>
+          Sipariş No: {order.packageId || order.id}
+        </div>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+          <button className="btn" style={{ backgroundColor: '#1976D2', color: 'white', padding: '12px', fontSize: 16 }} onClick={() => handleAction('picked', 'Kabul Edildi / Hazırlanıyor')}>
+            Siparişi Kabul Et (Hazırlanıyor)
+          </button>
+          <button className="btn" style={{ backgroundColor: '#F57C00', color: 'white', padding: '12px', fontSize: 16 }} onClick={() => handleAction('invoiced', 'Hazırlandı')}>
+            Hazırlandı (Fatura Kesildi)
+          </button>
+          <button className="btn" style={{ backgroundColor: '#00796B', color: 'white', padding: '12px', fontSize: 16 }} onClick={() => handleAction('shipped', 'Yola Çıktı')}>
+            Sipariş Yola Çıktı
+          </button>
+          <button className="btn" style={{ backgroundColor: '#388E3C', color: 'white', padding: '12px', fontSize: 16 }} onClick={() => handleAction('delivered', 'Teslim Edildi')}>
+            Sipariş Teslim Edildi
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 30 }}>
+          <button className="btn" style={{ backgroundColor: '#424242', padding: '10px 20px' }} onClick={onClose}>Kapat</button>
+        </div>
+      </div>
     </div>
   )
 }

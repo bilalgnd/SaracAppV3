@@ -30,16 +30,24 @@ async function upload() {
   await safePutFile(path.join(root, 'src', 'server.ts'), '/home/bilalgnd/saracapp/src/server.ts');
   await safePutFile(path.join(root, 'package.json'), '/home/bilalgnd/saracapp/package.json');
   await safePutFile(path.join(root, 'package-lock.json'), '/home/bilalgnd/saracapp/package-lock.json');
+  // Preserve remote production .env file (do not overwrite on deploy)
+  // await safePutFile(path.join(root, '.env'), '/home/bilalgnd/saracapp/.env');
   await safePutFile(path.join(root, 'dist', 'models.js'), '/home/bilalgnd/saracapp/dist/models.js');
   await safePutFile(path.join(root, 'src', 'models.ts'), '/home/bilalgnd/saracapp/src/models.ts');
   await safePutDir(path.join(root, 'src', 'services'), '/home/bilalgnd/saracapp/src/services');
   await safePutDir(path.join(root, 'dist', 'services'), '/home/bilalgnd/saracapp/dist/services');
   await safePutFile(path.join(root, 'public', 'templates', 'admintools.html'), '/home/bilalgnd/saracapp/public/templates/admintools.html');
+  await safePutFile(path.join(root, 'public', 'templates', 'login.html'), '/home/bilalgnd/saracapp/public/templates/login.html');
   await safePutFile(path.join(root, 'public', 'templates', 'portfolio.html'), '/home/bilalgnd/saracapp/public/templates/portfolio.html');
   await safePutFile(path.join(root, 'public', 'templates', 'tv.html'), '/home/bilalgnd/saracapp/public/templates/tv.html');
+  await safePutFile(path.join(root, 'public', 'templates', 'apiorders.html'), '/home/bilalgnd/saracapp/public/templates/apiorders.html');
+  await safePutFile(path.join(root, 'public', 'templates', 'apiorders_dev.html'), '/home/bilalgnd/saracapp/public/templates/apiorders_dev.html');
+  await safePutFile(path.join(root, 'public', 'templates', 'anti.html'), '/home/bilalgnd/saracapp/public/templates/anti.html');
+  await ssh.execCommand('rm -f /home/bilalgnd/saracapp/public/templates/tgo_admin.html');
   await safePutFile(path.join(root, 'public', 'static', 'favicon.png'), '/home/bilalgnd/saracapp/public/static/favicon.png');
   await safePutFile(path.join(root, 'public', 'static', 'profile.jpg'), '/home/bilalgnd/saracapp/public/static/profile.jpg');
   await safePutFile(path.join(root, 'public', 'static', 'bg.jpg'), '/home/bilalgnd/saracapp/public/static/bg.jpg');
+  await safePutFile(path.join(root, 'public', 'static', 'bg_video.mp4'), '/home/bilalgnd/saracapp/public/static/bg_video.mp4');
   await safePutDir(path.join(root, 'public', 'pos_app'), '/home/bilalgnd/saracapp/public/pos_app');
   await safePutDir(path.join(root, 'public', 'qr_app'), '/home/bilalgnd/saracapp/public/qr_app');
   console.log('Uploaded. Installing dependencies...');

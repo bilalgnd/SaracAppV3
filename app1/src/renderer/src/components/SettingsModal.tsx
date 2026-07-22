@@ -978,9 +978,9 @@ export default function SettingsModal() {
                     <input 
                       type="text" 
                       className="settings-input" 
-                      value={settings.TRENDYOL_API_URL || 'https://api.trendyol.com/integration/oms/core/t/orders?status=Created'}
+                      value={settings.TRENDYOL_API_URL || 'https://api.tgoapis.com/integrator/order/meal/suppliers/' + (settings.TRENDYOL_SUPPLIER_ID || '') + '/packages?packageStatuses=Created'}
                       onChange={(e) => handleSettingChange('TRENDYOL_API_URL', e.target.value)}
-                      placeholder="https://api.trendyol.com/integration/oms/core/t/orders?status=Created"
+                      placeholder="https://api.tgoapis.com/integrator/order/meal/suppliers/{supplierId}/packages?packageStatuses=Created"
                     />
                   </div>
 

@@ -67,6 +67,7 @@ const api = {
     ipcRenderer.removeListener('process-pdf', subscription)
   },
   updatePrice: (productName: string, portion: string, price: number) => ipcRenderer.invoke('update-price', { productName, portion, price }),
+  updateTgoOrderStatus: (packageId: string, statusType: string) => ipcRenderer.invoke('update-tgo-order-status', { packageId, statusType }),
   minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
   maximizeWindow: () => ipcRenderer.invoke('maximize-window'),
   closeWindow: () => ipcRenderer.invoke('close-window')

@@ -1,6 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, globalShortcut, dialog } from 'electron'
 import { join } from 'path'
-import { startTrendyolService } from './trendyolService'
+import { startTrendyolService, setTrendyolCallbacks } from './trendyolService'
+import { startYemeksepetiService } from './yemeksepetiService'
 import * as fs from 'fs'
 // --- SUPPRESS PDFJS CANVAS WARNINGS ---
 const originalWarn = console.warn;
@@ -38,8 +39,6 @@ import axios from 'axios'
 import WebSocket from 'ws'
 import express from 'express'
 import os from 'os'
-import { parseOrderText } from './textParser'
-import puppeteer from 'puppeteer-core'
 let mainWindow: BrowserWindow
 let isQuitting = false
 
@@ -411,24 +410,9 @@ function startLocalApi() {
     next();
   });
 
-  expressApp.post('/api/manual_parse', async (req, res) => {
-    try {
-      const rawHtmlOrText = req.body.text || '';
-      
-      const newOrder = parseOrderText(rawHtmlOrText);
-      
-      if (newOrder) {
-        sendLogToServer('success', `Print yakalama: Yeni sipariş eklendi (${newOrder.customerName || 'Bilinmiyor'})`);
-        await addAndSyncOrder(newOrder);
-        res.status(200).send({ success: true });
-      } else {
-        sendLogToServer('warning', 'Print yakalama: Veri alındı fakat sipariş formatı anlaşılamadı.');
-        res.status(400).send({ success: false, message: 'Format anlaşılamadı' });
-      }
-    } catch (e: any) {
-      console.error(e)
-      res.status(500).send({ success: false, message: e.message })
-    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  expressApp.post('/api/manual_parse', async (_req, res) => {
+    res.status(501).send({ success: false, message: 'Not Implemented (Archived)' });
   });
 
   expressApp.listen(3005, '0.0.0.0', () => {
@@ -539,9 +523,10 @@ app.whenReady().then(() => {
     autoUpdater.checkForUpdatesAndNotify()
   }
 
+  setTrendyolCallbacks(addAndSyncOrder, sendLogToServer)
   startTrendyolService()
+  startYemeksepetiService()
   startLocalApi()
-  startChromeInterceptor()
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -604,8 +589,10 @@ app.whenReady().then(() => {
   ipcMain.handle('get-settings', () => systemSettings)
   ipcMain.on('save-settings', async (_, settings) => {
     const oldToken = systemSettings.API_TOKEN;
+    console.log('[SETTINGS SAVE] Received settings:', JSON.stringify(settings));
     Object.assign(systemSettings, settings)
     saveSettings()
+    console.log('[SETTINGS SAVE] systemSettings after assign:', JSON.stringify(systemSettings));
     sendLogToServer('info', 'App1 (Kasa) Ayarları Güncellendi.')
     axios.defaults.headers.common['Authorization'] = systemSettings.API_TOKEN
     
@@ -684,9 +671,9 @@ app.whenReady().then(() => {
   ipcMain.handle('get-network-status', async () => {
     try {
       const res = await axios.get(`${CLOUD_URL}/network_status`)
-      return { ...res.data, botStatus: chromeInterceptorState, botMessage: chromeInterceptorMessage }
+      return { ...res.data }
     } catch(e) {
-      return { ip: CLOUD_URL, port: 443, connectedDevices: [], botStatus: chromeInterceptorState, botMessage: chromeInterceptorMessage }
+      return { ip: CLOUD_URL, port: 443, connectedDevices: [] }
     }
   })
 
@@ -853,252 +840,5 @@ export async function addAndSyncOrder(newOrder: any) {
   }
 }
 
-let isChromeInterceptorRunning = false;
-export let chromeInterceptorState = 'error';
-export let chromeInterceptorMessage = 'Bot Başlatılmadı';
-let connectedBrowser: any = null;
 
-async function checkTargetPages() {
-  if (!connectedBrowser || !isChromeInterceptorRunning) return;
-  try {
-    const pages = await connectedBrowser.pages();
-    const targetPage = pages.find(p => 
-      p.url().includes('yemeksepeti.com') || 
-      p.url().includes('trendyol.com') || 
-      p.url().includes('bilalgnd.shop') ||
-      p.url().includes('file://')
-    );
-
-    if (!targetPage) {
-      chromeInterceptorState = 'connected';
-      chromeInterceptorMessage = 'Chrome\'a bağlandı. Sekme bekleniyor...';
-    } else {
-      chromeInterceptorState = 'connected';
-      chromeInterceptorMessage = 'Aktif (Sipariş yazdırması dinleniyor)';
-      
-      const isInjected = await targetPage.evaluate(() => !!(window as any).__print_intercepted).catch(() => false);
-      
-      if (!isInjected) {
-        try {
-          await targetPage.exposeFunction('triggerTestPdf', async (base64Pdf?: string) => {
-            try {
-              const fs = require('fs');
-              const path = require('path');
-              const os = require('os');
-              const { execFile } = require('child_process');
-              const util = require('util');
-              const execFileAsync = util.promisify(execFile);
-              
-              const timestamp = new Date().getTime();
-              let testPdfPath = path.join(os.homedir(), 'Desktop', 'fis.pdf');
-              
-              if (base64Pdf) {
-                  const logDir = systemSettings.PDF_LOGS_DIR || path.join(app.getPath('documents'), 'logs');
-                  const pdfDir = path.join(logDir, 'pdfs');
-                  if (!fs.existsSync(pdfDir)) {
-                      fs.mkdirSync(pdfDir, { recursive: true });
-                  }
-                  testPdfPath = path.join(pdfDir, `test_receipt_${timestamp}.pdf`);
-                  fs.writeFileSync(testPdfPath, Buffer.from(base64Pdf, 'base64'));
-                  sendLogToServer('info', `Arka plan PDF arşive eklendi: ${testPdfPath}`);
-              } else if (!fs.existsSync(testPdfPath)) {
-                  sendLogToServer('error', 'Test başarısız: Masaüstünde fis.pdf bulunamadı!');
-                  return;
-              }
-
-              const tempTxtPath = path.join(os.tmpdir(), `receipt_${timestamp}.txt`);
-              
-              const exePath = !app.isPackaged 
-                ? path.join(app.getAppPath(), 'bin', 'extract_text.exe')
-                : path.join(process.resourcesPath, 'bin', 'extract_text.exe');
-                
-              await execFileAsync(exePath, [testPdfPath, tempTxtPath], { windowsHide: true });
-              
-              if (fs.existsSync(tempTxtPath)) {
-                const textContent = fs.readFileSync(tempTxtPath, 'utf8');
-                
-                // --- DEBUG: Console log instead of Desktop ---
-                try {
-                  sendLogToServer('info', 'DEBUG: Test PDF text okundu (Masaüstüne kaydedilmedi).');
-                } catch(e) {}
-                // ------------------------------
-                
-                const newOrder = parseOrderText(textContent);
-                if (newOrder) {
-                  sendLogToServer('success', `Test Fişi (fis.pdf): Yeni sipariş eklendi (${newOrder.customerName || newOrder.customer_name || 'Bilinmiyor'})`);
-                  await addAndSyncOrder(newOrder);
-                } else {
-                  const preview = textContent.replace(/\s+/g, ' ').substring(0, 100);
-                  sendLogToServer('warning', `Test Fişi (fis.pdf): Okundu fakat anlaşılamadı. Alınan: "${preview}..."`);
-                }
-                
-                try { fs.unlinkSync(tempTxtPath); } catch(e){}
-              }
-            } catch (err: any) {
-              sendLogToServer('error', `Print yakalama (Test PDF Reader) hatası: ${err.message}`);
-            }
-          });
-
-          await targetPage.exposeFunction('triggerPdfExtraction', async () => {
-            try {
-              const fs = require('fs');
-              const path = require('path');
-              const os = require('os');
-              const { execFile } = require('child_process');
-              const util = require('util');
-              const execFileAsync = util.promisify(execFile);
-
-              const timestamp = new Date().getTime();
-              
-              const logDir = systemSettings.PDF_LOGS_DIR || path.join(app.getPath('documents'), 'logs');
-              const pdfDir = path.join(logDir, 'pdfs');
-              if (!fs.existsSync(pdfDir)) {
-                  fs.mkdirSync(pdfDir, { recursive: true });
-              }
-              const tempPdfPath = path.join(pdfDir, `receipt_${timestamp}.pdf`);
-              const tempTxtPath = path.join(os.tmpdir(), `receipt_${timestamp}.txt`);
-              
-              // 1. Generate PDF from the print layout
-              await targetPage.pdf({ path: tempPdfPath, printBackground: true });
-              sendLogToServer('info', `Arka plan PDF arşive eklendi: ${tempPdfPath}`);
-              
-              // 2. Call python exe
-              const exePath = !app.isPackaged 
-                ? path.join(app.getAppPath(), 'bin', 'extract_text.exe')
-                : path.join(process.resourcesPath, 'bin', 'extract_text.exe');
-                
-              await execFileAsync(exePath, [tempPdfPath, tempTxtPath], { windowsHide: true });
-              
-              // 3. Read txt
-              if (fs.existsSync(tempTxtPath)) {
-                let textContent = fs.readFileSync(tempTxtPath, 'utf8');
-                
-                // Çok uzun metinlerin uygulamayı kitlemesini engelle (Catastrophic Backtracking)
-                if (textContent && textContent.length > 5000) {
-                  textContent = textContent.substring(0, 5000);
-                }
-                
-                const newOrder = parseOrderText(textContent);
-                if (newOrder) {
-                  sendLogToServer('success', `Print yakalama (PDF Reader): Yeni sipariş eklendi (${newOrder.customerName || 'Bilinmiyor'})`);
-                  await addAndSyncOrder(newOrder);
-                } else {
-                  const preview = textContent.replace(/\s+/g, ' ').substring(0, 100);
-                  sendLogToServer('warning', `Print yakalama (PDF Reader): Format anlaşılamadı. Alınan: "${preview}..."`);
-                  
-                  // Anlaşılamayan metni logla ki tasarım değişikliği görülüp Regex düzeltilebilsin
-                  try {
-                    const unparsedDir = path.join(logDir, 'unparsed_orders');
-                    if (!fs.existsSync(unparsedDir)) fs.mkdirSync(unparsedDir, { recursive: true });
-                    fs.writeFileSync(path.join(unparsedDir, `unparsed_${timestamp}.txt`), textContent);
-                  } catch (e) {}
-                }
-                
-                // Cleanup (sadece txt dosyasını siliyoruz, pdf kalıcı oluyor)
-                try { fs.unlinkSync(tempTxtPath); } catch(e){}
-              }
-            } catch (err: any) {
-              sendLogToServer('error', `Print yakalama (PDF Reader) hatası: ${err.message}`);
-            }
-          });
-
-          await targetPage.exposeFunction('sendRawTextToKasa', async (textContent: string) => {
-            try {
-                const fs = require('fs');
-                const path = require('path');
-                const os = require('os');
-                
-                try {
-                  // Masaüstüne debug kaydı yapılmıyor
-                } catch(e) {}
-                
-                const newOrder = parseOrderText(textContent);
-                if (newOrder) {
-                  sendLogToServer('success', `Print yakalama (Text Reader): Yeni sipariş eklendi (${newOrder.customerName || newOrder.customer_name || 'Bilinmiyor'})`);
-                  await addAndSyncOrder(newOrder);
-                } else {
-                  const preview = textContent.replace(/\s+/g, ' ').substring(0, 100);
-                  sendLogToServer('warning', `Print yakalama (Text Reader): Format anlaşılamadı. Alınan: "${preview}..."`);
-                }
-            } catch (err: any) {
-              sendLogToServer('error', `Print yakalama (Text Reader) hatası: ${err.message}`);
-            }
-          });
-        } catch (e) {
-          // Ignore exposeFunction error if already exposed
-        }
-
-        const injectScript = () => {
-          // Yemeksepeti/Trendyol Anti-Bot (Cloudflare/DataDome) Robot Doğrulamasını Atlatma
-          try {
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] }); // Sahte eklentiler göster
-          } catch(e) {}
-
-          if (!(window as any).__print_intercepted) {
-            (window as any).__print_intercepted = true;
-            const originalPrint = window.print;
-            window.print = async () => {
-              try {
-                const receiptText = document.body.innerText || document.documentElement.innerText;
-                // 1. Yöntem iptal edildi, sadece PDF okuma kullanılacak
-                if (window.top && (window.top as any).triggerPdfExtraction) {
-                  await (window.top as any).triggerPdfExtraction();
-                }
-              } finally {
-                originalPrint.apply(window);
-              }
-            };
-          }
-        };
-
-        await targetPage.evaluateOnNewDocument(injectScript).catch(() => {});
-        await targetPage.evaluate(injectScript).catch(() => {});
-      }
-    }
-  } catch (e) {
-    // Ignore errors during check
-  }
-  
-  if (isChromeInterceptorRunning) {
-    setTimeout(checkTargetPages, 3000);
-  }
-}
-
-async function startChromeInterceptor() {
-  if (isChromeInterceptorRunning) return;
-  try {
-    chromeInterceptorState = 'error';
-    chromeInterceptorMessage = 'Chrome aranıyor (Port 9222)...';
-    const { data } = await axios.get('http://127.0.0.1:9222/json/version', { timeout: 2000 });
-    connectedBrowser = await puppeteer.connect({
-      browserWSEndpoint: data.webSocketDebuggerUrl,
-      defaultViewport: null
-    });
-    
-    isChromeInterceptorRunning = true;
-    chromeInterceptorState = 'connected';
-    chromeInterceptorMessage = 'Chrome\'a bağlandı. Sekme bekleniyor...';
-    sendLogToServer('info', 'Print Interceptor Kasa içine başarıyla bağlandı.');
-    console.log('Chrome bağlandı (9222)');
-
-    connectedBrowser.on('disconnected', () => {
-      isChromeInterceptorRunning = false;
-      connectedBrowser = null;
-      chromeInterceptorState = 'error';
-      chromeInterceptorMessage = 'Chrome bağlantısı koptu. Tekrar aranıyor...';
-      sendLogToServer('warning', 'Chrome bağlantısı koptu. Tekrar aranıyor...');
-      setTimeout(startChromeInterceptor, 1000);
-    });
-
-    checkTargetPages();
-    
-  } catch (error) {
-    isChromeInterceptorRunning = false;
-    connectedBrowser = null;
-    chromeInterceptorState = 'error';
-    chromeInterceptorMessage = 'Chrome aranıyor (Port 9222)...';
-    setTimeout(startChromeInterceptor, 1000);
-  }
-}
 

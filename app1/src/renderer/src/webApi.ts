@@ -224,6 +224,14 @@ export const webApi = {
     }
   },
   updatePrice: async (_obj: any) => {},
+  updateTgoOrderStatus: async (packageId: string, statusType: string) => {
+    try {
+      const res = await axios.post(`${getBaseUrl()}/api/tgo/order/status`, { packageId, statusType });
+      return res.data;
+    } catch (e: any) {
+      return { error: e.response?.data?.error || e.message };
+    }
+  },
   minimizeWindow: () => {},
   maximizeWindow: () => {},
   closeWindow: () => {},

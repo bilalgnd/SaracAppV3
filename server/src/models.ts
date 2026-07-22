@@ -55,6 +55,8 @@ export class ShopState {
   spotifyAuthNeeded = false;
   connectedPhones: Set<any> = new Set();
   processedIdempotencyKeys: Set<string> = new Set();
+  tgoCustomerStats: Record<string, number> = {};
+  tgoProcessedOrders: Set<string> = new Set();
 
   constructor(shopId: string) {
  this.shopId = shopId;
@@ -80,55 +82,92 @@ export class ShopState {
  } catch (err) { }
  }
 
- async initialize() {
- this.priceMemory = await this.loadFromDB('priceMemory', {});
- this.systemSettings = await this.loadFromDB('systemSettings', { YAZICI_ADI: '' });
- this.activeOrders = await this.loadFromDB('activeOrders', []);
- this.pastOrders = await this.loadFromDB('pastOrders', []);
- this.customMenu = await this.loadFromDB('customMenu', null);
- 
- // For normal users, it starts empty unless they import.
- // For admin, it might be null and use default.
- 
-  let changed = false;
-  if (!this.systemSettings['SPOTIFY_CLIENT_ID']) {
-    this.systemSettings['SPOTIFY_CLIENT_ID'] = process.env.SPOTIFY_CLIENT_ID || '';
-    changed = true;
-    this.spotifyAuthNeeded = true;
-  }
-  if (!this.systemSettings['SPOTIFY_CLIENT_SECRET']) {
-    this.systemSettings['SPOTIFY_CLIENT_SECRET'] = process.env.SPOTIFY_CLIENT_SECRET || '';
-    changed = true;
-  }
-  if (!this.systemSettings['TRENDYOL_SUPPLIER_ID']) {
-    this.systemSettings['TRENDYOL_SUPPLIER_ID'] = process.env.TRENDYOL_SUPPLIER_ID || '';
-    changed = true;
-  }
-  if (!this.systemSettings['TRENDYOL_API_KEY']) {
-    this.systemSettings['TRENDYOL_API_KEY'] = process.env.TRENDYOL_API_KEY || '';
-    changed = true;
-  }
-  if (!this.systemSettings['TRENDYOL_API_SECRET']) {
-    this.systemSettings['TRENDYOL_API_SECRET'] = process.env.TRENDYOL_API_SECRET || '';
-    changed = true;
-  }
- if (!this.systemSettings['API_TOKEN']) {
- this.systemSettings['API_TOKEN'] = Math.random().toString(36).substring(2, 8).toUpperCase();
- changed = true;
- }
+  isInitialized: boolean = false;
 
- if (changed) {
- this.saveSettings();
- }
- if (this.systemSettings.dailyQueueNo) this.dailyQueueNo = this.systemSettings.dailyQueueNo;
- if (this.systemSettings.dailyMasaNo) this.dailyMasaNo = this.systemSettings.dailyMasaNo;
- }
+  async initialize() {
+    this.priceMemory = await this.loadFromDB('priceMemory', {});
+    const loadedSettings = await this.loadFromDB('systemSettings', null);
+    if (loadedSettings && typeof loadedSettings === 'object') {
+      this.systemSettings = { ...this.systemSettings, ...loadedSettings };
+    }
+    this.activeOrders = await this.loadFromDB('activeOrders', []);
+    this.pastOrders = await this.loadFromDB('pastOrders', []);
+    this.customMenu = await this.loadFromDB('customMenu', null);
+    this.tgoCustomerStats = await this.loadFromDB('tgoCustomerStats', {});
+    const savedTgoOrders = await this.loadFromDB('tgoProcessedOrders', []);
+    this.tgoProcessedOrders = new Set(savedTgoOrders);
+  
+    let changed = false;
+    if (!this.systemSettings['SPOTIFY_CLIENT_ID'] && process.env.SPOTIFY_CLIENT_ID) {
+      this.systemSettings['SPOTIFY_CLIENT_ID'] = process.env.SPOTIFY_CLIENT_ID;
+      changed = true;
+      this.spotifyAuthNeeded = true;
+    }
+    if (!this.systemSettings['SPOTIFY_CLIENT_SECRET'] && process.env.SPOTIFY_CLIENT_SECRET) {
+      this.systemSettings['SPOTIFY_CLIENT_SECRET'] = process.env.SPOTIFY_CLIENT_SECRET;
+      changed = true;
+    }
 
- saveOrders() { this.saveToDB('activeOrders', this.activeOrders); }
- savePastOrders() { this.saveToDB('pastOrders', this.pastOrders); }
- saveMenu() { this.saveToDB('customMenu', this.customMenu); }
- saveSettings() { this.saveToDB('systemSettings', this.systemSettings); }
- savePrices() { this.saveToDB('priceMemory', this.priceMemory); }
+    // Preserve & sync Trendyol Keys across camelCase and UPPERCASE formats without overwriting with empty env values
+    const existingSupplierId = this.systemSettings.trendyolSupplierId || this.systemSettings.TRENDYOL_SUPPLIER_ID;
+    if (existingSupplierId) {
+      this.systemSettings.trendyolSupplierId = existingSupplierId;
+      this.systemSettings.TRENDYOL_SUPPLIER_ID = existingSupplierId;
+    } else if (process.env.TRENDYOL_SUPPLIER_ID) {
+      this.systemSettings.trendyolSupplierId = process.env.TRENDYOL_SUPPLIER_ID;
+      this.systemSettings.TRENDYOL_SUPPLIER_ID = process.env.TRENDYOL_SUPPLIER_ID;
+      changed = true;
+    }
+
+    const existingApiKey = this.systemSettings.trendyolApiKey || this.systemSettings.TRENDYOL_API_KEY;
+    if (existingApiKey) {
+      this.systemSettings.trendyolApiKey = existingApiKey;
+      this.systemSettings.TRENDYOL_API_KEY = existingApiKey;
+    } else if (process.env.TRENDYOL_API_KEY) {
+      this.systemSettings.trendyolApiKey = process.env.TRENDYOL_API_KEY;
+      this.systemSettings.TRENDYOL_API_KEY = process.env.TRENDYOL_API_KEY;
+      changed = true;
+    }
+
+    const existingApiSecret = this.systemSettings.trendyolApiSecret || this.systemSettings.TRENDYOL_API_SECRET;
+    if (existingApiSecret) {
+      this.systemSettings.trendyolApiSecret = existingApiSecret;
+      this.systemSettings.TRENDYOL_API_SECRET = existingApiSecret;
+    } else if (process.env.TRENDYOL_API_SECRET) {
+      this.systemSettings.trendyolApiSecret = process.env.TRENDYOL_API_SECRET;
+      this.systemSettings.TRENDYOL_API_SECRET = process.env.TRENDYOL_API_SECRET;
+      changed = true;
+    }
+
+    if (!this.systemSettings['API_TOKEN']) {
+      this.systemSettings['API_TOKEN'] = '123456';
+      changed = true;
+    }
+
+    this.isInitialized = true;
+
+    if (changed) {
+      this.saveSettings();
+    }
+    if (this.systemSettings.dailyQueueNo) this.dailyQueueNo = this.systemSettings.dailyQueueNo;
+    if (this.systemSettings.dailyMasaNo) this.dailyMasaNo = this.systemSettings.dailyMasaNo;
+  }
+
+  saveOrders() { this.saveToDB('activeOrders', this.activeOrders); }
+  savePastOrders() { this.saveToDB('pastOrders', this.pastOrders); }
+  saveMenu() { this.saveToDB('customMenu', this.customMenu); }
+  saveSettings() { 
+    if (!this.isInitialized) {
+      console.warn(`[ShopState] Blocked premature saveSettings call for ${this.shopId}!`);
+      return;
+    }
+    this.saveToDB('systemSettings', this.systemSettings); 
+  }
+  savePrices() { this.saveToDB('priceMemory', this.priceMemory); }
+  saveTgoStats() { 
+    this.saveToDB('tgoCustomerStats', this.tgoCustomerStats); 
+    this.saveToDB('tgoProcessedOrders', Array.from(this.tgoProcessedOrders)); 
+  }
  
  updateCustomMenu(newMenu: any) {
  this.customMenu = newMenu;
