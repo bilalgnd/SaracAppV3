@@ -1,4 +1,9 @@
 import express from 'express'
+
+let GoogleGenerativeAI: any = null
+try {
+  GoogleGenerativeAI = require('@google/generative-ai').GoogleGenerativeAI
+} catch (e) {}
 import { WebSocketServer, WebSocket } from 'ws'
 import http from 'http'
 import axios from 'axios'
@@ -213,33 +218,460 @@ app.get('/anti', (_req, res) => {
   res.sendFile(join(__dirname, '../public/templates/anti.html'))
 })
 
+function findAndReadWorkspaceFiles(userQuery: string, workspaceRoot: string): string {
+  let resultContext = ''
+  const cleanQuery = userQuery.toLowerCase().replace(/[^a-z0-9çğıöşü\s\-]/g, ' ')
+  const rawTokens = cleanQuery.split(/\s+/).filter(w => w.length >= 2)
+
+  if (rawTokens.length === 0) return ''
+
+  const keywords = [...rawTokens]
+  for (let i = 0; i < rawTokens.length - 1; i++) {
+    keywords.push(rawTokens[i] + rawTokens[i + 1])
+    keywords.push(rawTokens[i] + '-' + rawTokens[i + 1])
+  }
+
+  // 1. Directory Tree Matcher & Auto Scanner
+  try {
+    const topProjects = fs.readdirSync(workspaceRoot)
+    for (const proj of topProjects) {
+      const projLower = proj.toLowerCase()
+      const fullProjPath = path.join(workspaceRoot, proj)
+
+      const isMatch = keywords.some(kw => projLower.includes(kw) || (kw.length >= 3 && projLower.includes(kw)))
+      if (isMatch && fs.existsSync(fullProjPath) && fs.lstatSync(fullProjPath).isDirectory()) {
+        try {
+          const subEntries = fs.readdirSync(fullProjPath).slice(0, 35)
+          resultContext += `\n\n=== [PROJE KLASÖR YAPISI VE DİZİN DÖKÜMÜ: ${proj}] ===\nKonum: ${fullProjPath}\nİçerdiği Dosya/Klasörler: ${subEntries.join(', ')}`
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
+
+  // 2. Deep File Content Matcher
+  const matchedFiles: { path: string; relPath: string; score: number }[] = []
+
+  function walkDir(dir: string, depth = 0) {
+    if (depth > 6) return
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'build' || entry.name === 'temp_extract' || entry.name === 'Archive') continue
+        const fullPath = path.join(dir, entry.name)
+        const relPath = path.relative(workspaceRoot, fullPath)
+
+        if (entry.isDirectory()) {
+          walkDir(fullPath, depth + 1)
+        } else if (entry.isFile()) {
+          const ext = path.extname(entry.name).toLowerCase()
+          const validExts = ['.ts', '.tsx', '.js', '.jsx', '.html', '.css', '.json', '.py', '.vue', '.md', '.kts', '.gradle', '.kt', '.java', '.txt']
+          if (!validExts.includes(ext)) continue
+
+          let score = 0
+          const fileNameLower = entry.name.toLowerCase()
+          const relPathLower = relPath.toLowerCase().replace(/\\/g, '/')
+
+          for (const kw of keywords) {
+            if (fileNameLower.includes(kw)) score += 15
+            if (relPathLower.includes(kw)) score += 10
+          }
+
+          if (score > 0) {
+            if (['app.tsx', 'app.jsx', 'index.html', 'readme.md', 'main.ts', 'server.ts', 'app.js', 'build.gradle.kts', 'package.json'].includes(fileNameLower)) {
+              score += 20
+            }
+            matchedFiles.push({ path: fullPath, relPath, score })
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  walkDir(workspaceRoot)
+
+  matchedFiles.sort((a, b) => b.score - a.score)
+
+  const topFiles = matchedFiles.slice(0, 5)
+  for (const file of topFiles) {
+    try {
+      const content = fs.readFileSync(file.path, 'utf-8')
+      resultContext += `\n\n=== GERÇEK DOSYA İÇERİĞİ (${file.relPath}) ===\n${content.substring(0, 15000)}`
+    } catch (e) {}
+  }
+
+  return resultContext
+}
+
 app.post('/api/anti/chat', async (req: any, res: any) => {
   try {
-    const { prompt, selectedFile, googleToken } = req.body
-    
+    const { prompt, history, selectedFile, googleToken, model: requestedModel } = req.body
+
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt alanı zorunludur.' })
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+
+    if (!googleToken && !apiKey) {
+      return res.status(401).json({
+        reply: '⚠️ **Yetkilendirme Gerekiyor**: Antigravity veya Google oturumunuz açık değil. Lütfen sağ üstteki **Google ile Bağlan** butonuna tıklayarak giriş yapın.'
+      })
+    }
+
     let contextStr = ''
-    if (selectedFile && googleToken) {
+    const workspaceRoot = antiSettings.workspaceRoot || 'c:\\Users\\bilal\\SARACAPP'
+
+    // Combine prompt + history for multi-turn keyword extraction
+    let fullQueryContext = prompt
+    if (Array.isArray(history)) {
+      fullQueryContext = history.map((h: any) => h.text || '').join(' ') + ' ' + prompt
+    }
+
+    // 1. Deep File Content Search & Ingestion based on fullQueryContext
+    try {
+      const matchedFileContents = findAndReadWorkspaceFiles(fullQueryContext, workspaceRoot)
+      if (matchedFileContents) {
+        contextStr += matchedFileContents
+      }
+    } catch (e) {}
+
+    // 2. Auto-scan local workspace projects summary
+    try {
+      if (fs.existsSync(workspaceRoot)) {
+        const projDirs = fs.readdirSync(workspaceRoot).filter(d => !d.startsWith('.') && d !== 'node_modules')
+        contextStr += `\n\n[Çalışma Alanı Projeleri (Workspace Projects)]: ${projDirs.join(', ')}`
+      }
+    } catch (e) {}
+
+    // 3. Auto-scan target Google Drive folder files
+    if (googleToken) {
       try {
-        const driveRes = await fetch(`https://www.googleapis.com/drive/v3/files/${selectedFile.id}?alt=media`, {
+        const q = `'1tYgmotovCvt_YCEDmJ3onVgRNAPXLskV' in parents and trashed = false`
+        const driveRes = await fetch(`https://www.googleapis.com/drive/v3/files?pageSize=20&fields=files(id,name,mimeType)&q=${encodeURIComponent(q)}`, {
           headers: { 'Authorization': `Bearer ${googleToken}` }
         })
-        if (driveRes.status === 200) {
-          const fileContent = await driveRes.text()
-          contextStr = `\n\n[Google Drive Dosyası: ${selectedFile.name}]\n${fileContent.substring(0, 4000)}`
+        if (driveRes.ok) {
+          const driveData = await driveRes.json()
+          if (driveData.files && driveData.files.length > 0) {
+            const fileNames = driveData.files.map((f: any) => f.name).join(', ')
+            contextStr += `\n\n[Google Drive Hedef Klasörü (1tYgmotovCvt_YCEDmJ3onVgRNAPXLskV) İçerisindeki Dosyalar]: ${fileNames}`
+          }
         }
-      } catch (e) {
-        console.error('Drive file fetch error:', e)
+      } catch (e) {}
+    }
+
+    // 4. User Attached File Content
+    if (selectedFile) {
+      if (selectedFile.content) {
+        contextStr += `\n\n[Kullanıcı Tarafından Seçilen Dosya (${selectedFile.name}) İçeriği]:\n${selectedFile.content.substring(0, 15000)}`
+      } else if (selectedFile.id && googleToken) {
+        try {
+          const driveRes = await fetch(`https://www.googleapis.com/drive/v3/files/${selectedFile.id}?alt=media`, {
+            headers: { 'Authorization': `Bearer ${googleToken}` }
+          })
+          if (driveRes.ok) {
+            const fileContent = await driveRes.text()
+            contextStr += `\n\n[Google Drive Dosyası (${selectedFile.name}) İçeriği]:\n${fileContent.substring(0, 15000)}`
+          }
+        } catch (e) {
+          console.error('Drive file fetch error:', e)
+        }
       }
     }
 
-    const reply = `🤖 **Antigravity AI Yanıtı:**\n\n${prompt}${selectedFile ? `\n\n📁 **Bağlanan Dosya:** \`${selectedFile.name}\`` : ''}\n\nİsteğiniz analiz edildi. Google Drive hesabınızla tam senkronize olarak geliştirme adımları yürütüldü.${contextStr ? '\n\n*Dosya içeriği başarıyla okundu ve işlendi.*' : ''}`
-    
+    // Format conversation history
+    let conversationHistoryStr = ''
+    if (Array.isArray(history) && history.length > 0) {
+      conversationHistoryStr = '\n\n[Geçmiş Sohbet Akışı (Conversation History)]:\n' + 
+        history.slice(-6).map((h: any) => `${h.role === 'user' ? 'Kullanıcı' : 'Asistan'}: ${h.text}`).join('\n')
+    }
+
+    const systemInstruction = `Sen Antigravity Agentic AI adında tam yetkili bir yapay zeka asistansın ve IDE çalışma ortamındasın.
+Google Drive (Hedef Klasör ID: 1tYgmotovCvt_YCEDmJ3onVgRNAPXLskV) ve yerel çalışma alanındaki projelere (SARACAPPV3, anti, pdfreader, a72 dock, app1 vb.) TAM ERİŞİM VE ANALİZ YETKİNE SAHİPSİN.
+Kullanıcıya KESİNLİKLE "Erişim yetkim yok", "Güvenlik protokolleri gereği Drive'a erişemem" veya "Dosya paylaşmanız gerekmektedir" DEME.
+Sana yukarıda sağlanan GERÇEK DOSYA İÇERİKLERİNİ ve kod yapılarını temel alarak kullanıcının sorularını (örneğin koddaki API'lar, fonksiyonlar, eksikler, hatalar) doğrudan incele ve %100 GERÇEK KODA DAYALI yanıt ver. Koddaki endpoint'leri ve değişkenleri uydurma, tam olarak kodda yazılanları listeleyin.`
+
+    const fullPrompt = `${systemInstruction}\n\n${contextStr}${conversationHistoryStr}\n\nKullanıcı Son Sorusu: ${prompt}`
+
+    const modelMappings: Record<string, string[]> = {
+      'gemini-3.6-flash-high': ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.0-flash'],
+      'gemini-3.6-flash-medium': ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.0-flash'],
+      'gemini-3.6-flash-low': ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.0-flash'],
+      'gemini-3.5-flash-high': ['gemini-3.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'],
+      'gemini-3.5-flash-medium': ['gemini-3.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'],
+      'gemini-3.5-flash-low': ['gemini-3.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'],
+      'gemini-3.1-pro-high': ['gemini-3.1-pro-preview', 'gemini-2.5-pro', 'gemini-2.0-flash'],
+      'gemini-3.1-pro-low': ['gemini-3.1-pro-preview', 'gemini-2.5-pro', 'gemini-2.0-flash'],
+      'claude-sonnet-4.6': ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.0-flash'],
+      'claude-opus-4.6': ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.0-flash'],
+      'gpt-oss-120b': ['gemini-3.6-flash', 'gemini-2.0-flash'],
+      'gemini-3.6-flash': ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.0-flash']
+    }
+
+    const candidateModels = modelMappings[requestedModel] || ['gemini-3.6-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite']
+    let geminiData: any = null
+    let lastError: string | null = null
+
+    for (const modelCandidate of candidateModels) {
+      try {
+        // 1. Try with OAuth token if present
+        if (googleToken) {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelCandidate}:generateContent`
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${googleToken}`
+            },
+            body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
+          })
+          const data = await res.json()
+          if (res.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+            geminiData = data
+            break
+          }
+        }
+
+        // 2. Use official GoogleGenerativeAI SDK or Fallback Fetch with API Key
+        if (!geminiData && apiKey) {
+          if (GoogleGenerativeAI) {
+            try {
+              const genAI = new GoogleGenerativeAI(apiKey)
+              const model = genAI.getGenerativeModel({ model: modelCandidate })
+              const result = await model.generateContent(fullPrompt)
+              const text = result.response.text()
+              if (text) {
+                geminiData = { candidates: [{ content: { parts: [{ text }] } }] }
+                break
+              }
+            } catch (sdkErr: any) {
+              lastError = sdkErr.message
+            }
+          }
+
+          if (!geminiData) {
+            try {
+              const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelCandidate}:generateContent?key=${apiKey}`
+              const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
+              })
+              const data = await res.json()
+              if (res.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                geminiData = data
+                break
+              } else {
+                lastError = data.error?.message || 'Model yanıt vermedi'
+              }
+            } catch (fetchErr: any) {
+              lastError = fetchErr.message
+            }
+          }
+        }
+      } catch (err: any) {
+        lastError = err.message
+      }
+    }
+
+    if (!geminiData) {
+      console.error('Gemini API Hatası:', lastError)
+      return res.status(500).json({
+        reply: `⚠️ Yapay zeka servisinden yanıt alınamadı: ${lastError || 'Bilinmeyen Hata'}`
+      })
+    }
+
+    const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt üretilemedi.'
     res.json({ reply })
   } catch (err: any) {
     console.error('Anti chat error:', err)
-    res.status(500).json({ error: err.message || 'Antigravity AI hatası' })
+    res.status(500).json({ reply: err.message || 'Antigravity AI hatası' })
   }
 })
+
+// In-Memory Data Stores for Antigravity IDE UI
+let antiConversations: any[] = [
+  {
+    id: 'conv-pinned-1',
+    title: 'SaracAppV2 Integration',
+    date: '20d ago',
+    pinned: true,
+    model: 'gemini-3.6-flash',
+    messages: [
+      { role: 'user', text: 'SaracAppV2 backend entegrasyon durumunu incele.' },
+      { role: 'agent', text: 'SaracAppV2 modülleri başarıyla bağlandı. Mongodb ve Socket.io bağlantıları aktif.' }
+    ]
+  },
+  {
+    id: 'conv-pinned-2',
+    title: 'Drive Agent Dev & Testing',
+    date: '2d ago',
+    pinned: true,
+    model: 'gemini-3.5-flash',
+    messages: [
+      { role: 'user', text: 'Google Drive OAuth token yönetimi testi.' },
+      { role: 'agent', text: 'OAuth 2.0 Bearer jeton doğrulaması hazır.' }
+    ]
+  }
+]
+
+let antiTasks: any[] = [
+  {
+    id: 'task-1',
+    prompt: 'Check server health and MongoDB connection status every hour',
+    schedule: 'Every 1 Hour',
+    status: 'active',
+    lastRun: '10 min ago'
+  },
+  {
+    id: 'task-2',
+    prompt: 'Auto-sync Google Drive workspace changes',
+    schedule: 'Timer 300s',
+    status: 'active',
+    lastRun: '5 min ago'
+  }
+]
+
+let antiSettings: any = {
+  defaultModel: 'gemini-3.6-flash',
+  systemPrompt: 'Sen Antigravity Web Agent adında gelişmiş bir yapay zeka asistansın.',
+  temperature: 0.7,
+  theme: 'dark',
+  workspaceRoot: 'c:\\Users\\bilal\\SARACAPP'
+}
+
+// 1. Projects & File Explorer APIs
+app.get('/api/anti/projects', (_req: any, res: any) => {
+  try {
+    const baseDir = path.join(__dirname, '../../..') // c:\Users\bilal\SARACAPP or server root
+    if (fs.existsSync(baseDir)) {
+      const items = fs.readdirSync(baseDir, { withFileTypes: true })
+      const projects = items
+        .filter(item => item.isDirectory() && !item.name.startsWith('.'))
+        .map(item => ({ name: item.name, path: item.name, isDir: true }))
+      return res.json({ projects, root: baseDir })
+    }
+    res.json({ projects: [{ name: 'anti', path: 'anti', isDir: true }, { name: 'SARACAPPV3', path: 'SARACAPPV3', isDir: true }], root: baseDir })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/anti/files', (req: any, res: any) => {
+  try {
+    const relativeDir = (req.query.dir as string) || ''
+    const baseDir = path.join(__dirname, '../../..')
+    const targetDir = path.resolve(baseDir, relativeDir)
+
+    // Security check to prevent traversing above workspace
+    if (!targetDir.startsWith(baseDir) && !targetDir.startsWith(path.dirname(baseDir))) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    if (!fs.existsSync(targetDir)) {
+      return res.status(404).json({ error: 'Directory not found' })
+    }
+
+    const items = fs.readdirSync(targetDir, { withFileTypes: true })
+    const files = items
+      .filter(item => !item.name.startsWith('.') && item.name !== 'node_modules')
+      .slice(0, 50)
+      .map(item => ({
+        name: item.name,
+        path: path.join(relativeDir, item.name).replace(/\\/g, '/'),
+        isDir: item.isDirectory(),
+        size: item.isFile() ? fs.statSync(path.join(targetDir, item.name)).size : 0
+      }))
+
+    res.json({ dir: relativeDir, files })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/anti/file-content', (req: any, res: any) => {
+  try {
+    const relativePath = (req.query.file as string) || ''
+    const baseDir = path.join(__dirname, '../../..')
+    const targetPath = path.resolve(baseDir, relativePath)
+
+    if (!fs.existsSync(targetPath) || fs.statSync(targetPath).isDirectory()) {
+      return res.status(404).json({ error: 'File not found' })
+    }
+
+    const stat = fs.statSync(targetPath)
+    if (stat.size > 100000) { // Limit to ~100KB text
+      return res.json({ path: relativePath, content: '// Dosya boyutu 100KB üstünde olduğu için önizleme kısaltıldı.\n', size: stat.size })
+    }
+
+    const content = fs.readFileSync(targetPath, 'utf-8')
+    res.json({ path: relativePath, content, size: stat.size })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// 2. Conversation History APIs
+app.get('/api/anti/conversations', (_req: any, res: any) => {
+  res.json({ conversations: antiConversations })
+})
+
+app.post('/api/anti/conversations', (req: any, res: any) => {
+  const { title, model, messages, pinned } = req.body
+  const newConv = {
+    id: 'conv-' + Date.now(),
+    title: title || 'New Conversation',
+    date: 'Just now',
+    pinned: !!pinned,
+    model: model || 'gemini-3.6-flash',
+    messages: messages || []
+  }
+  antiConversations.unshift(newConv)
+  res.json({ conversation: newConv })
+})
+
+app.delete('/api/anti/conversations/:id', (req: any, res: any) => {
+  const { id } = req.params
+  antiConversations = antiConversations.filter(c => c.id !== id)
+  res.json({ success: true })
+})
+
+// 3. Scheduled Tasks APIs
+app.get('/api/anti/tasks', (_req: any, res: any) => {
+  res.json({ tasks: antiTasks })
+})
+
+app.post('/api/anti/tasks', (req: any, res: any) => {
+  const { prompt, schedule } = req.body
+  if (!prompt) return res.status(400).json({ error: 'Prompt required' })
+  const newTask = {
+    id: 'task-' + Date.now(),
+    prompt,
+    schedule: schedule || 'Every 1 Hour',
+    status: 'active',
+    lastRun: 'Pending'
+  }
+  antiTasks.unshift(newTask)
+  res.json({ task: newTask })
+})
+
+app.delete('/api/anti/tasks/:id', (req: any, res: any) => {
+  const { id } = req.params
+  antiTasks = antiTasks.filter(t => t.id !== id)
+  res.json({ success: true })
+})
+
+// 4. Settings APIs
+app.get('/api/anti/settings', (_req: any, res: any) => {
+  res.json({ settings: antiSettings })
+})
+
+app.post('/api/anti/settings', (req: any, res: any) => {
+  antiSettings = { ...antiSettings, ...req.body }
+  res.json({ settings: antiSettings })
+})
+
+
 
 const requireAdminAuth = (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization']

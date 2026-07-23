@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistem Girişi</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            dark: '#121212',
+            panel: '#1e1e1e',
+            primary: '#ef4444',
+            primaryDark: '#dc2626'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #121212; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+    .glass-panel {
+      background: rgba(30, 30, 30, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus, 
+    input:-webkit-autofill:active{
+        -webkit-box-shadow: 0 0 0 30px #1e1e1e inset !important;
+        -webkit-text-fill-color: white !important;
+        transition: background-color 5000s ease-in-out 0s;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div id="loginScreen" class="glass-panel p-8 rounded-2xl shadow-2xl w-full max-w-md text-center transform transition-all duration-500">
+    <div class="mb-6">
+      <div class="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-shield-halved text-primary text-3xl"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-white">Yönetici Girişi</h2>
+      <p class="text-gray-400 text-sm mt-2">Sisteme erişmek için master parolayı girin.</p>
+    </div>
+    
+    <input type="password" id="passwordInput" placeholder="Admin Şifresi" class="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors mb-4 text-center tracking-widest text-lg" onkeypress="if(event.key === 'Enter') login()" />
+    
+    <button onclick="login()" class="w-full bg-primary hover:bg-primaryDark text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-lg shadow-primary/30">
+      Giriş Yap
+    </button>
+    <div id="loginError" class="text-red-400 mt-3 text-sm hidden">Hatalı şifre!</div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectUrl = urlParams.get('redirect') || '/admintools';
+
+    let adminToken = localStorage.getItem('adminToken') || '';
+    if (adminToken) {
+      window.location.href = redirectUrl;
+    }
+
+    async function login() {
+      const pwd = document.getElementById('passwordInput').value;
+      if(!pwd) return;
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pwd })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem('adminToken', data.token);
+          localStorage.setItem('adminPassword', pwd);
+          document.getElementById('loginError').classList.add('hidden');
+          window.location.href = redirectUrl;
+        } else {
+          document.getElementById('loginError').classList.remove('hidden');
+          document.getElementById('passwordInput').value = '';
+        }
+      } catch (e) {
+        document.getElementById('loginError').classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>

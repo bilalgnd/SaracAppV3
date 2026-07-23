@@ -239,6 +239,7 @@ interface KasaApi {
 
 object ApiClient {
     private var retrofit: Retrofit? = null
+    private var cachedToken: String? = null
     fun getApi(ip: String, token: String = ""): KasaApi {
         val temizIp = ip.trim().ifEmpty { "bilalgnd.shop" }
         val baseUrl = if (temizIp.startsWith("http")) {
@@ -248,14 +249,18 @@ object ApiClient {
         }
 
         var r = retrofit
-        if (r == null || r.baseUrl().toString() != baseUrl) {
-            val client = OkHttpClient.Builder().addInterceptor { chain ->
-                val requestBuilder = chain.request().newBuilder()
-                if (token.isNotBlank()) {
-                    requestBuilder.addHeader("Authorization", "Bearer $token")
-                }
-                chain.proceed(requestBuilder.build())
-            }.build()
+        if (r == null || r.baseUrl().toString() != baseUrl || cachedToken != token) {
+            val client = OkHttpClient.Builder()
+                .connectTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .writeTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .addInterceptor { chain ->
+                    val requestBuilder = chain.request().newBuilder()
+                    if (token.isNotBlank()) {
+                        requestBuilder.addHeader("Authorization", "Bearer $token")
+                    }
+                    chain.proceed(requestBuilder.build())
+                }.build()
 
             r = try {
                 Retrofit.Builder().baseUrl(baseUrl).client(client).addConverterFactory(GsonConverterFactory.create()).build()
@@ -263,6 +268,7 @@ object ApiClient {
                 null
             }
             retrofit = r
+            cachedToken = token
         }
         return retrofit!!.create(KasaApi::class.java)
     }
@@ -333,6 +339,14 @@ class HafizaYoneticisi(context: Context) {
     fun aktifMasalariGetir(): List<Adisyon> {
         val json = defter.getString("AKTIF_MASALAR", "[]")
         return gson.fromJson(json, object : TypeToken<List<Adisyon>>() {}.type) ?: emptyList()
+    }
+
+    fun kategorileriKaydet(liste: List<Kategori>) = defter.edit().putString("KATEGORILER_CACHE", gson.toJson(liste)).apply()
+    fun kategorileriGetir(): List<Kategori> {
+        val json = defter.getString("KATEGORILER_CACHE", "[]")
+        return try {
+            gson.fromJson(json, object : TypeToken<List<Kategori>>() {}.type) ?: emptyList()
+        } catch (e: Exception) { emptyList() }
     }
 }
 
@@ -461,8 +475,12 @@ fun AnaEkran() {
         return
     }
 
-    var kategoriler by remember { mutableStateOf<List<Kategori>>(emptyList()) }
-    var icecekMenusu by remember { mutableStateOf<List<Urun>>(emptyList()) }
+    var kategoriler by remember { mutableStateOf<List<Kategori>>(hafiza.kategorileriGetir()) }
+    var icecekMenusu by remember {
+        mutableStateOf<List<Urun>>(
+            kategoriler.find { it.name.contains("içecek", ignoreCase = true) || it.name.contains("icecek", ignoreCase = true) }?.items ?: emptyList()
+        )
+    }
     var ucretliEkstralar by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
     var siparisIcinAcilanUrun by remember { mutableStateOf<Urun?>(null) }
@@ -490,47 +508,22 @@ fun AnaEkran() {
 
     LaunchedEffect(isLoggedIn) {
         if (!isLoggedIn) return@LaunchedEffect
-        val client = OkHttpClient()
+        val wsClient = OkHttpClient.Builder()
+            .connectTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+            .pingInterval(10, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
         var activeWebSocket: WebSocket? = null
+        var lastMenuFetchTime = 0L
+        var fcmSent = false
 
         while (true) {
             val ip = hafiza.kasaIpOku().trim()
+            val tokenParam = hafiza.kasaTokenOku()
+
             if (ip.isNotBlank()) {
-                try {
-                    val api = ApiClient.getApi(ip, hafiza.kasaTokenOku())
-                    val menuRes = api.menuGetir()
-                    if (menuRes.isSuccessful && menuRes.body() != null) {
-                        val body = menuRes.body()!!
-                        kategoriler = body.categories ?: emptyList()
-                        ucretliEkstralar = body.ekstralar ?: emptyMap()
-                        val drinksCat = kategoriler.find { it.name.contains("içecek", ignoreCase = true) || it.name.contains("icecek", ignoreCase = true) }
-                        icecekMenusu = drinksCat?.items ?: emptyList()
-                    }
-                    
-                    val tokenVar = hafiza.fcmTokenOku()
-                    android.util.Log.e("API", "TokenVar is: $tokenVar")
-                    if (tokenVar.isNotBlank()) {
-                        try { 
-                            val res = api.fcmTokenKaydet(mapOf("token" to tokenVar))
-                            android.util.Log.e("API", "fcmTokenKaydet response: ${res.isSuccessful}")
-                        } catch (e: Exception) {
-                            android.util.Log.e("API", "fcmTokenKaydet ERROR: ${e.message}")
-                        }
-                    }
-                } catch (e: Exception) { }
-
-                val bekleyenler = hafiza.cevrimdisiSiparisleriGetir()
-                if (bekleyenler.isNotEmpty() && kasaOnline) {
-                    try {
-                        val api = ApiClient.getApi(ip, hafiza.kasaTokenOku())
-                        bekleyenler.forEach { api.siparisGonder(it) }
-                        hafiza.cevrimdisiSiparisTemizle()
-                        withContext(Dispatchers.Main) { Toast.makeText(context, "✅ Bekleyen Siparişler Gitti!", Toast.LENGTH_SHORT).show() }
-                    } catch (e: Exception) { }
-                }
-
+                // 1. WebSocket bağlantı başlatma (HTTP bekletmesi olmadan hızlı bağlantı)
                 if (activeWebSocket == null) {
-                    val tokenParam = hafiza.kasaTokenOku()
                     val devId = hafiza.cihazIdOku()
                     val wsUrl = if (ip.startsWith("https://")) {
                         ip.replace("https://", "wss://") + (if (ip.endsWith("/")) "ws?token=$tokenParam&deviceId=$devId" else "/ws?token=$tokenParam&deviceId=$devId")
@@ -542,7 +535,7 @@ fun AnaEkran() {
                         "ws://$ip/ws?token=$tokenParam&deviceId=$devId"
                     }
                     val request = Request.Builder().url(wsUrl).build()
-                    activeWebSocket = client.newWebSocket(request, object : WebSocketListener() {
+                    activeWebSocket = wsClient.newWebSocket(request, object : WebSocketListener() {
                         override fun onOpen(webSocket: WebSocket, response: Response) { 
                             kasaOnline = true
                             sendLogToServer(context, "success", "WebSocket bağlantısı kuruldu.")
@@ -568,7 +561,7 @@ fun AnaEkran() {
                             } catch (e: Exception) {}
                         }
                         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { 
-                            if (kasaOnline) sendLogToServer(context, "warning", "WebSocket bağlantısı kopyu.")
+                            if (kasaOnline) sendLogToServer(context, "warning", "WebSocket bağlantısı koptu.")
                             kasaOnline = false; activeWebSocket = null 
                         }
                         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) { 
@@ -576,9 +569,62 @@ fun AnaEkran() {
                             kasaOnline = false; activeWebSocket = null 
                         }
                     })
-                } else { activeWebSocket?.send("ping") }
+                }
+
+                // 2. Bekleyen çevrimdışı siparişleri gönderme
+                val bekleyenler = hafiza.cevrimdisiSiparisleriGetir()
+                if (bekleyenler.isNotEmpty() && kasaOnline) {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            val api = ApiClient.getApi(ip, tokenParam)
+                            bekleyenler.forEach { api.siparisGonder(it) }
+                            hafiza.cevrimdisiSiparisTemizle()
+                            withContext(Dispatchers.Main) { Toast.makeText(context, "✅ Bekleyen Siparişler Gitti!", Toast.LENGTH_SHORT).show() }
+                        } catch (e: Exception) { }
+                    }
+                }
+
+                // 3. Menü alma işlemini asenkron çalıştırma (Ana döngüyü bloklamaz)
+                val now = System.currentTimeMillis()
+                if (kategoriler.isEmpty() || (now - lastMenuFetchTime > 60000L)) {
+                    lastMenuFetchTime = now
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            val api = ApiClient.getApi(ip, tokenParam)
+                            val menuRes = api.menuGetir()
+                            if (menuRes.isSuccessful && menuRes.body() != null) {
+                                val body = menuRes.body()!!
+                                val newCats = body.categories ?: emptyList()
+                                val newExt = body.ekstralar ?: emptyMap()
+                                withContext(Dispatchers.Main) {
+                                    kategoriler = newCats
+                                    ucretliEkstralar = newExt
+                                    val drinksCat = newCats.find { it.name.contains("içecek", ignoreCase = true) || it.name.contains("icecek", ignoreCase = true) }
+                                    icecekMenusu = drinksCat?.items ?: emptyList()
+                                }
+                                hafiza.kategorileriKaydet(newCats)
+                            }
+                        } catch (e: Exception) {}
+                    }
+                }
+
+                // 4. FCM Token kaydını asenkron gönderme
+                if (!fcmSent) {
+                    val tokenVar = hafiza.fcmTokenOku()
+                    if (tokenVar.isNotBlank()) {
+                        fcmSent = true
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val api = ApiClient.getApi(ip, tokenParam)
+                                api.fcmTokenKaydet(mapOf("token" to tokenVar))
+                            } catch (e: Exception) {
+                                fcmSent = false
+                            }
+                        }
+                    }
+                }
             }
-            delay(3000)
+            delay(2000)
         }
     }
 

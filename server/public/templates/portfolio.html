@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilal G. | Portfolio</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050b14;
+            --text-primary: #ffffff;
+            --text-secondary: #c0c4cc;
+            --accent: #ff4757;
+            --glass-bg: rgba(255, 255, 255, 0.03); /* Daha şeffaf, gerçekçi cam */
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Sabit arka planı mobilde bozmamak (iOS Safari fixed bug) için pseudo-element kullanıyoruz */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('/static/bg.jpg');
+            background-size: cover;
+            background-position: center;
+            z-index: -1;
+        }
+
+        /* Abstract ambient glows for the AMOLED background */
+        .ambient-glow {
+            position: fixed; /* Mobilde scroll ile kaymaması için fixed yapıldı */
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.6;
+            z-index: 0;
+            pointer-events: none;
+            animation: pulse 8s infinite alternate ease-in-out;
+        }
+        .glow-1 {
+            top: -100px;
+            left: -100px;
+            width: 400px;
+            height: 400px;
+            background: rgba(255, 71, 87, 0.15); /* subtle red/pink */
+        }
+        .glow-2 {
+            bottom: -100px;
+            right: 10%;
+            width: 500px;
+            height: 500px;
+            background: rgba(55, 100, 250, 0.15); /* subtle blue */
+            animation-delay: -4s;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1) translate(0, 0); opacity: 0.4; }
+            100% { transform: scale(1.2) translate(20px, -20px); opacity: 0.6; }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 90%;
+            max-width: 1200px;
+            height: 85vh;
+            min-height: 600px;
+            display: flex;
+            border-radius: 24px;
+            overflow: hidden;
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.02);
+            animation: slideUpFade 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(40px);
+        }
+
+        @keyframes slideUpFade {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .left-panel {
+            flex: 1;
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            z-index: 2;
+        }
+
+        .right-panel {
+            flex: 1;
+            position: relative;
+            background-image: url('/static/profile.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            /* Resmin cama yumuşak bir şekilde erimesi için (Premium görünüm) */
+            -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+            mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+        }
+        
+        /* Right panel has no blur overlay over the photo itself */
+
+        /* Nav */
+        header {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+        }
+        .logo {
+            position: relative;
+            width: 76px;
+            height: 76px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .logo-group h1 {
+            margin: 0;
+            font-size: 5vw;
+            letter-spacing: -1px;
+        }
+        @media (min-width: 1600px) { .logo-group h1 { font-size: 60px; } }
+        nav {
+            display: flex;
+            gap: 25px;
+        }
+        nav a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+        nav a:hover {
+            color: var(--accent);
+        }
+
+        /* Hero Content */
+        .hero-content {
+            margin-top: -40px;
+        }
+        
+        p.subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            max-width: 80%;
+            margin-bottom: 40px;
+            font-weight: 300;
+        }
+        p.subtitle strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .cta-group {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            padding: 15px 35px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 10px 20px rgba(255, 71, 87, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 25px rgba(255, 71, 87, 0.4);
+        }
+        
+        .social-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            transition: background 0.3s ease, transform 0.3s ease;
+            border: 1px solid var(--glass-border);
+        }
+        .social-icon:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-3px);
+        }
+
+        /* Animation delays for elements */
+        header .logo-group, header nav {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        header .logo-group { animation-delay: 0.3s; }
+        .hero-content {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.5s;
+        }
+        .footer-brands { animation-delay: 0.6s; opacity: 0; transform: translateY(20px); animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        .footer-brands {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            color: #666;
+            font-weight: 600;
+            font-size: 20px;
+        }
+
+        /* Glass Overlay over image (İptal edildi, yerine mask-image kullanıyoruz) */
+        .image-overlay {
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            body {
+                align-items: flex-start;
+                padding-top: 20px;
+                padding-bottom: 20px;
+                height: auto;
+            }
+            body::before {
+                background-position: center bottom;
+                transform: scale(1.5) translateY(-14%); /* Arka planı daha da büyütüp çok daha fazla yukarı kaydırır */
+            }
+            .container {
+                flex-direction: column-reverse;
+                height: auto;
+                min-height: auto;
+                border-radius: 28px;
+                width: 92%;
+            }
+            .right-panel {
+                min-height: 40vh;
+                background-position: center 0%; /* Fotonun en üstünden başla */
+                -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+                mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+            }
+            .left-panel {
+                padding: 10px 30px 40px 30px;
+                margin-top: -60px; /* Fotoğraf ile metni kaynaştırır ve logoyu geçişe oturtur */
+            }
+            .logo-group h1 { font-size: 42px; }
+            p.subtitle { max-width: 100%; }
+            .hero-content { margin-top: 30px; margin-bottom: 50px; }
+            header { justify-content: space-between; margin-bottom: 30px; }
+            nav { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <div class="container">
+        <div class="left-panel">
+            <header>
+                <div class="logo-group">
+                    <div class="logo">
+                        <img src="/static/favicon.png" alt="logo">
+                    </div>
+                    <h1>bilalgnd.</h1>
+                </div>
+                <nav>
+                    <a href="/apiorders">APIs</a>
+                    <a href="#">Story</a>
+                    <a href="#">Contact</a>
+                    <a href="/pos">POS Login</a>
+                </nav>
+            </header>
+
+            <div class="hero-content">
+                <div class="cta-group">
+                    <a href="https://instagram.com/bilalgnd" target="_blank" class="social-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                    </a>
+                    <a href="/pos" class="social-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Removed footer brands -->
+        </div>
+        
+        <div class="right-panel">
+            <div class="image-overlay"></div>
+        </div>
+    </div>
+
+</body>
+</html>

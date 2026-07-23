@@ -12,6 +12,11 @@ declare global {
       getTvLink: () => Promise<string>
       restartTvTunnel: () => Promise<string>
       openTrendyolLogs: () => Promise<void>
+      getTrendyolStatus: () => Promise<any>
+      testTrendyolConnection: () => Promise<{ success: boolean; message: string; statusCode?: number; ordersCount?: number }>
+      triggerTrendyolPoll: () => Promise<any>
+      getTrendyolStoreStatus: () => Promise<{ success: boolean; status?: string; storeId?: string | number; storeName?: string; message?: string }>
+      updateTrendyolStoreStatus: (status: 'OPEN' | 'CLOSED') => Promise<{ success: boolean; message: string; status?: 'OPEN' | 'CLOSED' }>
       saveOrders: (orders: any[]) => void
       saveSettings: (settings: any) => void
       printReceipt: (data: any) => void

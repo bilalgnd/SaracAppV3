@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, globalShortcut, dialog } from 'electron'
 import { join } from 'path'
-import { startTrendyolService, setTrendyolCallbacks } from './trendyolService'
+import { startTrendyolService, setTrendyolCallbacks, getTrendyolStatus, testTrendyolConnection, triggerTrendyolPoll, getTrendyolStoreStatus, updateTrendyolStoreStatus } from './trendyolService'
 import { startYemeksepetiService } from './yemeksepetiService'
 import * as fs from 'fs'
 // --- SUPPRESS PDFJS CANVAS WARNINGS ---
@@ -60,11 +60,13 @@ app.commandLine.appendSwitch('disable-http-cache')
 
 
 axios.interceptors.request.use((config) => {
-  if (systemSettings && systemSettings.API_TOKEN) {
-    if (systemSettings.API_TOKEN.length > 20) {
-      config.headers['Authorization'] = `Bearer ${systemSettings.API_TOKEN}`;
-    } else {
-      config.headers['Authorization'] = systemSettings.API_TOKEN;
+  if (config.url && (config.url.startsWith(CLOUD_URL) || config.url.startsWith('/'))) {
+    if (systemSettings && systemSettings.API_TOKEN) {
+      if (systemSettings.API_TOKEN.length > 20) {
+        config.headers['Authorization'] = `Bearer ${systemSettings.API_TOKEN}`;
+      } else {
+        config.headers['Authorization'] = systemSettings.API_TOKEN;
+      }
     }
   }
   return config;
@@ -584,6 +586,11 @@ app.whenReady().then(() => {
     }
     shell.showItemInFolder(trendyolDir);
   })
+  ipcMain.handle('get-trendyol-status', () => getTrendyolStatus())
+  ipcMain.handle('test-trendyol-connection', async () => await testTrendyolConnection())
+  ipcMain.handle('trigger-trendyol-poll', async () => await triggerTrendyolPoll())
+  ipcMain.handle('get-trendyol-store-status', async () => await getTrendyolStoreStatus())
+  ipcMain.handle('update-trendyol-store-status', async (_, status) => await updateTrendyolStoreStatus(status))
   ipcMain.handle('restart-tv-tunnel', getTvUrlWithShop)
   
   ipcMain.handle('get-settings', () => systemSettings)

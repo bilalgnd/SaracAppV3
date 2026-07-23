@@ -16,6 +16,11 @@ export default function SettingsModal() {
   const [networkStatus, setNetworkStatus] = useState<any>(null)
   const [pastOrders, setPastOrders] = useState<any[]>([])
   const [menuData, setMenuData] = useState<any>(null)
+  const [trendyolStatus, setTrendyolStatus] = useState<any>(null)
+  const [isTestingTrendyol, setIsTestingTrendyol] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [isUpdatingStoreStatus, setIsUpdatingStoreStatus] = useState(false)
+  const [storeStatusResult, setStoreStatusResult] = useState<{ success: boolean; message: string } | null>(null)
   // tvLink unused
 
   // Custom Prompt States
@@ -84,6 +89,94 @@ export default function SettingsModal() {
     let interval: any
     if (isOpen && activeTab === 'general') {
       interval = setInterval(fetchNetworkStatus, 3000)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [isOpen, activeTab])
+
+  const fetchTrendyolStatus = async () => {
+    try {
+      if (window.api && window.api.getTrendyolStatus) {
+        const res = await window.api.getTrendyolStatus()
+        setTrendyolStatus(res)
+      }
+    } catch (e) {
+      console.error('getTrendyolStatus error', e)
+    }
+  }
+
+  const handleTestTrendyol = async () => {
+    setIsTestingTrendyol(true)
+    setTestResult(null)
+    try {
+      if (window.api && window.api.saveSettings) {
+        window.api.saveSettings(settings)
+      }
+      if (window.api && window.api.testTrendyolConnection) {
+        const res = await window.api.testTrendyolConnection()
+        setTestResult(res)
+        fetchTrendyolStatus()
+      }
+    } catch (e: any) {
+      setTestResult({ success: false, message: e.message || 'Test sırasında hata oluştu' })
+    } finally {
+      setIsTestingTrendyol(false)
+    }
+  }
+
+  const handlePollTrendyolNow = async () => {
+    try {
+      if (window.api && window.api.triggerTrendyolPoll) {
+        const res = await window.api.triggerTrendyolPoll()
+        setTrendyolStatus(res)
+        customAlert("Trendyol siparişleri kontrol edildi!", "success")
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const handleUpdateTrendyolStoreStatus = async (newStatus: 'OPEN' | 'CLOSED') => {
+    setIsUpdatingStoreStatus(true)
+    setStoreStatusResult(null)
+    try {
+      if (window.api && window.api.saveSettings) {
+        window.api.saveSettings(settings)
+      }
+      if (window.api && window.api.updateTrendyolStoreStatus) {
+        const res = await window.api.updateTrendyolStoreStatus(newStatus)
+        setStoreStatusResult(res)
+        fetchTrendyolStatus()
+      }
+    } catch (e: any) {
+      setStoreStatusResult({ success: false, message: e.message || 'Restoran çalışma durumu güncellenemedi' })
+    } finally {
+      setIsUpdatingStoreStatus(false)
+    }
+  }
+
+  const handleFetchTrendyolStoreStatus = async () => {
+    try {
+      if (window.api && window.api.getTrendyolStoreStatus) {
+        const res = await window.api.getTrendyolStoreStatus()
+        if (res.success && res.status) {
+          setTrendyolStatus((prev: any) => ({ ...prev, storeStatus: res.status, storeId: res.storeId, storeName: res.storeName }))
+          if (res.storeId) {
+            setSettings((prev: any) => ({ ...prev, TRENDYOL_STORE_ID: String(res.storeId) }))
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  useEffect(() => {
+    let interval: any
+    if (isOpen && ['integrations', 'trendyol'].includes(activeTab)) {
+      fetchTrendyolStatus()
+      interval = setInterval(fetchTrendyolStatus, 4000)
     }
     return () => {
       if (interval) clearInterval(interval)
@@ -902,6 +995,7 @@ export default function SettingsModal() {
                         const newVal = settings.ENABLE_TRENDYOL ? false : true;
                         handleSettingChange('ENABLE_TRENDYOL', newVal);
                         window.api.saveSettings({ ...settings, ENABLE_TRENDYOL: newVal });
+                        setTimeout(fetchTrendyolStatus, 300);
                       }}
                       style={{ padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', width: '100px' }}
                     >
@@ -909,14 +1003,201 @@ export default function SettingsModal() {
                     </button>
                   </div>
                   
+                  {/* Trendyol API Status & Statistics Dashboard Card */}
+                  <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#fff' }}>API Bağlantı Durumu</span>
+                        {(() => {
+                          const st = trendyolStatus?.status || 'unconfigured';
+                          const isEnabled = settings.ENABLE_TRENDYOL;
+                          if (!isEnabled) {
+                            return (
+                              <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', background: 'rgba(255,255,255,0.1)', color: '#aaa', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                ⚪ Servis Kapalı
+                              </span>
+                            );
+                          }
+                          if (st === 'connected') {
+                            return (
+                              <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', background: 'rgba(76, 175, 80, 0.2)', color: '#4caf50', border: '1px solid rgba(76, 175, 80, 0.4)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4caf50', boxShadow: '0 0 8px #4caf50' }}></span>
+                                Bağlantı Aktif (200 OK)
+                              </span>
+                            );
+                          } else if (st === 'checking') {
+                            return (
+                              <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', background: 'rgba(255, 152, 0, 0.2)', color: '#ff9800', border: '1px solid rgba(255, 152, 0, 0.4)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                🟡 Kontrol Ediliyor...
+                              </span>
+                            );
+                          } else if (st === 'error') {
+                            return (
+                              <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', background: 'rgba(244, 67, 54, 0.2)', color: '#f44336', border: '1px solid rgba(244, 67, 54, 0.4)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                🔴 Bağlantı Hatası
+                              </span>
+                            );
+                          } else {
+                            return (
+                              <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', background: 'rgba(255, 152, 0, 0.2)', color: '#ff9800', border: '1px solid rgba(255, 152, 0, 0.4)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                🟠 Yapılandırma Eksik
+                              </span>
+                            );
+                          }
+                        })()}
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          className="settings-btn"
+                          disabled={isTestingTrendyol}
+                          onClick={handleTestTrendyol}
+                          style={{ padding: '6px 12px', fontSize: '12px', background: '#3b82f6', color: '#fff', fontWeight: 'bold', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+                        >
+                          {isTestingTrendyol ? '⚡ Test Ediliyor...' : '⚡ Bağlantıyı Test Et'}
+                        </button>
+                        <button
+                          className="settings-btn"
+                          onClick={handlePollTrendyolNow}
+                          style={{ padding: '6px 12px', fontSize: '12px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+                          title="Siparişleri Şimdi Kontrol Et"
+                        >
+                          🔄 Şimdi Kontrol Et
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Restoran Çalışma Durumu (Store Working Status) Bar */}
+                    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '12px 14px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#fff' }}>
+                          🏪 Restoran Durumu{trendyolStatus?.storeName ? ` (${trendyolStatus.storeName})` : ''}:
+                        </span>
+                        {(() => {
+                          const st = trendyolStatus?.storeStatus;
+                          if (st === 'OPEN') {
+                            return (
+                              <span style={{ padding: '3px 10px', borderRadius: '14px', fontSize: '12px', fontWeight: 'bold', background: 'rgba(76, 175, 80, 0.25)', color: '#4caf50', border: '1px solid rgba(76, 175, 80, 0.4)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                🟢 AÇIK (OPEN)
+                              </span>
+                            );
+                          } else if (st === 'CLOSED') {
+                            return (
+                              <span style={{ padding: '3px 10px', borderRadius: '14px', fontSize: '12px', fontWeight: 'bold', background: 'rgba(244, 67, 54, 0.25)', color: '#f44336', border: '1px solid rgba(244, 67, 54, 0.4)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                🔴 KAPALI (CLOSED)
+                              </span>
+                            );
+                          } else {
+                            return (
+                              <span style={{ padding: '3px 10px', borderRadius: '14px', fontSize: '12px', fontWeight: 'bold', background: 'rgba(255, 255, 255, 0.1)', color: '#aaa', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                ⚪ BİLİNMİYOR
+                              </span>
+                            );
+                          }
+                        })()}
+                        {trendyolStatus?.storeId && (
+                          <span style={{ fontSize: '11px', color: '#888', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px' }}>
+                            Mağaza ID: {trendyolStatus.storeId}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                          className="settings-btn"
+                          disabled={isUpdatingStoreStatus || !settings.ENABLE_TRENDYOL}
+                          onClick={() => handleUpdateTrendyolStoreStatus('OPEN')}
+                          style={{ padding: '6px 14px', fontSize: '12px', background: trendyolStatus?.storeStatus === 'OPEN' ? '#2e7d32' : 'rgba(76, 175, 80, 0.2)', color: '#4caf50', border: '1px solid #4caf50', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+                        >
+                          {isUpdatingStoreStatus ? '...' : '🟢 Restoranı Aç'}
+                        </button>
+                        <button
+                          className="settings-btn"
+                          disabled={isUpdatingStoreStatus || !settings.ENABLE_TRENDYOL}
+                          onClick={() => handleUpdateTrendyolStoreStatus('CLOSED')}
+                          style={{ padding: '6px 14px', fontSize: '12px', background: trendyolStatus?.storeStatus === 'CLOSED' ? '#c62828' : 'rgba(244, 67, 54, 0.2)', color: '#f44336', border: '1px solid #f44336', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+                        >
+                          {isUpdatingStoreStatus ? '...' : '🔴 Restoranı Kapat'}
+                        </button>
+                        <button
+                          className="settings-btn"
+                          onClick={handleFetchTrendyolStoreStatus}
+                          style={{ padding: '6px 10px', fontSize: '11px', background: 'rgba(255,255,255,0.08)', color: '#aaa', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                          title="Sorgula"
+                        >
+                          🔍 Sorgula
+                        </button>
+                      </div>
+                    </div>
+
+                    {storeStatusResult && (
+                      <div style={{ background: storeStatusResult.success ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)', border: `1px solid ${storeStatusResult.success ? '#4caf50' : '#f44336'}`, borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '12px', color: storeStatusResult.success ? '#81c784' : '#ff8a80' }}>
+                        <strong>Çalışma Durumu İletisi:</strong> {storeStatusResult.message}
+                      </div>
+                    )}
+
+                    {trendyolStatus?.lastError && settings.ENABLE_TRENDYOL && (
+                      <div style={{ background: 'rgba(244, 67, 54, 0.1)', border: '1px solid rgba(244, 67, 54, 0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', color: '#ff8a80' }}>
+                        <strong>Son Hata Ayrıntısı:</strong> {trendyolStatus.lastError}
+                      </div>
+                    )}
+
+                    {testResult && (
+                      <div style={{ background: testResult.success ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)', border: `1px solid ${testResult.success ? '#4caf50' : '#f44336'}`, borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', color: testResult.success ? '#81c784' : '#ff8a80' }}>
+                        <strong>Test Sonucu:</strong> {testResult.message}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '12px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '4px' }}>📦 Toplam Alınan</div>
+                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ff9800' }}>
+                          {trendyolStatus?.totalOrdersReceived || 0}
+                        </div>
+                      </div>
+
+                      <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '12px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '4px' }}>📅 Bugünkü Sipariş</div>
+                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#4caf50' }}>
+                          {trendyolStatus?.todayOrdersCount || 0}
+                        </div>
+                      </div>
+
+                      <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '12px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '4px' }}>🕒 Son Sipariş</div>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {trendyolStatus?.lastOrderId ? `#${trendyolStatus.lastOrderId} (${trendyolStatus.lastOrderTime})` : 'Yok'}
+                        </div>
+                      </div>
+
+                      <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '12px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '4px' }}>⏱️ Son Başarılı Kontrol</div>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#2196f3', marginTop: '4px' }}>
+                          {trendyolStatus?.lastSuccessTime || 'Henüz Yok'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '13px', color: '#aaa' }}>Satıcı ID</label>
+                    <label style={{ fontSize: '13px', color: '#aaa' }}>Satıcı ID (Supplier ID)</label>
                     <input 
                       type="text" 
                       className="settings-input" 
                       value={settings.TRENDYOL_SUPPLIER_ID || ''}
                       onChange={(e) => handleSettingChange('TRENDYOL_SUPPLIER_ID', e.target.value)}
                       placeholder="6647850"
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '13px', color: '#aaa' }}>Mağaza ID (Store ID - Boş bırakılırsa Satıcı ID kullanılır)</label>
+                    <input 
+                      type="text" 
+                      className="settings-input" 
+                      value={settings.TRENDYOL_STORE_ID || ''}
+                      onChange={(e) => handleSettingChange('TRENDYOL_STORE_ID', e.target.value)}
+                      placeholder={settings.TRENDYOL_SUPPLIER_ID || '6647850'}
                     />
                   </div>
                   
@@ -965,7 +1246,19 @@ export default function SettingsModal() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '13px', color: '#aaa' }}>Trendyol API Endpoint</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '13px', color: '#aaa' }}>Trendyol API Endpoint</label>
+                      <button
+                        className="settings-btn"
+                        style={{ padding: '2px 8px', fontSize: '11px', background: 'rgba(255,255,255,0.1)' }}
+                        onClick={() => {
+                          const defaultUrl = 'https://api.tgoapis.com/integrator/order/meal/suppliers/' + (settings.TRENDYOL_SUPPLIER_ID || '') + '/packages?packageStatuses=Created';
+                          handleSettingChange('TRENDYOL_API_URL', defaultUrl);
+                        }}
+                      >
+                        Sıfırla (Trendyol Yemek API)
+                      </button>
+                    </div>
                     <input 
                       type="text" 
                       className="settings-input" 
