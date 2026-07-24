@@ -1246,13 +1246,13 @@ export default function SettingsModal() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
                       <label style={{ fontSize: '13px', color: '#aaa' }}>Trendyol API Endpoint</label>
                       <button
                         className="settings-btn"
                         style={{ padding: '2px 8px', fontSize: '11px', background: 'rgba(255,255,255,0.1)' }}
                         onClick={() => {
-                          const defaultUrl = 'https://api.tgoapis.com/integrator/order/meal/suppliers/' + (settings.TRENDYOL_SUPPLIER_ID || '') + '/packages?packageStatuses=Created';
+                          const defaultUrl = 'https://api.tgoapis.com/integrator/order/meal/suppliers/' + (settings.TRENDYOL_SUPPLIER_ID || '') + '/packages?packageStatuses=Created,Approved,Preparing,Picking&size=50';
                           handleSettingChange('TRENDYOL_API_URL', defaultUrl);
                         }}
                       >
@@ -1262,9 +1262,9 @@ export default function SettingsModal() {
                     <input 
                       type="text" 
                       className="settings-input" 
-                      value={settings.TRENDYOL_API_URL || 'https://api.tgoapis.com/integrator/order/meal/suppliers/' + (settings.TRENDYOL_SUPPLIER_ID || '') + '/packages?packageStatuses=Created'}
+                      value={settings.TRENDYOL_API_URL || 'https://api.tgoapis.com/integrator/order/meal/suppliers/' + (settings.TRENDYOL_SUPPLIER_ID || '') + '/packages?packageStatuses=Created,Approved,Preparing,Picking&size=50'}
                       onChange={(e) => handleSettingChange('TRENDYOL_API_URL', e.target.value)}
-                      placeholder="https://api.tgoapis.com/integrator/order/meal/suppliers/{supplierId}/packages?packageStatuses=Created"
+                      placeholder="https://api.tgoapis.com/integrator/order/meal/suppliers/{supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking&size=50"
                     />
                   </div>
 
@@ -1282,10 +1282,95 @@ export default function SettingsModal() {
           {activeTab === 'updates' && (
             <div>
               <div className="settings-section-title">Uygulama Güncellemeleri</div>
-              <div className="settings-card" style={{ textAlign: 'center', padding: 40, display: 'flex', flexDirection: 'column', gap: 30 }}>
+              <div className="settings-card" style={{ padding: 25, display: 'flex', flexDirection: 'column', gap: 25 }}>
+                {/* Güncelleme Kaynağı Seçimi */}
+                <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: 20, borderRadius: 12 }}>
+                  <div style={{ fontWeight: 'bold', fontSize: 15, color: '#fff', marginBottom: 6 }}>
+                    🎯 Güncelleme Kaynağı (Update Source)
+                  </div>
+                  <div style={{ fontSize: 12, color: '#aaa', marginBottom: 15 }}>
+                    Güncellemelerin nereden kontrol edilip indirileceğini seçin:
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                    <button
+                      onClick={() => {
+                        const newSource = 'github';
+                        handleSettingChange('UPDATE_SOURCE', newSource);
+                        window.api.saveSettings({ ...settings, UPDATE_SOURCE: newSource });
+                      }}
+                      style={{
+                        padding: '12px 10px',
+                        borderRadius: 8,
+                        border: (settings.UPDATE_SOURCE || 'auto') === 'github' ? '2px solid #4CAF50' : '1px solid #444',
+                        background: (settings.UPDATE_SOURCE || 'auto') === 'github' ? 'rgba(76, 175, 80, 0.15)' : '#222',
+                        color: (settings.UPDATE_SOURCE || 'auto') === 'github' ? '#81c784' : '#ccc',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>🌐 GitHub Release</span>
+                      <span style={{ fontSize: 11, fontWeight: 'normal', opacity: 0.8 }}>İnternet / Resmi Sürüm</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const newSource = 'unpacked';
+                        handleSettingChange('UPDATE_SOURCE', newSource);
+                        window.api.saveSettings({ ...settings, UPDATE_SOURCE: newSource });
+                      }}
+                      style={{
+                        padding: '12px 10px',
+                        borderRadius: 8,
+                        border: (settings.UPDATE_SOURCE || 'auto') === 'unpacked' ? '2px solid #4CAF50' : '1px solid #444',
+                        background: (settings.UPDATE_SOURCE || 'auto') === 'unpacked' ? 'rgba(76, 175, 80, 0.15)' : '#222',
+                        color: (settings.UPDATE_SOURCE || 'auto') === 'unpacked' ? '#81c784' : '#ccc',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>📁 Yerel / Drive</span>
+                      <span style={{ fontSize: 11, fontWeight: 'normal', opacity: 0.8 }}>Unpacked Klasörü</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const newSource = 'auto';
+                        handleSettingChange('UPDATE_SOURCE', newSource);
+                        window.api.saveSettings({ ...settings, UPDATE_SOURCE: newSource });
+                      }}
+                      style={{
+                        padding: '12px 10px',
+                        borderRadius: 8,
+                        border: (settings.UPDATE_SOURCE || 'auto') === 'auto' ? '2px solid #4CAF50' : '1px solid #444',
+                        background: (settings.UPDATE_SOURCE || 'auto') === 'auto' ? 'rgba(76, 175, 80, 0.15)' : '#222',
+                        color: (settings.UPDATE_SOURCE || 'auto') === 'auto' ? '#81c784' : '#ccc',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>🔀 Otomatik</span>
+                      <span style={{ fontSize: 11, fontWeight: 'normal', opacity: 0.8 }}>Önce Yerel, Yoksa GitHub</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* 1. Kasa Uygulaması (EXE) Güncelleme */}
-                <div>
-                  <h3 style={{ borderBottom: '1px solid #333', paddingBottom: 10, marginBottom: 20 }}>Kasa (Windows) Güncellemesi</h3>
+                <div style={{ textAlign: 'center' }}>
+                  <h3 style={{ borderBottom: '1px solid #333', paddingBottom: 10, marginBottom: 20 }}>Kasa (Windows) Otomatik Güncellemesi</h3>
+
                   {updaterState.status === 'idle' && <h2 style={{ color: '#aaa', fontSize: 20 }}>Güncelleme durumu kontrol edilebilir.</h2>}
                   {updaterState.status === 'checking' && <h2 style={{ color: '#4CAF50', fontSize: 24 }}>Kontrol ediliyor...</h2>}
                   {updaterState.status === 'not-available' && <h2 style={{ color: '#aaa', fontSize: 24 }}>Kasa Uygulaması Güncel.</h2>}
@@ -1293,32 +1378,32 @@ export default function SettingsModal() {
                   
                   {updaterState.status === 'available' && (
                     <div>
-                      <h2 style={{ color: '#FF9800', fontSize: 24, marginBottom: 15 }}>Yeni Bir Güncelleme Bulundu!</h2>
-                      <p style={{ color: '#ddd', marginBottom: 20 }}>Versiyon: {updaterState.info?.version}</p>
-                      <button className="settings-btn primary" onClick={downloadUpdate} style={{ fontSize: 16, padding: '10px 25px' }}>Şimdi İndir (Kasa)</button>
+                      <h2 style={{ color: '#FF9800', fontSize: 24, marginBottom: 15 }}>Yeni Bir Fark Güncellemesi Bulundu!</h2>
+                      <p style={{ color: '#ddd', marginBottom: 20 }}>Sürüm: {updaterState.info?.version || 'win-unpacked Güncellemesi'}</p>
+                      <button className="settings-btn primary" onClick={downloadUpdate} style={{ fontSize: 16, padding: '10px 25px' }}>Şimdi İndir (Kasa Fark Dosyaları)</button>
                     </div>
                   )}
                   
                   {updaterState.status === 'downloading' && (
                     <div>
-                      <h2 style={{ color: '#2196F3', fontSize: 24, marginBottom: 15 }}>İndiriliyor...</h2>
+                      <h2 style={{ color: '#2196F3', fontSize: 24, marginBottom: 15 }}>Fark Dosyaları Hazırlanıyor...</h2>
                       <div style={{ width: '100%', background: '#333', height: 20, borderRadius: 10, overflow: 'hidden', marginBottom: 10 }}>
                         <div style={{ width: `${updaterState.progress?.percent || 0}%`, background: '#4CAF50', height: '100%' }}></div>
                       </div>
-                      <p style={{ color: '#aaa' }}>{Math.round(updaterState.progress?.percent || 0)}% - {(updaterState.progress?.bytesPerSecond / 1024 / 1024).toFixed(2)} MB/s</p>
+                      <p style={{ color: '#aaa' }}>{Math.round(updaterState.progress?.percent || 0)}%</p>
                     </div>
                   )}
                   
                   {updaterState.status === 'downloaded' && (
                     <div>
-                      <h2 style={{ color: '#4CAF50', fontSize: 24, marginBottom: 15 }}>Güncelleme İndirildi!</h2>
-                      <p style={{ color: '#ddd', marginBottom: 20 }}>Yüklemek için uygulamanın yeniden başlatılması gerekiyor.</p>
+                      <h2 style={{ color: '#4CAF50', fontSize: 24, marginBottom: 15 }}>Güncelleme Dosyaları Hazır!</h2>
+                      <p style={{ color: '#ddd', marginBottom: 20 }}>Uygulama 2 saniye içinde yenilenecektir.</p>
                       <button className="settings-btn success" onClick={installUpdate} style={{ fontSize: 16, padding: '10px 25px' }}>Kasa'yı Yeniden Başlat ve Kur</button>
                     </div>
                   )}
                   
                   {(updaterState.status === 'idle' || updaterState.status === 'not-available' || updaterState.status === 'error') && (
-                    <button className="settings-btn" onClick={checkUpdates} style={{ marginTop: 30 }}>Tüm Güncellemeleri Kontrol Et</button>
+                    <button className="settings-btn" onClick={checkUpdates} style={{ marginTop: 20 }}>Güncellemeleri Kontrol Et</button>
                   )}
                 </div>
 

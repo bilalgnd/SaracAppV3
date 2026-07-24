@@ -16,6 +16,7 @@ import { startBotService } from './services/botService'
 import * as fs from 'fs'
 import * as path from 'path'
 import multer from 'multer'
+import { YemeksepetiCatalogService } from './services/yemeksepetiCatalogService'
 
 import { z } from 'zod'
 import crypto from 'crypto'
@@ -1099,6 +1100,8 @@ let mockDevOrders: any[] = [
   {
     "id": 999901,
     "orderNumber": "TG-MOCK-782",
+    "platform": "trendyol",
+    "_platform": "trendyol",
     "packageStatus": "Created",
     "status": "Created",
     "orderDate": Date.now() - 300000,
@@ -1159,6 +1162,62 @@ let mockDevOrders: any[] = [
     ],
     "customerNote": "Soğansız ve domatessiz sipariş hazırlarsanız sevinirim (Servis İstiyorum)",
     "isMock": true
+  },
+  {
+    "id": 999902,
+    "orderNumber": "YS-MOCK-304",
+    "platform": "yemeksepeti",
+    "_platform": "yemeksepeti",
+    "packageStatus": "Created",
+    "status": "Created",
+    "orderDate": Date.now() - 120000,
+    "packageCreationDate": Date.now() - 120000,
+    "deliveryType": "RESTAURANT",
+    "paymentMethod": "ONLINE",
+    "totalPrice": 215.00,
+    "customer": {
+      "id": 99312,
+      "firstName": "Caner",
+      "lastName": "D.",
+      "orderCount": 8
+    },
+    "address": {
+      "address1": "Sakarya Mah. Kıbrıs Şehitleri Cad. No:42",
+      "address2": "",
+      "city": "Çanakkale",
+      "cityCode": 17,
+      "district": "Biga",
+      "neighborhood": "Sakarya Mah",
+      "apartmentNumber": "42",
+      "floor": "1",
+      "doorNumber": "2",
+      "addressDescription": "Yemeksepeti Dev Mock Siparişi (Zil Çalmayın)"
+    },
+    "lines": [
+      {
+        "productId": 801,
+        "productName": "Yemeksepeti Özel Dürüm Menü (Tavuk Döner + Patates + İçecek)",
+        "quantity": 1,
+        "price": 190.00,
+        "extraIngredients": [
+          { "id": 810, "name": "Sarımsaklı Mayonez" }
+        ],
+        "removedIngredients": [
+          { "id": 812, "name": "Turşu" }
+        ],
+        "notes": "Sos bol olsun, turşusuz"
+      },
+      {
+        "productId": 802,
+        "productName": "Kutu Ayran 290ml",
+        "quantity": 1,
+        "price": 25.00,
+        "extraIngredients": [],
+        "removedIngredients": []
+      }
+    ],
+    "customerNote": "Zili çalmayın lütfen, bebek uyuyor. (Servis İstiyorum)",
+    "isMock": true
   }
 ];
 
@@ -1170,14 +1229,77 @@ app.get('/api/tgo/dev/orders', requireAdminAuth, async (_req: any, res: any) => 
   }
 });
 
-app.post('/api/tgo/dev/mock-order', requireAdminAuth, async (_req: any, res: any) => {
+app.post('/api/tgo/dev/mock-order', requireAdminAuth, async (req: any, res: any) => {
   try {
+    const isYemeksepeti = (req.body?.platform || '').toLowerCase() === 'yemeksepeti';
     const mockOrderNum = Math.floor(1000000000 + Math.random() * 9000000000).toString();
-    const newOrder = {
+    
+    const newOrder = isYemeksepeti ? {
+      "id": mockOrderNum,
+      "packageId": mockOrderNum,
+      "orderId": mockOrderNum,
+      "orderNumber": "YS-" + Math.floor(100000 + Math.random() * 900000),
+      "orderCode": "YS-" + Math.floor(100 + Math.random() * 900),
+      "platform": "yemeksepeti",
+      "_platform": "yemeksepeti",
+      "supplierId": 88120,
+      "storeId": 99401,
+      "packageCreationDate": Date.now(),
+      "orderDate": Date.now(),
+      "totalPrice": 215.00,
+      "packageStatus": "Created",
+      "status": "Created",
+      "deliveryType": "RESTAURANT",
+      "paymentMethod": "ONLINE",
+      "customer": {
+        "id": Math.floor(100000 + Math.random() * 900000),
+        "firstName": "Ayşe",
+        "lastName": "Demir",
+        "orderCount": Math.floor(1 + Math.random() * 20)
+      },
+      "address": {
+        "address1": "Sakarya Mah. Kıbrıs Şehitleri Cad. No:42",
+        "address2": "",
+        "city": "Çanakkale",
+        "district": "Biga",
+        "neighborhood": "Sakarya Mah",
+        "apartmentNumber": "42",
+        "floor": "1",
+        "doorNumber": "2",
+        "addressDescription": "Yemeksepeti Dev Mock Siparişi (Zil Çalmayın)",
+        "latitude": "40.228000",
+        "longitude": "27.243000"
+      },
+      "lines": [
+        {
+          "productId": 201,
+          "productName": "Yemeksepeti Dürüm Menü (Tavuk Döner + Patates + İçecek)",
+          "name": "Yemeksepeti Dürüm Menü",
+          "quantity": 1,
+          "price": 190.00,
+          "extraIngredients": [{ "id": 10, "name": "Sarımsaklı Mayonez" }, { "id": 11, "name": "Cheddar Sos" }],
+          "removedIngredients": [{ "id": 12, "name": "Turşu" }],
+          "notes": "Sos bol olsun, turşusuz hazırlansın lütfen"
+        },
+        {
+          "productId": 202,
+          "productName": "Kutu Ayran 290ml",
+          "name": "Kutu Ayran 290ml",
+          "quantity": 1,
+          "price": 25.00,
+          "extraIngredients": [],
+          "removedIngredients": []
+        }
+      ],
+      "customerNote": "Zili çalmayın lütfen bebeğimiz uyuyor. (Servis İstiyorum)",
+      "isMock": true
+    } : {
       "id": mockOrderNum,
       "packageId": mockOrderNum,
       "supplierId": parseInt(getTrendyolSupplierId()) || 6647850,
       "storeId": parseInt(getTrendyolStoreId()) || 367376,
+      "platform": "trendyol",
+      "_platform": "trendyol",
       "orderCode": "MOCK-" + Math.floor(100 + Math.random() * 900),
       "packageCreationDate": Date.now(),
       "orderId": mockOrderNum,
@@ -1230,9 +1352,140 @@ app.post('/api/tgo/dev/mock-order', requireAdminAuth, async (_req: any, res: any
     };
 
     mockDevOrders.unshift(newOrder);
-    res.json({ success: true, message: 'Mock sipariş eklendi', order: newOrder });
+    res.json({ success: true, message: `${isYemeksepeti ? 'Yemeksepeti' : 'Trendyol'} Mock siparişi eklendi`, order: newOrder });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Yemeksepeti Webhook Test/Simülatör Endpoint
+app.post('/api/dev/yemeksepeti-webhook', requireAdminAuth, async (req: any, res: any) => {
+  try {
+    const payload = req.body || {};
+    const orderData = payload.order || payload;
+    const orderId = orderData.order_id || ("YS-HOOK-" + Math.floor(100000 + Math.random() * 900000));
+    const status = orderData.status || "RECEIVED";
+
+    const mappedStatus = status === "RECEIVED" ? "Created" :
+                        status === "READY_FOR_PICKUP" ? "Picking" :
+                        status === "DISPATCHED" ? "Shipped" :
+                        status === "DELIVERED" ? "Delivered" :
+                        status === "CANCELLED" ? "Cancelled" : "Created";
+
+    const webhookOrder = {
+      "id": orderId,
+      "packageId": orderId,
+      "orderId": orderId,
+      "orderNumber": orderId,
+      "orderCode": orderId,
+      "platform": "yemeksepeti",
+      "_platform": "yemeksepeti",
+      "packageCreationDate": Date.now(),
+      "totalPrice": orderData.total_amount || 235.00,
+      "packageStatus": mappedStatus,
+      "status": mappedStatus,
+      "deliveryType": orderData.delivery_type || "RESTAURANT",
+      "paymentMethod": "ONLINE",
+      "customer": {
+        "id": 88100,
+        "firstName": orderData.customer_name || "Yemeksepeti Müşterisi",
+        "lastName": "",
+        "orderCount": 3
+      },
+      "address": {
+        "address1": "İnönü Cad. No:88 (Webhook Test)",
+        "city": "Çanakkale",
+        "district": "Biga",
+        "neighborhood": "Gazi Mah"
+      },
+      "lines": (orderData.items || [
+        { name: "Et Döner Dürüm", quantity: 1, price: 210.00 },
+        { name: "Şalgam 330ml", quantity: 1, price: 25.00 }
+      ]).map((it: any, idx: number) => ({
+        "productId": 300 + idx,
+        "productName": it.name || "Ürün",
+        "quantity": it.quantity || 1,
+        "price": it.price || 0,
+        "extraIngredients": (it.options || []).map((opt: string, oi: number) => ({ id: oi, name: opt })),
+        "removedIngredients": []
+      })),
+      "customerNote": orderData.order_note || "Webhook Simülasyon Siparişi",
+      "isMock": true,
+      "isWebhookSimulated": true
+    };
+
+    // Mevcut dev siparişi varsa durumunu güncelle, yoksa yeni ekle
+    const existingIndex = mockDevOrders.findIndex(o => String(o.id) === String(orderId) || String(o.orderNumber) === String(orderId));
+    if (existingIndex >= 0) {
+      mockDevOrders[existingIndex].packageStatus = mappedStatus;
+      mockDevOrders[existingIndex].status = mappedStatus;
+    } else {
+      mockDevOrders.unshift(webhookOrder);
+    }
+
+    res.json({ success: true, message: `Yemeksepeti Webhook işlendi (${status})`, order: webhookOrder });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== YEMEKSEPETI CATALOG API ENDPOINTS ==================== //
+app.get('/api/yemeksepeti/catalog/categories', requireAuth, async (req: any, res: any) => {
+  try {
+    const chainId = (req.query.chainId as string) || process.env.YEMEKSEPETI_CHAIN_ID || 'chain_default';
+    const storeId = (req.query.storeId as string) || process.env.YEMEKSEPETI_STORE_ID || 'store_default';
+    const result = await YemeksepetiCatalogService.getCategories(chainId, storeId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/yemeksepeti/catalog/products', requireAuth, async (req: any, res: any) => {
+  try {
+    const chainId = (req.query.chainId as string) || process.env.YEMEKSEPETI_CHAIN_ID || 'chain_default';
+    const storeId = (req.query.storeId as string) || process.env.YEMEKSEPETI_STORE_ID || 'store_default';
+    const result = await YemeksepetiCatalogService.getProducts(chainId, storeId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/yemeksepeti/catalog/product-status', requireAuth, async (req: any, res: any) => {
+  try {
+    const chainId = req.body.chainId || process.env.YEMEKSEPETI_CHAIN_ID || 'chain_default';
+    const storeId = req.body.storeId || process.env.YEMEKSEPETI_STORE_ID || 'store_default';
+    const updates = req.body.updates || [];
+
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ success: false, error: 'Güncellenecek ürün listesi (updates) boş olamaz.' });
+    }
+
+    const result = await YemeksepetiCatalogService.updateProductStatusAndPrice(chainId, storeId, updates);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/yemeksepeti/catalog/export', requireAuth, async (req: any, res: any) => {
+  try {
+    const chainId = req.body.chainId || process.env.YEMEKSEPETI_CHAIN_ID || 'chain_default';
+    const storeId = req.body.storeId || process.env.YEMEKSEPETI_STORE_ID || 'store_default';
+    const result = await YemeksepetiCatalogService.exportAssortment(chainId, storeId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/yemeksepeti/catalog-webhook', async (req: any, res: any) => {
+  try {
+    const result = YemeksepetiCatalogService.handleCatalogWebhook(req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

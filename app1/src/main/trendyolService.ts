@@ -88,14 +88,14 @@ export function getTrendyolApiUrl(supplierId: string): string {
     let url = customUrl.trim();
     // If user mistakenly entered the E-Commerce (OMS) URL instead of Trendyol Yemek (TGO) API:
     if (url.includes('api.trendyol.com/integration')) {
-      return `https://api.tgoapis.com/integrator/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created`;
+      return `https://api.tgoapis.com/integrator/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking&size=50`;
     }
     if (url.includes('{supplierId}')) {
       url = url.replace('{supplierId}', supplierId);
     }
     return url;
   }
-  return `https://api.tgoapis.com/integrator/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created`;
+  return `https://api.tgoapis.com/integrator/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking&size=50`;
 }
 
 function transformTrendyolOrder(rawData: any): any {
@@ -222,10 +222,14 @@ async function pollTrendyol() {
 
     const data = response.data;
     
-    // Extract orders array from response
+    // Extract orders array from response flexibly
     let orders: any[] = [];
     if (data && Array.isArray(data.content) && data.content.length > 0) {
       orders = data.content;
+    } else if (data && data.data && Array.isArray(data.data.content) && data.data.content.length > 0) {
+      orders = data.data.content;
+    } else if (data && Array.isArray(data.data) && data.data.length > 0) {
+      orders = data.data;
     } else if (Array.isArray(data) && data.length > 0) {
       orders = data;
     }

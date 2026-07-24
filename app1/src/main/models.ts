@@ -64,6 +64,20 @@ export async function initializeModels() {
     changed = true;
   }
 
+  // Update Settings (Google Drive / win-unpacked)
+  if (!systemSettings["UPDATE_DRIVE_LINK"]) {
+    systemSettings["UPDATE_DRIVE_LINK"] = "https://drive.google.com/drive/folders/175wvFtIF4P1OlgkBCwffNi2i90Rch8EA?usp=sharing";
+    changed = true;
+  }
+  if (!systemSettings["UPDATE_LOCAL_PATH"]) {
+    systemSettings["UPDATE_LOCAL_PATH"] = "";
+    changed = true;
+  }
+  if (!systemSettings["UPDATE_SOURCE"]) {
+    systemSettings["UPDATE_SOURCE"] = "auto";
+    changed = true;
+  }
+
   if (changed) {
     saveSettings();
   }

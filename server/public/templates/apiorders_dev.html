@@ -5,6 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🧪 DEV TEST - Entegrasyon Kontrol Merkezi</title>
   <link rel="icon" type="image/png" href="/static/favicon.png">
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'light') {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+        } else {
+          document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
+        }
+      } catch(e) {}
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -78,89 +92,83 @@
       touch-action: pan-y;
     }
 
-    /* Clean Light Mode Theme Overrides */
+    /* Clean, Modern Light Mode Design System Overrides */
     html.light body,
     html.light main {
-      background-color: #f3f4f6 !important;
+      background-color: #f8fafc !important;
       color: #0f172a !important;
     }
 
+    /* ALL Primary Glass Panels, Sidebars, Cards, Modals & Detail Drawers in Light Mode */
     html.light .glass-panel,
     html.light aside,
-    html.light #orderDetailPanel {
+    html.light #orderDetailPanel,
+    html.light [class*="bg-[#"],
+    html.light [class*="bg-black"],
+    html.light [class*="bg-gray-900"],
+    html.light [class*="bg-gradient-to"] {
+      background: #ffffff !important;
       background-color: #ffffff !important;
+      background-image: none !important;
       border-color: #e2e8f0 !important;
       color: #0f172a !important;
       box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05), 0 1px 2px -1px rgba(0,0,0,0.05) !important;
     }
 
-    /* Black Translucent Overlays (Headers, Footers, Modal Sidebars) in Light Mode */
-    html.light .bg-black\/40,
-    html.light .bg-black\/50,
-    html.light .bg-black\/30,
-    html.light .bg-black\/25,
-    html.light .bg-black\/20,
-    html.light .bg-black\/60 {
-      background-color: #f8fafc !important;
-      border-color: #e2e8f0 !important;
-      color: #0f172a !important;
-    }
-
-    /* All Card & Sub-panel Backgrounds in Light Mode */
-    html.light .bg-gradient-to-br,
-    html.light .bg-\[\#151517\],
-    html.light .bg-\[\#18181b\],
-    html.light .bg-\[\#121214\],
-    html.light .bg-\[\#0c0c0e\],
-    html.light .bg-\[\#1c1c1e\],
-    html.light .bg-\[\#111113\],
-    html.light .bg-\[\#0a0a0c\],
-    html.light .bg-\[\#0a0a0a\],
-    html.light .bg-\[\#1e1e1e\],
-    html.light .bg-\[\#1a1a1d\],
-    html.light .bg-\[\#161618\],
-    html.light .bg-gray-900\/60,
-    html.light .bg-gray-900,
-    html.light .bg-[#151517] {
-      background: #ffffff !important;
-      border-color: #e2e8f0 !important;
-    }
-
-    html.light .hover\:bg-\[\#1a1a1d\]:hover,
-    html.light .hover\:bg-gray-800\/60:hover,
-    html.light .hover\:bg-gray-800:hover {
+    /* Neutral Gray/Slate Dark Buttons & Pill Badges in Light Mode */
+    html.light [class~="bg-gray-800"],
+    html.light [class~="bg-gray-800/80"],
+    html.light [class~="bg-gray-800/60"],
+    html.light [class~="bg-gray-700"],
+    html.light [class~="bg-[#1a1a1d]"],
+    html.light [class~="bg-[#1a1a1d]/80"] {
+      background: #f1f5f9 !important;
       background-color: #f1f5f9 !important;
-    }
-
-    /* Active Filter Tab Buttons (Screenshot 4 fix) */
-    html.light .bg-gray-700 {
-      background-color: #ffffff !important;
-      color: #0f172a !important;
-      box-shadow: 0 1px 2px 0 rgba(0,0,0,0.08) !important;
-      border: 1px solid #cbd5e1 !important;
-    }
-
-    /* Category Breakdown Legend Items (Screenshot 1 fix) */
-    html.light .bg-\[\#1a1a1d\]\/80,
-    html.light .bg-gray-800\/80,
-    html.light .bg-gray-800\/60 {
-      background-color: #f1f5f9 !important;
-      border-color: #e2e8f0 !important;
-      color: #0f172a !important;
-    }
-    html.light .group-hover\/item\:text-white:hover {
+      background-image: none !important;
+      border-color: #cbd5e1 !important;
       color: #0f172a !important;
     }
 
-    /* Total Amount & Payment Card (Screenshot 2 fix) */
-    html.light .bg-\[\#1c1c1f\],
-    html.light .bg-black\/80 {
+    /* Hover States in Light Mode */
+    html.light [class~="bg-gray-800"]:hover,
+    html.light [class~="bg-gray-700"]:hover,
+    html.light [class*="hover:bg-gray-800"]:hover,
+    html.light [class*="hover:bg-gray-700"]:hover {
+      background: #e2e8f0 !important;
+      background-color: #e2e8f0 !important;
+      border-color: #94a3b8 !important;
+      color: #0f172a !important;
+    }
+
+    /* Selected Order Item in Order List */
+    html.light [class~="bg-[#222226]"] {
+      background: #eff6ff !important;
+      background-color: #eff6ff !important;
+      border-color: #3b82f6 !important;
+    }
+
+    /* Total Amount & Payment Card in Light Mode */
+    html.light [class~="bg-[#1c1c1f]"] {
+      background: #f0fdf4 !important;
       background-color: #f0fdf4 !important;
       border-color: #bbf7d0 !important;
       color: #166534 !important;
     }
 
-    /* Address Tarif & Note Text Colors (Screenshot 5 fix) */
+    /* Progress Bar Track in Light Mode */
+    html.light [class~="bg-[#2a2a2a]"] {
+      background: #e2e8f0 !important;
+      background-color: #e2e8f0 !important;
+    }
+
+    /* Customer Note & Address Tarif Box Containers in Light Mode */
+    html.light [class~="bg-amber-500/10"],
+    html.light [class~="bg-amber-500/5"] {
+      background: #fffbeb !important;
+      background-color: #fffbeb !important;
+      border-color: #fde68a !important;
+      color: #92400e !important;
+    }
     html.light .text-amber-300,
     html.light .text-amber-300\/90,
     html.light .text-amber-200 {
@@ -172,126 +180,224 @@
       font-weight: 700 !important;
     }
 
-    /* Text Colors in Light Mode */
-    html.light h1, html.light h2, html.light h3, html.light h4, html.light h5, html.light h6 {
-      color: #0f172a !important;
-    }
-
-    html.light p {
-      color: #334155 !important;
-    }
-
-    html.light .text-white {
-      color: #0f172a !important;
-    }
-
-    html.light .text-gray-200,
-    html.light .text-gray-300 {
-      color: #1e293b !important;
-    }
-
-    html.light .text-gray-400 {
-      color: #475569 !important;
-    }
-
-    html.light .text-gray-500 {
-      color: #64748b !important;
-    }
-
-    /* Action & Pill Buttons in Light Mode (Screenshot 3 fix) */
-    html.light .bg-emerald-500\/20 {
+    /* Translucent Colored Status Badges & Action Pills in Light Mode */
+    html.light [class~="bg-emerald-500/20"],
+    html.light [class~="bg-emerald-500/15"] {
+      background: #ecfdf5 !important;
       background-color: #ecfdf5 !important;
       border-color: #a7f3d0 !important;
       color: #047857 !important;
     }
-    html.light .text-emerald-300 {
+    html.light .text-emerald-300,
+    html.light .text-emerald-400,
+    html.light .text-green-400 {
       color: #047857 !important;
       font-weight: 700 !important;
     }
 
-    html.light .bg-blue-500\/20 {
+    html.light [class~="bg-blue-500/20"],
+    html.light [class~="bg-blue-500/15"] {
+      background: #eff6ff !important;
       background-color: #eff6ff !important;
       border-color: #bfdbfe !important;
       color: #1d4ed8 !important;
     }
-    html.light .text-blue-300 {
+    html.light .text-blue-300,
+    html.light .text-blue-400 {
       color: #1d4ed8 !important;
       font-weight: 700 !important;
     }
 
-    html.light .bg-rose-500\/20,
-    html.light .bg-rose-500\/25 {
+    html.light [class~="bg-rose-500/20"],
+    html.light [class~="bg-rose-500/25"],
+    html.light [class~="bg-rose-500/15"] {
+      background: #fff1f2 !important;
       background-color: #fff1f2 !important;
       border-color: #fecdd3 !important;
-      color: #be123c !important;
+      color: #be185d !important;
     }
     html.light .text-rose-200,
-    html.light .text-rose-300 {
-      color: #be123c !important;
+    html.light .text-rose-300,
+    html.light .text-rose-400,
+    html.light .text-red-400 {
+      color: #be185d !important;
       font-weight: 700 !important;
     }
 
-    html.light .bg-orange-500\/20 {
+    html.light [class~="bg-orange-500/20"],
+    html.light [class~="bg-orange-500/15"] {
+      background: #fff7ed !important;
       background-color: #fff7ed !important;
       border-color: #fed7aa !important;
       color: #c2410c !important;
     }
+    html.light .text-orange-400 {
+      color: #c2410c !important;
+      font-weight: 700 !important;
+    }
 
-    html.light .bg-pink-500\/20 {
+    html.light [class~="bg-pink-500/20"],
+    html.light [class~="bg-pink-500/15"] {
+      background: #fdf2f8 !important;
       background-color: #fdf2f8 !important;
       border-color: #fbcfe8 !important;
       color: #be185d !important;
     }
+    html.light .text-pink-400 {
+      color: #be185d !important;
+      font-weight: 700 !important;
+    }
 
-    html.light .bg-purple-500\/20 {
+    html.light [class~="bg-purple-500/20"],
+    html.light [class~="bg-purple-500/15"] {
+      background: #faf5ff !important;
       background-color: #faf5ff !important;
       border-color: #e9d5ff !important;
       color: #6b21a8 !important;
     }
-
-    /* Order list item selected / unselected in Light Mode */
-    html.light .bg-\[\#222226\] {
-      background-color: #f0f9ff !important;
-      border-color: #0284c7 !important;
+    html.light .text-purple-400 {
+      color: #6b21a8 !important;
+      font-weight: 700 !important;
     }
 
-    /* Address Tarif Box Container in Light Mode */
-    html.light .bg-amber-500\/10,
-    html.light .bg-amber-500\/5 {
-      background-color: #fffbeb !important;
-      border-color: #fde68a !important;
-      color: #92400e !important;
+    html.light [class~="bg-yellow-500/20"] {
+      background: #fefce8 !important;
+      background-color: #fefce8 !important;
+      border-color: #fef08a !important;
+      color: #a16207 !important;
+    }
+    html.light .text-yellow-400 {
+      color: #a16207 !important;
+      font-weight: 700 !important;
     }
 
-    /* Modal inputs & Cancel Button in Light Mode */
-    html.light input, 
+    /* Preserve & Enhance Solid Primary Action Buttons (CRITICAL) */
+    html.light .bg-primary,
+    html.light [class*="bg-primary"],
+    html.light [class~="bg-primary"] {
+      background: #ef4444 !important;
+      background-color: #ef4444 !important;
+      background-image: none !important;
+      color: #ffffff !important;
+    }
+    html.light .bg-primary *,
+    html.light [class*="bg-primary"] *,
+    html.light [class~="bg-primary"] * {
+      color: #ffffff !important;
+    }
+
+    html.light .bg-green-600,
+    html.light [class*="bg-green-600"] {
+      background: #16a34a !important;
+      background-color: #16a34a !important;
+      color: #ffffff !important;
+    }
+    html.light .bg-green-600 *,
+    html.light [class*="bg-green-600"] * {
+      color: #ffffff !important;
+    }
+
+    html.light .bg-emerald-600,
+    html.light [class*="bg-emerald-600"] {
+      background: #059669 !important;
+      background-color: #059669 !important;
+      color: #ffffff !important;
+    }
+    html.light .bg-emerald-600 *,
+    html.light [class*="bg-emerald-600"] * {
+      color: #ffffff !important;
+    }
+
+    html.light .bg-blue-600,
+    html.light [class*="bg-blue-600"] {
+      background: #2563eb !important;
+      background-color: #2563eb !important;
+      color: #ffffff !important;
+    }
+    html.light .bg-blue-600 *,
+    html.light [class*="bg-blue-600"] * {
+      color: #ffffff !important;
+    }
+
+    html.light .bg-purple-600,
+    html.light [class*="bg-purple-600"] {
+      background: #9333ea !important;
+      background-color: #9333ea !important;
+      color: #ffffff !important;
+    }
+    html.light .bg-purple-600 *,
+    html.light [class*="bg-purple-600"] * {
+      color: #ffffff !important;
+    }
+
+    html.light .bg-rose-600,
+    html.light [class*="bg-rose-600"] {
+      background: #e11d48 !important;
+      background-color: #e11d48 !important;
+      color: #ffffff !important;
+    }
+    html.light .bg-rose-600 *,
+    html.light [class*="bg-rose-600"] * {
+      color: #ffffff !important;
+    }
+
+    html.light .bg-red-600,
+    html.light [class*="bg-red-600"] {
+      background: #dc2626 !important;
+      background-color: #dc2626 !important;
+      color: #ffffff !important;
+    }
+    html.light .bg-red-600 *,
+    html.light [class*="bg-red-600"] * {
+      color: #ffffff !important;
+    }
+
+    /* Structural Text Colors in Light Mode */
+    html.light h1, html.light h2, html.light h3, html.light h4, html.light h5, html.light h6 {
+      color: #0f172a !important;
+    }
+    html.light p, html.light label, html.light strong, html.light b {
+      color: #334155 !important;
+    }
+    html.light [class~="text-white"],
+    html.light [class~="text-gray-100"],
+    html.light [class~="text-gray-200"],
+    html.light [class~="text-gray-300"] {
+      color: #1e293b !important;
+    }
+    html.light [class~="text-gray-400"] {
+      color: #475569 !important;
+    }
+    html.light [class~="text-gray-500"] {
+      color: #64748b !important;
+    }
+
+    /* Form Controls & Option Dropdowns in Light Mode */
+    html.light input,
     html.light select,
     html.light textarea {
       background-color: #ffffff !important;
       border-color: #cbd5e1 !important;
       color: #0f172a !important;
     }
-
-    html.light input::placeholder {
+    html.light option {
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+    }
+    html.light input::placeholder,
+    html.light textarea::placeholder {
       color: #94a3b8 !important;
     }
 
-    /* Modal Cancel (Vazgeç) Button */
-    html.light .bg-gray-800 {
-      background-color: #e2e8f0 !important;
-      color: #334155 !important;
-    }
-    html.light .hover\:bg-gray-700:hover {
-      background-color: #cbd5e1 !important;
-      color: #0f172a !important;
-    }
-
-    /* Borders in Light Mode */
-    html.light .border-gray-800,
-    html.light .border-gray-800\/80,
-    html.light .border-gray-800\/60,
-    html.light .border-gray-700,
-    html.light .border-gray-700\/50 {
+    /* Borders & Dividers in Light Mode */
+    html.light [class~="border-gray-800"],
+    html.light [class~="border-gray-800/80"],
+    html.light [class~="border-gray-800/70"],
+    html.light [class~="border-gray-800/60"],
+    html.light [class~="border-gray-700"],
+    html.light [class~="border-gray-700/50"],
+    html.light [class~="border-white/5"],
+    html.light [class~="border-white/10"] {
       border-color: #e2e8f0 !important;
     }
 
@@ -300,22 +406,28 @@
       border-color: #e2e8f0 !important;
     }
 
+    /* SweetAlert2 Popups in Light Mode */
     html.light .swal2-popup {
       background: #ffffff !important;
       color: #0f172a !important;
       border: 1px solid #e2e8f0 !important;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
     }
-
-    html.light .swal2-title, 
-    html.light .swal2-html-container {
+    html.light .swal2-title,
+    html.light .swal2-html-container,
+    html.light .swal2-content {
       color: #0f172a !important;
     }
 
+    /* Scrollbar in Light Mode */
     html.light ::-webkit-scrollbar-track {
       background: #f1f5f9;
     }
     html.light ::-webkit-scrollbar-thumb {
       background: #cbd5e1;
+    }
+    html.light ::-webkit-scrollbar-thumb:hover {
+      background: #ef4444;
     }
   </style>
 </head>
@@ -1853,6 +1965,9 @@
             html.classList.remove('dark');
             html.classList.add('light');
           }
+          if (this._lastTrendData && this._lastCategoryData) {
+            this.renderCharts(this._lastTrendData, this._lastCategoryData);
+          }
         },
 
         initApp() {
@@ -2140,13 +2255,26 @@
 
         renderCharts(trendData, categoryData) {
           if (!document.getElementById('trendChart') || !document.getElementById('categoryChart')) return;
+          this._lastTrendData = trendData;
+          this._lastCategoryData = categoryData;
+
+          const isDark = this.isDarkMode;
+          const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)';
+          const tickColor = isDark ? '#6b7280' : '#475569';
+          const pointBg = isDark ? '#1a1a1a' : '#ffffff';
+          const tooltipBg = isDark ? '#1c1c1f' : '#ffffff';
+          const tooltipTitle = isDark ? '#ffffff' : '#0f172a';
+          const tooltipBody = isDark ? '#cbd5e1' : '#334155';
+          const tooltipBorder = isDark ? 'rgba(255, 255, 255, 0.1)' : '#cbd5e1';
+          const centerTextColor = isDark ? '#ffffff' : '#0f172a';
+          const centerSubColor = isDark ? '#9ca3af' : '#64748b';
 
           // Trend Chart
           const trendCtx = document.getElementById('trendChart').getContext('2d');
           if (this.trendChartInstance) this.trendChartInstance.destroy();
           
           let gradient = trendCtx.createLinearGradient(0, 0, 0, 300);
-          gradient.addColorStop(0, 'rgba(34, 197, 94, 0.4)'); // green gradient for App1 style
+          gradient.addColorStop(0, isDark ? 'rgba(34, 197, 94, 0.4)' : 'rgba(34, 197, 94, 0.25)');
           gradient.addColorStop(1, 'rgba(34, 197, 94, 0.0)');
 
           this.trendChartInstance = new Chart(trendCtx, {
@@ -2159,7 +2287,7 @@
                 borderColor: '#22c55e', // text-green-500
                 backgroundColor: gradient,
                 borderWidth: 3,
-                pointBackgroundColor: '#1a1a1a',
+                pointBackgroundColor: pointBg,
                 pointBorderColor: '#22c55e',
                 pointBorderWidth: 2,
                 pointRadius: 4,
@@ -2172,8 +2300,8 @@
               maintainAspectRatio: false,
               plugins: { legend: { display: false } },
               scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.05)' }, border: { dash: [4, 4] }, ticks: { color: '#6b7280', font: { size: 10 } } },
-                x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 10 } } }
+                y: { beginAtZero: true, grid: { color: gridColor }, border: { dash: [4, 4] }, ticks: { color: tickColor, font: { size: 10 } } },
+                x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10 } } }
               }
             }
           });
@@ -2219,10 +2347,10 @@
                 },
                 tooltip: {
                   enabled: true,
-                  backgroundColor: '#1c1c1f',
-                  titleColor: '#ffffff',
-                  bodyColor: '#cbd5e1',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  backgroundColor: tooltipBg,
+                  titleColor: tooltipTitle,
+                  bodyColor: tooltipBody,
+                  borderColor: tooltipBorder,
                   borderWidth: 1,
                   padding: 10,
                   cornerRadius: 8,
@@ -2246,12 +2374,12 @@
 
                 // Main Number (Bold Modern Sans-Serif)
                 ctx.font = `900 ${mainFontSize}px Inter, system-ui, -apple-system, sans-serif`;
-                ctx.fillStyle = "#ffffff";
+                ctx.fillStyle = centerTextColor;
                 ctx.fillText(text, width / 2, (height / 2) - 5);
 
                 // Subtitle
                 ctx.font = `600 ${subFontSize}px Inter, system-ui, -apple-system, sans-serif`;
-                ctx.fillStyle = "#9ca3af";
+                ctx.fillStyle = centerSubColor;
                 ctx.fillText(subText, width / 2, (height / 2) + (mainFontSize / 2));
 
                 ctx.save();
@@ -2325,49 +2453,97 @@
         },
 
         async openMenuModal() {
-          if (this.activeApi === 'yemeksepeti') {
-             Swal.fire({title:'Bilgi', text:'Yemeksepeti menü yönetimi henüz aktif değil.', icon:'info', toast:true, position:'top-end', timer:2000, showConfirmButton:false});
-             return;
-          }
           this.isCategorySortMode = false;
           this.isMenuModalOpen = true;
           this.loadingMenu = true;
           try {
-            const res = await fetch('/api/tgo/menu', {
-              headers: { 'Authorization': `Bearer ${this.adminToken}` }
-            });
-            const data = await res.json();
-            
-            // Normalize sections/categories array
-            let sections = [];
-            if (Array.isArray(data)) {
-              sections = data;
-            } else if (data && data.sections && Array.isArray(data.sections)) {
-              sections = data.sections;
-            } else if (data && data.categories && Array.isArray(data.categories)) {
-              sections = data.categories;
-            } else if (data && data.content && Array.isArray(data.content)) {
-              sections = data.content;
-            }
-
-            // Saved order'ı uygula (localStorage)
-            const savedOrder = this._loadCategoryOrder();
-            if (savedOrder && savedOrder.length) {
-              sections.sort((a, b) => {
-                const ai = savedOrder.indexOf(String(a.id));
-                const bi = savedOrder.indexOf(String(b.id));
-                if (ai === -1 && bi === -1) return 0;
-                if (ai === -1) return 1;
-                if (bi === -1) return -1;
-                return ai - bi;
+            if (this.activeApi === 'yemeksepeti' || this.dashboardFilters?.platform === 'yemeksepeti') {
+              const res = await fetch('/api/yemeksepeti/catalog/products', {
+                headers: { 'Authorization': `Bearer ${this.adminToken}` }
               });
-            }
+              const data = await res.json();
+              const products = data.products || [];
+              this.menuData = {
+                sections: [
+                  {
+                    id: 'ys_catalog_sec',
+                    name: 'Yemeksepeti Katalog Menüsü',
+                    items: products.map(p => ({
+                      id: p.id,
+                      name: p.name,
+                      price: p.price,
+                      available: p.available !== false,
+                      sku: p.sku
+                    }))
+                  }
+                ]
+              };
+            } else {
+              const res = await fetch('/api/tgo/menu', {
+                headers: { 'Authorization': `Bearer ${this.adminToken}` }
+              });
+              const data = await res.json();
+              
+              // Normalize sections/categories array for Trendyol
+              let sections = [];
+              if (Array.isArray(data)) {
+                sections = data;
+              } else if (data && data.sections && Array.isArray(data.sections)) {
+                sections = data.sections;
+              } else if (data && data.categories && Array.isArray(data.categories)) {
+                sections = data.categories;
+              } else if (data && data.content && Array.isArray(data.content)) {
+                sections = data.content;
+              }
 
-            this.menuData = { sections };
+              // Saved order'ı uygula (localStorage)
+              const savedOrder = this._loadCategoryOrder();
+              if (savedOrder && savedOrder.length) {
+                sections.sort((a, b) => {
+                  const ai = savedOrder.indexOf(String(a.id));
+                  const bi = savedOrder.indexOf(String(b.id));
+                  if (ai === -1 && bi === -1) return 0;
+                  if (ai === -1) return 1;
+                  if (bi === -1) return -1;
+                  return ai - bi;
+                });
+              }
+
+              this.menuData = { sections };
+            }
           } catch(e) {
              Swal.fire({title:'Hata', text:'Menü kategorileri çekilemedi.', icon:'error', toast:true, position:'top-end', timer:2000, showConfirmButton:false});
           }
           this.loadingMenu = false;
+        },
+
+        async updateYemeksepetiItemStatus(item) {
+          try {
+            const res = await fetch('/api/yemeksepeti/catalog/product-status', {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Bearer ${this.adminToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                updates: [
+                  {
+                    productId: item.id,
+                    available: item.available,
+                    price: item.price
+                  }
+                ]
+              })
+            });
+            const data = await res.json();
+            if (data.success) {
+              Swal.fire({title:'Başarılı', text:'Yemeksepeti ürün durumu güncellendi.', icon:'success', toast:true, position:'top-end', timer:2000, showConfirmButton:false});
+            } else {
+              Swal.fire({title:'Hata', text: data.error || 'Güncelleme başarısız.', icon:'error', toast:true, position:'top-end', timer:2000, showConfirmButton:false});
+            }
+          } catch(e) {
+            Swal.fire({title:'Hata', text:'İstek gönderilirken hata oluştu.', icon:'error', toast:true, position:'top-end', timer:2000, showConfirmButton:false});
+          }
         },
 
         toggleCategorySortMode() {
@@ -2829,7 +3005,7 @@
                   window.print();
                   setTimeout(function() { window.close(); }, 500);
                 };
-              <\/script>
+              ${'<'}/script>
             </body>
             </html>
           `;
