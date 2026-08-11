@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SARAÇ DÖNER - Sistem Kontrol Merkezi</title>
   <link rel="icon" type="image/png" href="/static/favicon.png">
+  <script>
+    (function() {
+      try {
+        var token = localStorage.getItem('adminToken');
+        if (!token) {
+          window.location.replace('/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search));
+        }
+      } catch(e) {}
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -82,63 +92,76 @@
 
   <!-- Dashboard Screen -->
   <div id="dashboardScreen" class="w-full max-w-6xl h-auto min-h-[90vh] pb-10 flex flex-col">
-    <!-- Header -->
-    <div class="glass-panel rounded-2xl mb-6 shadow-lg overflow-hidden">
-      <div class="p-4 md:p-6 flex justify-between items-center cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleSection('headerContent', 'headerIcon')">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center">
-            <i class="fa-solid fa-users-gear text-primary text-xl"></i>
+
+
+
+    <!-- Unified User Management Section -->
+    <div class="glass-panel rounded-2xl flex flex-col shadow-xl w-full mb-6 overflow-hidden border border-gray-800/80">
+      <!-- Combined Header & Toolbar -->
+      <div class="p-4 md:p-5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-gray-800/60 bg-black/30 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleSection('usersContent', 'usersIcon')">
+        <!-- Title & Info -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/30 shadow-md shadow-primary/10">
+            <i class="fa-solid fa-users-gear text-primary text-lg"></i>
           </div>
           <div>
-            <h1 class="text-xl font-bold">Sistem Kontrol Merkezi</h1>
-            <p class="text-gray-400 text-sm hidden md:block">Hesapları, oturumları ve aktiviteleri yönetin</p>
+            <h1 class="text-base md:text-lg font-bold text-white flex items-center gap-2">
+              Kullanıcı Yönetimi
+              <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-gray-800/90 text-gray-300 border border-gray-700/80" id="userCountBadge">0 Kullanıcı</span>
+            </h1>
+            <p class="text-gray-400 text-xs hidden md:block">Hesap oluşturun, rolleri yönetin ve oturum durumlarını izleyin</p>
           </div>
         </div>
-        <div class="text-gray-400"><i id="headerIcon" class="fa-solid fa-chevron-up transition-transform duration-300"></i></div>
-      </div>
-      
-      <div id="headerContent" class="p-4 md:p-6 pt-0 border-t border-gray-800/50 flex flex-col md:flex-row items-center justify-end gap-4 md:gap-6 w-full transition-all">
-        <div class="flex flex-wrap md:flex-nowrap items-center gap-3 bg-black/40 p-2 rounded-xl border border-gray-800 shadow-inner justify-center w-full md:w-auto">
-          <input type="text" id="newUsername" placeholder="Kullanıcı Adı" class="bg-gray-800/60 border border-gray-700 rounded-lg text-white text-sm px-3 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary flex-1 md:w-28 placeholder-gray-500 transition-colors min-w-[100px]">
-          <input type="password" id="newPassword" placeholder="Şifre" class="bg-gray-800/60 border border-gray-700 rounded-lg text-white text-sm px-3 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary flex-1 md:w-28 placeholder-gray-500 transition-colors min-w-[100px]">
-          <select id="newRole" class="bg-gray-800/60 border border-gray-700 rounded-lg text-white text-sm px-3 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors cursor-pointer">
-            <option value="kasa" class="bg-gray-800">Kasa</option>
-            <option value="garson" class="bg-gray-800">Garson</option>
-            <option value="admin" class="bg-gray-800">Admin</option>
-          </select>
-          <button onclick="createUser()" class="bg-primary hover:bg-primaryDark text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap shadow-md shadow-primary/20 w-full md:w-auto"><i class="fa-solid fa-plus mr-1"></i> Aç</button>
-        </div>
-        
-        <a href="/tgo_admin" target="_blank" class="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors whitespace-nowrap flex items-center justify-center">
-          <i class="fa-solid fa-flask mr-2"></i> Trendyol API
-        </a>
-        <button onclick="logout()" class="text-gray-400 hover:text-white transition-colors p-2" title="Çıkış Yap">
-          <i class="fa-solid fa-arrow-right-from-bracket text-xl"></i> Çıkış
-        </button>
-      </div>
-    </div>
 
-    <!-- Users Table -->
-    <div class="glass-panel rounded-2xl flex-col shadow-lg w-full mb-6 overflow-hidden">
-      <div class="p-4 md:p-6 flex justify-between items-center cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleSection('usersContent', 'usersIcon')">
-        <div class="flex items-center gap-3">
-          <i class="fa-solid fa-users text-blue-400 text-xl"></i>
-          <h2 class="text-lg font-bold">Kullanıcı Listesi</h2>
+        <!-- Right Side: Account Creation Form, Logout Button & Collapse Icon -->
+        <div class="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full lg:w-auto justify-end" onclick="event.stopPropagation()">
+          <!-- Create Account Form -->
+          <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-black/60 backdrop-blur-md p-1.5 rounded-xl border border-gray-800/90 shadow-inner w-full sm:w-auto">
+            <div class="relative flex-1 sm:w-32 min-w-[100px]">
+              <i class="fa-solid fa-user absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+              <input type="text" id="newUsername" placeholder="Kullanıcı Adı" class="bg-gray-900/90 border border-gray-700/80 rounded-lg text-white text-xs pl-7 pr-2.5 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-full placeholder-gray-500 transition-colors">
+            </div>
+            <div class="relative flex-1 sm:w-32 min-w-[100px]">
+              <i class="fa-solid fa-lock absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+              <input type="password" id="newPassword" placeholder="Şifre" class="bg-gray-900/90 border border-gray-700/80 rounded-lg text-white text-xs pl-7 pr-2.5 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-full placeholder-gray-500 transition-colors">
+            </div>
+            <select id="newRole" class="bg-gray-900/90 border border-gray-700/80 rounded-lg text-white text-xs px-2.5 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer">
+              <option value="kasa" class="bg-gray-900">Kasa</option>
+              <option value="garson" class="bg-gray-900">Garson</option>
+              <option value="admin" class="bg-gray-900">Admin</option>
+            </select>
+            <button onclick="createUser()" class="bg-primary hover:bg-primaryDark text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all whitespace-nowrap shadow-md shadow-primary/20 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5 w-full sm:w-auto">
+              <i class="fa-solid fa-plus text-xs"></i> Aç
+            </button>
+          </div>
+
+          <!-- Logout Button -->
+          <button onclick="logout()" class="bg-gray-800/80 hover:bg-red-500/20 text-gray-300 hover:text-red-400 border border-gray-700/80 hover:border-red-500/40 text-xs font-semibold px-3 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm" title="Çıkış Yap">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span>Çıkış</span>
+          </button>
+
+          <!-- Collapse Chevron Icon -->
+          <div class="text-gray-400 pl-2 cursor-pointer hover:text-white transition-colors" onclick="toggleSection('usersContent', 'usersIcon'); event.stopPropagation();" title="Katla / Genişlet">
+            <i id="usersIcon" class="fa-solid fa-chevron-up transition-transform duration-300"></i>
+          </div>
         </div>
-        <div class="text-gray-400"><i id="usersIcon" class="fa-solid fa-chevron-up transition-transform duration-300"></i></div>
       </div>
-      <div id="usersContent" class="overflow-x-auto w-full border-t border-gray-800/50 transition-all">
+
+      <!-- Users Table Content -->
+      <div id="usersContent" class="overflow-x-auto w-full transition-all">
         <table class="w-full text-left border-collapse min-w-[700px]">
           <thead>
-            <tr class="text-gray-400 border-b border-gray-800 text-sm uppercase tracking-wider whitespace-nowrap">
-              <th class="py-4 font-medium px-4">Kullanıcı Adı</th>
-              <th class="py-4 font-medium px-4">Rol</th>
-              <th class="py-4 font-medium px-4">Durum</th>
-              <th class="py-4 font-medium px-4">Son Görülme</th>
-              <th class="py-4 font-medium px-4 text-right">İşlemler</th>
+            <tr class="text-gray-400 border-b border-gray-800/80 text-[11px] uppercase tracking-wider whitespace-nowrap bg-black/40">
+              <th class="py-3.5 font-semibold px-5">Kullanıcı Adı</th>
+              <th class="py-3.5 font-semibold px-4">Şifre</th>
+              <th class="py-3.5 font-semibold px-4">Rol</th>
+              <th class="py-3.5 font-semibold px-4">Durum</th>
+              <th class="py-3.5 font-semibold px-4">Son Görülme</th>
+              <th class="py-3.5 font-semibold px-5 text-right">İşlemler</th>
             </tr>
           </thead>
-          <tbody id="usersList" class="text-gray-200">
+          <tbody id="usersList" class="text-gray-200 divide-y divide-gray-800/40">
             <!-- Filled by JS -->
           </tbody>
         </table>
@@ -146,29 +169,65 @@
     </div>
 
     <!-- Terminal Section -->
-    <div class="glass-panel rounded-2xl flex flex-col shadow-lg h-auto overflow-hidden w-full">
-        <div class="p-4 border-b border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-black/40 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleSection('terminal', 'terminalIcon')">
+    <div class="glass-panel rounded-2xl flex flex-col shadow-xl h-auto overflow-hidden w-full border border-gray-800/80">
+        <div class="p-4 border-b border-gray-800/80 flex flex-col md:flex-row justify-between items-center gap-4 bg-black/40 cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleSection('terminal', 'terminalIcon')">
             <div class="flex items-center gap-3 w-full md:w-auto">
-                <i class="fa-solid fa-terminal text-[#58a6ff]"></i>
-                <div class="title font-bold text-[#58a6ff] text-sm md:text-base text-center md:text-left break-all" style="text-shadow: 0 0 5px rgba(88, 166, 255, 0.5);">_ SARACAPP / SYSTEM_TERMINAL</div>
+                <div class="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center border border-blue-500/20">
+                  <i class="fa-solid fa-terminal text-[#58a6ff]"></i>
+                </div>
+                <div class="title font-bold text-[#58a6ff] text-sm md:text-base text-center md:text-left break-all" style="text-shadow: 0 0 8px rgba(88, 166, 255, 0.4);">_ SYSTEM_TERMINAL</div>
             </div>
+            
             <div class="flex items-center justify-between w-full md:w-auto gap-4">
-                <div class="filters flex flex-wrap justify-center gap-3" style="background: #161b22; padding: 8px 15px; border-radius: 8px; border: 1px solid #30363d;" onclick="event.stopPropagation()">
-                    <label class="filter-label flex items-center gap-2 cursor-pointer text-[#c9d1d9] text-xs md:text-sm">
-                        <input type="checkbox" id="filterApp1" checked onchange="renderLogs()" class="terminal-checkbox"> App1 (Kasa)
+                <!-- Modern Segment Filter Pills -->
+                <div class="filters flex items-center gap-1.5 p-1 bg-black/70 backdrop-blur-md rounded-xl border border-gray-800/90 shadow-inner" onclick="event.stopPropagation()">
+                    <!-- App1 (Kasa) Toggle Pill -->
+                    <label class="filter-pill relative flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all border border-gray-700 bg-gray-800/80 text-xs font-semibold select-none group" id="pillApp1">
+                        <input type="checkbox" id="filterApp1" checked onchange="updateFilterPill('App1'); renderLogs();" class="sr-only">
+                        <span class="w-2 h-2 rounded-full bg-[#ff7b72] shadow-[0_0_8px_#ff7b72] group-hover:scale-125 transition-transform" id="dotApp1"></span>
+                        <i class="fa-solid fa-desktop text-[#ff7b72] text-[11px]"></i>
+                        <span class="text-gray-200 group-hover:text-white">App1 <span class="text-gray-400 font-normal text-[10px]">(Kasa)</span></span>
                     </label>
-                    <label class="filter-label flex items-center gap-2 cursor-pointer text-[#c9d1d9] text-xs md:text-sm">
-                        <input type="checkbox" id="filterApp2" checked onchange="renderLogs()" class="terminal-checkbox"> App2 (Mobil)
+
+                    <!-- App2 (Mobil) Toggle Pill -->
+                    <label class="filter-pill relative flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all border border-gray-700 bg-gray-800/80 text-xs font-semibold select-none group" id="pillApp2">
+                        <input type="checkbox" id="filterApp2" checked onchange="updateFilterPill('App2'); renderLogs();" class="sr-only">
+                        <span class="w-2 h-2 rounded-full bg-[#79c0ff] shadow-[0_0_8px_#79c0ff] group-hover:scale-125 transition-transform" id="dotApp2"></span>
+                        <i class="fa-solid fa-mobile-screen-button text-[#79c0ff] text-[11px]"></i>
+                        <span class="text-gray-200 group-hover:text-white">App2 <span class="text-gray-400 font-normal text-[10px]">(Mobil)</span></span>
                     </label>
-                    <label class="filter-label flex items-center gap-2 cursor-pointer text-[#c9d1d9] text-xs md:text-sm">
-                        <input type="checkbox" id="filterServer" checked onchange="renderLogs()" class="terminal-checkbox"> Server
+
+                    <!-- Server Toggle Pill -->
+                    <label class="filter-pill relative flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all border border-gray-700 bg-gray-800/80 text-xs font-semibold select-none group" id="pillServer">
+                        <input type="checkbox" id="filterServer" checked onchange="updateFilterPill('Server'); renderLogs();" class="sr-only">
+                        <span class="w-2 h-2 rounded-full bg-[#d2a8ff] shadow-[0_0_8px_#d2a8ff] group-hover:scale-125 transition-transform" id="dotServer"></span>
+                        <i class="fa-solid fa-server text-[#d2a8ff] text-[11px]"></i>
+                        <span class="text-gray-200 group-hover:text-white">Server</span>
                     </label>
                 </div>
-                <div class="text-gray-400 pl-2"><i id="terminalIcon" class="fa-solid fa-chevron-up transition-transform duration-300"></i></div>
+                <div class="text-gray-400 pl-1"><i id="terminalIcon" class="fa-solid fa-chevron-up transition-transform duration-300"></i></div>
             </div>
         </div>
         <div class="terminal-box h-[400px] p-4 overflow-y-auto text-xs md:text-sm font-mono break-all transition-all duration-300" id="terminal" style="background-color: #010409; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);"></div>
     </div>
+
+    <!-- Portfolio Media Card (compact) -->
+    <div class="glass-panel rounded-2xl w-full mt-6 border border-gray-800/80">
+      <div class="px-5 py-3 flex flex-wrap items-center gap-3">
+        <div class="w-7 h-7 bg-purple-500/20 rounded-lg flex items-center justify-center border border-purple-500/30 flex-shrink-0">
+          <i class="fa-solid fa-photo-film text-purple-400 text-xs"></i>
+        </div>
+        <span class="text-sm font-semibold text-white">Portfolio Medyası</span>
+        <select id="portfolioSelect" onchange="setPortfolioMedia(this.value)"
+          class="ml-auto bg-gray-900 border border-gray-700 rounded-lg text-white text-xs px-3 py-1.5 focus:outline-none focus:border-purple-500 cursor-pointer">
+          <option value="image">🖼 Fotoğraf</option>
+          <option value="video">🎬 Video 1 (0729)</option>
+          <option value="video2">🎬 Video 2 (new)</option>
+        </select>
+        <span id="portfolioCurrentBadge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">Yükleniyor…</span>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -203,8 +262,47 @@
 
     function showDashboard() {
       fetchUsers();
+      loadPortfolioState();
       if (!ws || ws.readyState !== WebSocket.OPEN) connectWS();
     }
+
+    // --- Portfolio Media ---
+    const PORTFOLIO_LABELS = { image: '🖼 Fotoğraf', video: '🎬 Video 1 (0729)', video2: '🎬 Video 2 (new)' };
+
+    function applyPortfolioUIState(type) {
+      const badge = document.getElementById('portfolioCurrentBadge');
+      const sel   = document.getElementById('portfolioSelect');
+      if (badge) badge.textContent = PORTFOLIO_LABELS[type] || type;
+      if (sel)   sel.value = type;
+    }
+
+    async function loadPortfolioState() {
+      try {
+        const res = await fetch('/api/portfolio-media');
+        const data = await res.json();
+        applyPortfolioUIState(data.type || 'image');
+      } catch (e) { console.warn('portfolio-media load failed', e); }
+    }
+
+    async function setPortfolioMedia(type) {
+      try {
+        const res = await fetch('/api/portfolio-media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': adminToken },
+          body: JSON.stringify({ type })
+        });
+        const data = await res.json();
+        if (data.success) {
+          applyPortfolioUIState(type);
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: (PORTFOLIO_LABELS[type] || type) + ' aktif edildi', showConfirmButton: false, timer: 2000 });
+        } else {
+          Swal.fire('Hata', data.error || 'Bilinmeyen hata', 'error');
+        }
+      } catch (e) {
+        Swal.fire('Hata', 'Sunucuya ulaşılamadı', 'error');
+      }
+    }
+    // --- End Portfolio Media ---
 
     function timeAgo(dateString) {
       if (!dateString) return 'Hiç girmedi';
@@ -224,6 +322,39 @@
       return Math.floor(seconds) + " saniye önce";
     }
 
+    function updateFilterPill(source) {
+      const checkbox = document.getElementById('filter' + source);
+      const pill = document.getElementById('pill' + source);
+      const dot = document.getElementById('dot' + source);
+      if (checkbox && pill) {
+        if (checkbox.checked) {
+          pill.classList.remove('bg-transparent', 'border-transparent', 'opacity-40');
+          pill.classList.add('bg-gray-800/80', 'border-gray-700');
+          if (dot) dot.style.opacity = '1';
+        } else {
+          pill.classList.remove('bg-gray-800/80', 'border-gray-700');
+          pill.classList.add('bg-transparent', 'border-transparent', 'opacity-40');
+          if (dot) dot.style.opacity = '0.3';
+        }
+      }
+    }
+
+    function togglePass(id) {
+      const span = document.getElementById('pass-' + id);
+      const icon = document.getElementById('eye-' + id);
+      if (!span) return;
+      const pass = span.getAttribute('data-pass');
+      if (span.getAttribute('data-shown') === 'true') {
+        span.innerText = '••••••••';
+        span.setAttribute('data-shown', 'false');
+        if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+      } else {
+        span.innerText = pass;
+        span.setAttribute('data-shown', 'true');
+        if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+      }
+    }
+
     async function fetchUsers() {
       try {
         const res = await fetch('/api/admin/users', {
@@ -233,10 +364,14 @@
         
         const data = await res.json();
         const tbody = document.getElementById('usersList');
+        const badge = document.getElementById('userCountBadge');
+        if (badge && data.users) {
+          badge.innerText = data.users.length + ' Kullanıcı';
+        }
         tbody.innerHTML = '';
         
         if(data.users.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500">Kayıtlı kullanıcı bulunamadı.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">Kayıtlı kullanıcı bulunamadı.</td></tr>`;
           return;
         }
 
@@ -253,6 +388,16 @@
           const timeText = timeAgo(u.lastSeen);
           const isOnline = timeText === "Şu an Aktif";
 
+          const plainPass = u.plain_password || '';
+          const passCell = plainPass 
+            ? `<div class="flex items-center gap-2 font-mono text-xs text-gray-300 bg-black/40 px-2.5 py-1 rounded-lg border border-gray-800/80 w-fit">
+                 <span id="pass-${u._id}" data-pass="${plainPass}" data-shown="false">••••••••</span>
+                 <button onclick="togglePass('${u._id}')" class="text-gray-500 hover:text-gray-300 transition-colors p-0.5" title="Şifreyi Göster/Gizle">
+                   <i id="eye-${u._id}" class="fa-solid fa-eye-slash text-[11px]"></i>
+                 </button>
+               </div>`
+            : `<span class="text-gray-500 text-[11px] italic cursor-pointer hover:text-blue-400" onclick="editUser('${u.username}', '${u.role}')" title="Şifre belirlemek için tıklayın">Belirlenmedi (✏️ Düzenle)</span>`;
+
           tbody.innerHTML += `
             <tr class="border-b border-gray-800/50 hover:bg-white/5 transition-colors group ${isSuspended ? 'opacity-50' : ''}">
               <td class="py-3 px-4 font-medium text-white flex items-center gap-3">
@@ -265,6 +410,7 @@
                   <div class="text-[10px] text-gray-500 font-mono">${u.account_id || '-'}</div>
                 </div>
               </td>
+              <td class="py-3 px-4">${passCell}</td>
               <td class="py-3 px-4">${roleBadge}</td>
               <td class="py-3 px-4">${statusBadge}</td>
               <td class="py-3 px-4 text-gray-400 text-xs">
@@ -304,7 +450,7 @@
       const role = document.getElementById('newRole').value;
       
       if(!username || !password) return Swal.fire('Hata', 'Kullanıcı adı ve şifre zorunlu!', 'error');
-      if(password.length < 8) return Swal.fire('Hata', 'Şifre en az 8 karakter olmalıdır.', 'error');
+      if(password.length < 4) return Swal.fire('Hata', 'Şifre en az 4 karakter olmalıdır.', 'error');
       
       try {
         const res = await fetch('/api/admin/create_user', {
@@ -327,13 +473,11 @@
     }
 
     async function editUser(username, currentRole) {
-      if(username === 'bilalgnd') return Swal.fire('Hata', 'Ana yönetici hesabı düzenlenemez.', 'error');
-
       const { value: formValues } = await Swal.fire({
         title: `${username} Düzenle`,
         html: `
-          <div class="text-left mb-2 text-sm text-gray-400">Yeni Şifre (Değiştirmek istemiyorsanız boş bırakın)</div>
-          <input id="swal-pwd" type="text" class="swal2-input w-full mx-0 mb-4" placeholder="Yeni şifre">
+          <div class="text-left mb-2 text-sm text-gray-400">Yeni Şifre (En az 4 karakter)</div>
+          <input id="swal-pwd" type="text" class="swal2-input w-full mx-0 mb-4" placeholder="Yeni şifre belirleyin">
           <div class="text-left mb-2 text-sm text-gray-400">Rol</div>
           <select id="swal-role" class="swal2-select w-full mx-0">
             <option value="kasa" ${currentRole==='kasa'?'selected':''}>Kasa</option>
@@ -362,13 +506,13 @@
           });
           const data = await res.json();
           if(res.ok && data.success) {
-            Swal.fire({ title: 'Güncellendi', icon: 'success', timer: 1000, showConfirmButton: false });
+            Swal.fire({ title: 'Başarıyla Güncellendi', icon: 'success', timer: 1200, showConfirmButton: false });
             fetchUsers();
           } else {
             Swal.fire('Hata', data.error || 'Güncellenemedi', 'error');
           }
         } catch (err) {
-          console.error(err);
+          Swal.fire('Hata', err.message || 'Sunucu hatası', 'error');
         }
       }
     }
@@ -393,8 +537,16 @@
             headers: { 'Content-Type': 'application/json', 'Authorization': adminToken },
             body: JSON.stringify({ targetUsername: username, newStatus })
           });
-          if(res.ok) fetchUsers();
-        } catch (e) { console.error(e) }
+          const data = await res.json();
+          if(res.ok && data.success) {
+            Swal.fire({ title: 'Başarılı', text: `Hesap durumu: ${newStatus === 'suspended' ? 'Donduruldu' : 'Aktif'}`, icon: 'success', timer: 1500, showConfirmButton: false });
+            fetchUsers();
+          } else {
+            Swal.fire('Hata', data.error || 'İşlem başarısız', 'error');
+          }
+        } catch (e) {
+          Swal.fire('Hata', e.message || 'Sunucu hatası', 'error');
+        }
       }
     }
 
@@ -416,11 +568,15 @@
             body: JSON.stringify({ targetUsername: username })
           });
           const data = await res.json();
-          if(res.ok) {
-            Swal.fire('Başarılı', `${username} adlı kullanıcı ${data.kickedCount} cihazdan atıldı.`, 'success');
+          if(res.ok && data.success) {
+            Swal.fire('Başarılı', `${username} adlı kullanıcı ${data.kickedCount || 0} cihazdan atıldı.`, 'success');
             fetchUsers();
+          } else {
+            Swal.fire('Hata', data.error || 'Kick işlemi başarısız', 'error');
           }
-        } catch (e) { console.error(e) }
+        } catch (e) {
+          Swal.fire('Hata', e.message || 'Sunucu hatası', 'error');
+        }
       }
     }
 

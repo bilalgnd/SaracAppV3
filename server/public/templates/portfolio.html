@@ -1,106 +1,135 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bilal G. | Portfolio</title>
+    <title>bilalgnd.shop — Bilal GÜNDOĞDU</title>
+    <meta name="description" content="Vantage — Masaüstü POS, Android garson uygulaması, TV mutfak ekranı ve platform entegrasyonu ile tam kapsamlı restoran yönetim sistemi.">
     <link rel="icon" type="image/png" href="/static/favicon.png">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
+        /* ─── Reset & Tokens ─── */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --bg-color: #050b14;
-            --text-primary: #ffffff;
-            --text-secondary: #c0c4cc;
+            --bg: #050b14;
+            --surface: rgba(255,255,255,0.04);
+            --border: rgba(255,255,255,0.09);
+            --text: #ffffff;
+            --muted: #8892a4;
             --accent: #ff4757;
-            --glass-bg: rgba(255, 255, 255, 0.03); /* Daha şeffaf, gerçekçi cam */
-            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent2: #3ecf8e;
+            --accent3: #7c3aed;
+            --glass: rgba(10,14,25,0.7);
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Outfit', sans-serif;
-        }
-
+        html { scroll-behavior: smooth; }
         body {
-            background-color: var(--bg-color);
-            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
             overflow-x: hidden;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
-        /* Sabit arka planı mobilde bozmamak (iOS Safari fixed bug) için pseudo-element kullanıyoruz */
-        body::before {
-            content: '';
+        /* ─── Fixed BG for hero ─── */
+        #hero-bg {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            inset: 0;
             background-image: url('/static/bg.jpg');
             background-size: cover;
             background-position: center;
-            z-index: -1;
+            z-index: 0;
+            transition: opacity 0.6s ease;
         }
 
-        /* Abstract ambient glows for the AMOLED background */
+        /* ─── Lang Toggle (Single Pill) ─── */
+        #lang-toggle {
+            position: fixed;
+            top: 16px; right: 18px;
+            z-index: 1000;
+        }
+        #lang-toggle button {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.14);
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.4);
+            transition: all 0.25s ease;
+            letter-spacing: 0.05em;
+            user-select: none;
+        }
+        #lang-toggle button:hover {
+            background: rgba(255,255,255,0.11);
+        }
+        #lang-toggle button span {
+            transition: color 0.25s ease;
+        }
+        #lang-toggle button span.active {
+            color: #c4b5fd;
+            font-weight: 800;
+        }
+        #lang-toggle .lang-divider {
+            opacity: 0.3;
+            font-weight: 400;
+            font-size: 10px;
+            margin: 0 1px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* ─── HERO SECTION ─── */
+        #hero {
+            position: relative;
+            z-index: 1;
+            height: 100vh;
+            min-height: 600px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
         .ambient-glow {
-            position: fixed; /* Mobilde scroll ile kaymaması için fixed yapıldı */
+            position: fixed;
             border-radius: 50%;
             filter: blur(120px);
-            opacity: 0.6;
+            opacity: 0.55;
             z-index: 0;
             pointer-events: none;
             animation: pulse 8s infinite alternate ease-in-out;
         }
-        .glow-1 {
-            top: -100px;
-            left: -100px;
-            width: 400px;
-            height: 400px;
-            background: rgba(255, 71, 87, 0.15); /* subtle red/pink */
-        }
-        .glow-2 {
-            bottom: -100px;
-            right: 10%;
-            width: 500px;
-            height: 500px;
-            background: rgba(55, 100, 250, 0.15); /* subtle blue */
-            animation-delay: -4s;
-        }
-
+        .glow-1 { top: -100px; left: -100px; width: 400px; height: 400px; background: rgba(255,71,87,0.15); }
+        .glow-2 { bottom: -100px; right: 10%; width: 500px; height: 500px; background: rgba(55,100,250,0.15); animation-delay: -4s; }
         @keyframes pulse {
-            0% { transform: scale(1) translate(0, 0); opacity: 0.4; }
-            100% { transform: scale(1.2) translate(20px, -20px); opacity: 0.6; }
+            0% { transform: scale(1) translate(0,0); opacity: 0.35; }
+            100% { transform: scale(1.2) translate(20px,-20px); opacity: 0.55; }
         }
 
-        .container {
+        .hero-card {
             position: relative;
-            z-index: 1;
+            z-index: 2;
             width: 90%;
             max-width: 1200px;
             height: 85vh;
-            min-height: 600px;
+            min-height: 560px;
             display: flex;
             border-radius: 24px;
             overflow: hidden;
-            background: var(--glass-bg);
+            background: var(--surface);
             backdrop-filter: blur(40px);
             -webkit-backdrop-filter: blur(40px);
-            border: 1px solid var(--glass-border);
-            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.02);
-            animation: slideUpFade 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            border: 1px solid var(--border);
+            box-shadow: 0 30px 60px -15px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.02);
+            animation: slideUpFade 1s cubic-bezier(0.16,1,0.3,1) forwards;
             opacity: 0;
             transform: translateY(40px);
         }
-
-        @keyframes slideUpFade {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+        @keyframes slideUpFade { to { opacity:1; transform:translateY(0); } }
 
         .left-panel {
             flex: 1;
@@ -111,233 +140,777 @@
             position: relative;
             z-index: 2;
         }
-
         .right-panel {
             flex: 1;
             position: relative;
-            background-image: url('/static/profile.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            /* Resmin cama yumuşak bir şekilde erimesi için (Premium görünüm) */
+            overflow: hidden;
             -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
             mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
         }
-        
-        /* Right panel has no blur overlay over the photo itself */
+        .panel-image {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            background-image: url('/static/profile.jpg');
+            background-size: cover; background-position: center;
+            opacity: 1; transition: opacity 0.6s ease;
+        }
+        .panel-video {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            object-fit: cover; object-position: center;
+            opacity: 0; transition: opacity 0.6s ease;
+        }
+        .right-panel.show-video .panel-image { opacity: 0; }
+        .right-panel.show-video .panel-video:first-of-type { opacity: 1; }
+        .right-panel.show-video2 .panel-image { opacity: 0; }
+        .right-panel.show-video2 .panel-video:last-of-type { opacity: 1; }
 
-        /* Nav */
-        header {
-            display: flex;
-            align-items: center;
-            gap: 40px;
-        }
-        .logo {
-            position: relative;
-            width: 76px;
-            height: 76px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 50%;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            overflow: hidden;
-        }
-        .logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .logo-group {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-        .logo-group h1 {
-            margin: 0;
-            font-size: 5vw;
-            letter-spacing: -1px;
-        }
-        @media (min-width: 1600px) { .logo-group h1 { font-size: 60px; } }
-        nav {
-            display: flex;
-            gap: 25px;
-        }
+        header { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+        .logo { position: relative; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+        .logo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 24px rgba(0,0,0,0.5)); }
+        .logo-group { display: flex; align-items: center; gap: 18px; }
+        .logo-group h1 { margin: 0; font-size: 44px; font-weight: 800; letter-spacing: -1.5px; color: #fff;
+            animation: slideUpFade 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s forwards; opacity:0; transform:translateY(20px); }
+        nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            animation: slideUpFade 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s forwards; opacity:0; transform:translateY(20px); }
         nav a {
-            color: var(--text-primary);
-            text-decoration: none;
-            font-size: 15px;
-            font-weight: 600;
-            transition: color 0.3s ease;
+            color: rgba(255,255,255,0.9); text-decoration: none; font-size: 13px; font-weight: 600;
+            padding: 8px 14px; border-radius: 12px; transition: all 0.25s ease; backdrop-filter: blur(10px);
         }
-        nav a:hover {
-            color: var(--accent);
-        }
+        nav a:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+        nav a.nav-admin { background: rgba(244,63,94,0.15)!important; border: 1px solid rgba(244,63,94,0.35)!important; color: #ffe4e6!important; }
+        nav a.nav-admin:hover { background: rgba(244,63,94,0.3)!important; color: #fff!important; box-shadow: 0 4px 15px rgba(244,63,94,0.3)!important; }
+        nav a.nav-pos { background: rgba(16,185,129,0.15)!important; border: 1px solid rgba(16,185,129,0.35)!important; color: #d1fae5!important; }
+        nav a.nav-pos:hover { background: rgba(16,185,129,0.3)!important; color: #fff!important; }
+        nav a.nav-tv { background: rgba(168,85,247,0.15)!important; border: 1px solid rgba(168,85,247,0.35)!important; color: #f3e8ff!important; }
+        nav a.nav-tv:hover { background: rgba(168,85,247,0.3)!important; color: #fff!important; }
+        nav a.nav-qr { background: rgba(245,158,11,0.15)!important; border: 1px solid rgba(245,158,11,0.35)!important; color: #fef3c7!important; }
+        nav a.nav-qr:hover { background: rgba(245,158,11,0.3)!important; color: #fff!important; }
+        nav a.nav-apis { background: rgba(56,189,248,0.15)!important; border: 1px solid rgba(56,189,248,0.35)!important; color: #e0f2fe!important; }
+        nav a.nav-apis:hover { background: rgba(56,189,248,0.3)!important; color: #fff!important; }
 
-        /* Hero Content */
         .hero-content {
             margin-top: -40px;
+            animation: slideUpFade 0.8s cubic-bezier(0.16,1,0.3,1) 0.5s forwards;
+            opacity: 0; transform: translateY(20px);
         }
-        
-        p.subtitle {
-            font-size: 18px;
-            color: var(--text-secondary);
-            line-height: 1.6;
-            max-width: 80%;
-            margin-bottom: 40px;
-            font-weight: 300;
+        .social-icon {
+            width: 50px; height: 50px; border-radius: 50%;
+            background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center;
+            color: white; text-decoration: none; transition: all 0.3s ease; border: 1px solid var(--border);
         }
-        p.subtitle strong {
-            color: var(--text-primary);
-            font-weight: 600;
+        .social-icon:hover { background: rgba(255,255,255,0.1); transform: translateY(-3px); }
+        .cta-group { display: flex; align-items: center; gap: 20px; }
+        .mobile-nav { display: none; }
+
+        /* ─── Scroll Hint ─── */
+        .scroll-hint {
+            position: absolute;
+            bottom: 32px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 0;
+            animation: fadeInDown 1s ease 1.8s forwards; opacity: 0;
+            cursor: pointer; z-index: 10;
+            user-select: none;
+        }
+        .scroll-hint:hover .scroll-pill-wrap { opacity: 1; }
+        .scroll-hint:hover .scroll-line-track { opacity: 0.6; }
+        .scroll-pill-wrap {
+            position: relative;
+            padding: 1px;
+            border-radius: 30px;
+            overflow: hidden;
+            display: inline-flex;
+            margin-bottom: 10px;
+        }
+        .scroll-pill-wrap::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: conic-gradient(from 0deg, transparent 0 280deg, rgba(255,71,87,0.9) 330deg, rgba(255,255,255,0.95) 360deg);
+            animation: rotate-border 2.5s linear infinite;
+        }
+        @keyframes rotate-border {
+            100% { transform: rotate(360deg); }
+        }
+        .scroll-pill {
+            position: relative;
+            z-index: 1;
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 18px;
+            border-radius: 30px;
+            background: rgba(8, 12, 22, 0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            transition: all 0.3s ease;
+        }
+        .scroll-pill span {
+            font-size: 10px; font-weight: 700; letter-spacing: 0.22em;
+            text-transform: uppercase; color: rgba(255,255,255,0.7);
+            transition: color 0.3s;
+        }
+        .scroll-hint:hover .scroll-pill span { color: #ffffff; }
+        .scroll-arrow {
+            display: flex; align-items: center; justify-content: center;
+            color: var(--accent);
+            animation: arrow-bounce 1.5s infinite ease-in-out;
+        }
+        @keyframes arrow-bounce {
+            0%, 100% { transform: translateY(-1px); }
+            50% { transform: translateY(2px); }
+        }
+        /* Animated scroll line */
+        .scroll-line-track {
+            width: 1px; height: 56px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 1px;
+            position: relative;
+            overflow: hidden;
+            opacity: 0.45;
+            transition: opacity 0.3s;
+        }
+        .scroll-line-fill {
+            position: absolute;
+            top: -100%; left: 0;
+            width: 100%; height: 50%;
+            background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.7), transparent);
+            animation: scroll-line-travel 1.6s cubic-bezier(0.4,0,0.6,1) infinite;
+        }
+        @keyframes scroll-line-travel {
+            0%   { top: -60%; }
+            100% { top: 160%; }
+        }
+        @keyframes fadeInDown { to { opacity:1; } }
+
+        /* ─── SCROLL SECTIONS ─── */
+        .sections-wrapper {
+            position: relative;
+            z-index: 2;
+            background: linear-gradient(to bottom, transparent 0%, var(--bg) 120px);
+            overflow: hidden;
+        }
+        #scroll-bg-layer {
+            position: absolute;
+            inset: 0;
+            background-image: url('/static/bg_scroll.png');
+            background-size: cover;
+            background-position: center 0%;
+            opacity: 0.09;
+            z-index: 0;
+            pointer-events: none;
+            will-change: background-position;
+        }
+        section {
+            position: relative;
+            z-index: 1;
+            padding: 100px 5%;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        .section-label {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+            color: var(--accent); margin-bottom: 14px; display: block;
+        }
+        .section-title {
+            font-size: clamp(2rem, 4vw, 3.2rem);
+            font-weight: 800; line-height: 1.15;
+            margin-bottom: 18px;
+        }
+        .section-sub {
+            font-size: 17px; color: var(--muted); max-width: 600px; line-height: 1.7;
+            margin-bottom: 60px;
         }
 
-        .cta-group {
-            display: flex;
-            align-items: center;
+        /* Fade-in on scroll */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        /* ─── FEATURES ─── */
+        #features { padding-top: 0; }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
         }
-        .btn-primary {
-            background: var(--accent);
-            color: #fff;
-            padding: 15px 35px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 16px;
-            border: none;
-            cursor: pointer;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: 0 10px 20px rgba(255, 71, 87, 0.3);
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px 28px;
+            backdrop-filter: blur(20px);
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
         }
-        .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 25px rgba(255, 71, 87, 0.4);
+        .feature-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(255,255,255,0.18);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
-        
-        .social-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
+        .feature-icon {
+            width: 52px; height: 52px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; margin-bottom: 20px;
+        }
+        .feature-title { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+        .feature-desc { font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+        /* ─── SCREENSHOTS ─── */
+        #screenshots { padding-top: 80px; }
+        .tabs {
+            display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 40px;
+        }
+        .tab-btn {
             background: rgba(255,255,255,0.05);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            text-decoration: none;
-            transition: background 0.3s ease, transform 0.3s ease;
-            border: 1px solid var(--glass-border);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.6);
+            padding: 10px 22px;
+            border-radius: 30px;
+            font-size: 13px; font-weight: 700;
+            cursor: pointer; transition: all 0.25s ease;
+            font-family: 'Outfit', sans-serif;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            letter-spacing: 0.02em;
         }
-        .social-icon:hover {
+        .tab-btn:hover {
             background: rgba(255,255,255,0.1);
-            transform: translateY(-3px);
+            color: #fff;
+            transform: translateY(-2px);
         }
+        .tab-btn[data-tab="pos"].active {
+            background: rgba(255,71,87,0.18) !important;
+            border-color: rgba(255,71,87,0.45) !important;
+            color: #ffe4e6 !important;
+            box-shadow: 0 4px 18px rgba(255,71,87,0.22);
+        }
+        .tab-btn[data-tab="api"].active {
+            background: rgba(56,189,248,0.18) !important;
+            border-color: rgba(56,189,248,0.45) !important;
+            color: #e0f2fe !important;
+            box-shadow: 0 4px 18px rgba(56,189,248,0.22);
+        }
+        .tab-btn[data-tab="tv"].active {
+            background: rgba(168,85,247,0.18) !important;
+            border-color: rgba(168,85,247,0.45) !important;
+            color: #f3e8ff !important;
+            box-shadow: 0 4px 18px rgba(168,85,247,0.22);
+        }
+        .tab-btn[data-tab="qr"].active {
+            background: rgba(245,158,11,0.18) !important;
+            border-color: rgba(245,158,11,0.45) !important;
+            color: #fef3c7 !important;
+            box-shadow: 0 4px 18px rgba(245,158,11,0.22);
+        }
+        .screenshots-track {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 16px;
+        }
+        .screenshot-item {
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.3);
+            aspect-ratio: 16/9;
+            cursor: zoom-in;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .screenshot-item img {
+            width: 100%; height: 100%;
+            object-fit: cover; object-position: top left;
+            display: block;
+            transition: transform 0.5s ease;
+        }
+        .screenshot-item:hover { transform: scale(1.02); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .screenshot-item:hover img { transform: scale(1.04); }
 
-        /* Animation delays for elements */
-        header .logo-group, header nav {
+        /* Lightbox */
+        #lightbox {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.92);
+            display: none; align-items: center; justify-content: center;
+            z-index: 9999; backdrop-filter: blur(8px);
+        }
+        #lightbox.open { display: flex; }
+        #lightbox img { max-width: 92vw; max-height: 88vh; border-radius: 12px; box-shadow: 0 40px 80px rgba(0,0,0,0.8); }
+        #lightbox-close {
+            position: absolute; top: 20px; right: 24px;
+            background: none; border: none; color: #fff; font-size: 32px;
+            cursor: pointer; opacity: 0.7; transition: opacity 0.2s;
+        }
+        #lightbox-close:hover { opacity: 1; }
+
+        /* ─── PLATFORMS ─── */
+        #platforms { padding-bottom: 120px; }
+        .platforms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+        }
+        .platform-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 40px 32px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            transition: transform 0.3s ease, border-color 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .platform-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 0%, var(--glow-color, transparent) 0%, transparent 70%);
             opacity: 0;
-            transform: translateY(20px);
-            animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            transition: opacity 0.4s;
         }
-        header .logo-group { animation-delay: 0.3s; }
-        .hero-content {
-            opacity: 0;
-            transform: translateY(20px);
-            animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            animation-delay: 0.5s;
+        .platform-card:hover { transform: translateY(-8px); border-color: rgba(255,255,255,0.16); }
+        .platform-card:hover::after { opacity: 1; }
+        .platform-card.pos  { --glow-color: rgba(255,71,87,0.12); }
+        .platform-card.mobile { --glow-color: rgba(62,207,142,0.12); }
+        .platform-card.web { --glow-color: rgba(124,58,237,0.12); }
+        .platform-card.tv { --glow-color: rgba(56,189,248,0.12); }
+        .platform-icon {
+            font-size: 44px; margin-bottom: 20px; display: block;
         }
-        .footer-brands { animation-delay: 0.6s; opacity: 0; transform: translateY(20px); animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .platform-name { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+        .platform-desc { font-size: 14px; color: var(--muted); line-height: 1.65; }
+        .platform-tag {
+            display: inline-block; margin-top: 16px;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+            padding: 5px 14px; border-radius: 20px; border: 1px solid;
+        }
+        .pos .platform-tag  { color: var(--accent); border-color: rgba(255,71,87,0.3); background: rgba(255,71,87,0.08); }
+        .mobile .platform-tag { color: var(--accent2); border-color: rgba(62,207,142,0.3); background: rgba(62,207,142,0.08); }
+        .web .platform-tag  { color: #a78bfa; border-color: rgba(124,58,237,0.3); background: rgba(124,58,237,0.08); }
+        .tv .platform-tag   { color: #38bdf8; border-color: rgba(56,189,248,0.3); background: rgba(56,189,248,0.08); }
 
-        .footer-brands {
-            display: flex;
-            align-items: center;
-            gap: 30px;
-            color: #666;
-            font-weight: 600;
-            font-size: 20px;
+        /* ─── FOOTER ─── */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 30px 5%;
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
         }
+        footer a { color: var(--muted); text-decoration: none; }
+        footer a:hover { color: #fff; }
 
-        /* Glass Overlay over image (İptal edildi, yerine mask-image kullanıyoruz) */
-        .image-overlay {
-            display: none;
-        }
-
+        /* ─── MOBILE ─── */
         @media (max-width: 900px) {
-            body {
+            body { display: block; }
+            #hero {
+                height: auto; min-height: 100svh;
+                padding: 12px;
                 align-items: flex-start;
-                padding-top: 20px;
-                padding-bottom: 20px;
-                height: auto;
+                justify-content: center;
             }
-            body::before {
-                background-position: center bottom;
-                transform: scale(1.5) translateY(-14%); /* Arka planı daha da büyütüp çok daha fazla yukarı kaydırır */
-            }
-            .container {
+            .hero-card {
                 flex-direction: column-reverse;
-                height: auto;
-                min-height: auto;
-                border-radius: 28px;
-                width: 92%;
+                height: auto; min-height: auto;
+                border-radius: 24px; width: 100%;
             }
             .right-panel {
-                min-height: 40vh;
-                background-position: center 0%; /* Fotonun en üstünden başla */
-                -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
-                mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+                min-height: 42vh;
+                -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+                mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
             }
             .left-panel {
-                padding: 10px 30px 40px 30px;
-                margin-top: -60px; /* Fotoğraf ile metni kaynaştırır ve logoyu geçişe oturtur */
+                padding: 0 22px 32px;
+                margin-top: -50px;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
             }
-            .logo-group h1 { font-size: 42px; }
-            p.subtitle { max-width: 100%; }
-            .hero-content { margin-top: 30px; margin-bottom: 50px; }
-            header { justify-content: space-between; margin-bottom: 30px; }
+            header {
+                flex-direction: row!important;
+                align-items: center!important;
+                justify-content: space-between!important;
+                width: 100%;
+                gap: 8px;
+            }
+            .logo-group {
+                gap: 10px!important;
+                flex-shrink: 1;
+                min-width: 0;
+            }
+            .logo-group h1 { font-size: 24px!important; white-space: nowrap; }
+            .logo { width: 46px!important; height: 46px!important; flex-shrink: 0; }
             nav { display: none; }
+            #lang-toggle {
+                position: static!important;
+                top: auto; right: auto;
+                margin-left: auto;
+                flex-shrink: 0;
+            }
+            #lang-toggle button {
+                padding: 5px 12px!important;
+                font-size: 11px!important;
+            }
+            /* hide desktop social icons on mobile */
+            .cta-group { display: none; }
+            .mobile-nav {
+                display: flex!important;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 0;
+            }
+            .mobile-nav a {
+                color: rgba(255,255,255,0.9);
+                text-decoration: none;
+                font-size: 13px; font-weight: 600;
+                padding: 9px 16px; border-radius: 14px;
+                background: rgba(255,255,255,0.06);
+                border: 1px solid rgba(255,255,255,0.12);
+                backdrop-filter: blur(10px);
+                transition: all 0.2s;
+            }
+            .mobile-nav a.nav-admin { background: rgba(244,63,94,0.15)!important; border-color: rgba(244,63,94,0.35)!important; color: #ffe4e6!important; }
+            .mobile-nav a.nav-pos   { background: rgba(16,185,129,0.15)!important; border-color: rgba(16,185,129,0.35)!important; color: #d1fae5!important; }
+            .mobile-nav a.nav-tv    { background: rgba(168,85,247,0.15)!important; border-color: rgba(168,85,247,0.35)!important; color: #f3e8ff!important; }
+            .mobile-nav a.nav-qr    { background: rgba(245,158,11,0.15)!important; border-color: rgba(245,158,11,0.35)!important; color: #fef3c7!important; }
+            .mobile-nav a.nav-apis  { background: rgba(56,189,248,0.15)!important; border-color: rgba(56,189,248,0.35)!important; color: #e0f2fe!important; }
+            /* hero-content: remove negative margin on mobile */
+            .hero-content { margin-top: 0; opacity: 1 !important; transform: none !important; animation: none; }
+            section { padding: 60px 18px; }
+            .section-title { font-size: 1.7rem; }
+            .features-grid { grid-template-columns: 1fr; }
+            .platforms-grid { grid-template-columns: 1fr; }
+            .screenshots-track { grid-template-columns: 1fr; }
+            .scroll-hint { display: none; }
+            #lang-toggle { top: 14px; right: 14px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="ambient-glow glow-1"></div>
-    <div class="ambient-glow glow-2"></div>
+<!-- Fixed hero background -->
+<div id="hero-bg"></div>
 
-    <div class="container">
+<!-- Ambient glows -->
+<div class="ambient-glow glow-1"></div>
+<div class="ambient-glow glow-2"></div>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section id="hero">
+    <div class="hero-card">
         <div class="left-panel">
             <header>
                 <div class="logo-group">
                     <div class="logo">
-                        <img src="/static/favicon.png" alt="logo">
+                        <img src="/static/bg_logo.png" alt="logo">
                     </div>
                     <h1>bilalgnd.</h1>
                 </div>
                 <nav>
-                    <a href="/apiorders">APIs</a>
-                    <a href="#">Story</a>
-                    <a href="#">Contact</a>
-                    <a href="/pos">POS Login</a>
+                    <a href="/admintools" class="nav-admin">Admin</a>
+                    <a href="/pos" class="nav-pos">POS</a>
+                    <a href="/tv-sarac" class="nav-tv">TV</a>
+                    <a href="/qr" class="nav-qr">QR</a>
+                    <a href="/apiorders" class="nav-apis">APIs</a>
                 </nav>
+                <div id="lang-toggle" onclick="toggleLang()">
+                    <button id="btn-lang" type="button" title="Dil değiştir / Change language">
+                        <span id="lang-tr" class="active">TR</span>
+                        <span class="lang-divider">/</span>
+                        <span id="lang-en">EN</span>
+                    </button>
+                </div>
             </header>
 
             <div class="hero-content">
                 <div class="cta-group">
                     <a href="https://instagram.com/bilalgnd" target="_blank" class="social-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
                     </a>
                     <a href="/pos" class="social-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                     </a>
                 </div>
+                <div class="mobile-nav">
+                    <a href="/admintools" class="nav-admin">Admin</a>
+                    <a href="/pos" class="nav-pos">POS</a>
+                    <a href="/tv-sarac" class="nav-tv">TV</a>
+                    <a href="/qr" class="nav-qr">QR</a>
+                    <a href="/apiorders" class="nav-apis">APIs</a>
+                </div>
             </div>
-
-            <!-- Removed footer brands -->
         </div>
-        
-        <div class="right-panel">
-            <div class="image-overlay"></div>
+
+        <div class="right-panel" id="rightPanel">
+            <div class="panel-image"></div>
+            <video class="panel-video" id="panelVideo" src="/static/profile_video.mp4" poster="/static/profile.jpg" preload="auto" autoplay muted loop playsinline></video>
+            <video class="panel-video" id="panelVideo2" src="/static/profile_video2.mp4" poster="/static/profile.jpg" preload="auto" autoplay muted loop playsinline></video>
         </div>
     </div>
+
+    <div class="scroll-hint" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">
+        <div class="scroll-pill-wrap">
+            <div class="scroll-pill">
+                <svg class="scroll-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                <span data-tr="Keşfet" data-en="Explore">Keşfet</span>
+            </div>
+        </div>
+        <div class="scroll-line-track">
+            <div class="scroll-line-fill"></div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════ SECTIONS WRAPPER ═══════════════ -->
+<div class="sections-wrapper">
+<div id="scroll-bg-layer"></div>
+
+    <!-- ─── FEATURES ─── -->
+    <section id="features">
+        <div class="reveal">
+            <span class="section-label" style="display:none" data-tr="Özellikler" data-en="Features">Özellikler</span>
+            <h2 class="section-title" data-tr="Restoranı yönetmek<br>hiç bu kadar kolay olmamıştı." data-en="Managing your restaurant<br>has never been this easy.">Restoranı yönetmek<br>hiç bu kadar kolay olmamıştı.</h2>
+            <p class="section-sub" data-tr="Vantage, kasadan mutfağa, garsondan platforma kadar restoran operasyonunun tüm katmanlarını tek bir sistemde birleştirir." data-en="Vantage unifies every layer of restaurant operations — from cashier to kitchen, waiter to delivery platform — into one seamless system.">Vantage, kasadan mutfağa, garsondan platforma kadar restoran operasyonunun tüm katmanlarını tek bir sistemde birleştirir.</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card reveal" style="transition-delay:0.05s">
+                <div class="feature-icon" style="background:rgba(255,71,87,0.12);">🖥️</div>
+                <div class="feature-title" data-tr="Masaüstü POS" data-en="Desktop POS">Masaüstü POS</div>
+                <div class="feature-desc" data-tr="Kategoriler, ürünler, masalar ve fiyatlar üzerinde tam kontrol. Tek tıkla sipariş al, yazıcıya gönder, kasayı kapat." data-en="Full control over categories, products, tables and prices. One-click ordering, print receipts and close the till.">Kategoriler, ürünler, masalar ve fiyatlar üzerinde tam kontrol. Tek tıkla sipariş al, yazıcıya gönder, kasayı kapat.</div>
+            </div>
+            <div class="feature-card reveal" style="transition-delay:0.1s">
+                <div class="feature-icon" style="background:rgba(62,207,142,0.12);">📱</div>
+                <div class="feature-title" data-tr="Garson Uygulaması" data-en="Waiter App">Garson Uygulaması</div>
+                <div class="feature-desc" data-tr="Android eşlikçi uygulama ile garsonlar masalardan sipariş alır, anlık olarak kasaya iletir." data-en="Android companion app lets waiters take orders tableside and sync instantly to the POS.">Android eşlikçi uygulama ile garsonlar masalardan sipariş alır, anlık olarak kasaya iletir.</div>
+            </div>
+            <div class="feature-card reveal" style="transition-delay:0.15s">
+                <div class="feature-icon" style="background:rgba(56,189,248,0.12);">📺</div>
+                <div class="feature-title" data-tr="TV Mutfak Ekranı" data-en="Kitchen Display">TV Mutfak Ekranı</div>
+                <div class="feature-desc" data-tr="Mutfaktaki TV'de aktif siparişler gerçek zamanlı görünür. Spotify entegrasyonu ile müzik kontrolü, Radyo modu." data-en="Active orders appear on the kitchen TV in real time. Spotify integration for music control and radio mode.">Mutfaktaki TV'de aktif siparişler gerçek zamanlı görünür. Spotify entegrasyonu ile müzik kontrolü.</div>
+            </div>
+            <div class="feature-card reveal" style="transition-delay:0.2s">
+                <div class="feature-icon" style="background:rgba(245,158,11,0.12);">📲</div>
+                <div class="feature-title" data-tr="QR Müşteri Menüsü" data-en="QR Customer Menu">QR Müşteri Menüsü</div>
+                <div class="feature-desc" data-tr="Müşteriler QR kod ile masadan sipariş verir. Sipariş doğrudan kasaya düşer, garson gerekmez." data-en="Customers order from their table via QR code. Orders go straight to the POS — no waiter required.">Müşteriler QR kod ile masadan sipariş verir. Sipariş doğrudan kasaya düşer.</div>
+            </div>
+            <div class="feature-card reveal" style="transition-delay:0.25s">
+                <div class="feature-icon" style="background:rgba(168,85,247,0.12);">🛵</div>
+                <div class="feature-title" data-tr="Platform Entegrasyonu" data-en="Platform Integration">Platform Entegrasyonu</div>
+                <div class="feature-desc" data-tr="Trendyol ve YemekSepeti siparişleri tek ekranda. Anlık durum güncellemesi, onay ve red — teslimattan müşteriye kadar takip." data-en="Trendyol and YemekSepeti orders on one screen. Real-time status updates, accept/reject and full delivery tracking.">Trendyol ve YemekSepeti siparişleri tek ekranda. Anlık durum güncellemesi ve teslimat takibi.</div>
+            </div>
+            <div class="feature-card reveal" style="transition-delay:0.3s">
+                <div class="feature-icon" style="background:rgba(62,207,142,0.1);">📊</div>
+                <div class="feature-title" data-tr="Satış Analitikleri" data-en="Sales Analytics">Satış Analitikleri</div>
+                <div class="feature-desc" data-tr="Günlük ciro, sipariş trendi, kategori dağılımı ve en çok satan ürünler. Grafik ve istatistiklerle anlık raporlama." data-en="Daily revenue, order trends, category breakdown and top-selling items. Real-time reporting with charts and stats.">Günlük ciro, sipariş trendi, kategori dağılımı ve en çok satan ürünler. Anlık raporlama.</div>
+            </div>
+            <div class="feature-card reveal" style="transition-delay:0.35s">
+                <div class="feature-icon" style="background:rgba(255,71,87,0.08);">☁️</div>
+                <div class="feature-title" data-tr="Bulut & WebSocket" data-en="Cloud & WebSocket">Bulut & WebSocket</div>
+                <div class="feature-desc" data-tr="Node.js ve WebSocket altyapısı ile anlık senkronizasyon. Uzaktan yönetim ve kesintisiz çalışma." data-en="Node.js and WebSocket backend for instant synchronization. Remote management and zero-downtime performance.">Node.js ve WebSocket altyapısı ile anlık senkronizasyon. Uzaktan yönetim ve kesintisiz çalışma.</div>
+            </div>
+            <div class="feature-card reveal" style="transition-delay:0.4s">
+                <div class="feature-icon" style="background:rgba(56,189,248,0.08);">🔐</div>
+                <div class="feature-title" data-tr="Çok Kullanıcılı & Rol Tabanlı" data-en="Multi-user & Role-based">Çok Kullanıcılı & Rol Tabanlı</div>
+                <div class="feature-desc" data-tr="Admin, kasa ve garson rolleri. Her kullanıcı yalnızca kendi yetkisindeki alana erişir. Güvenli oturum yönetimi." data-en="Admin, cashier and waiter roles. Each user only sees what they're authorized for. Secure session management.">Admin, kasa ve garson rolleri. Her kullanıcı yalnızca kendi yetkisindeki alana erişir.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── SCREENSHOTS ─── -->
+    <section id="screenshots">
+        <div class="reveal">
+            <span class="section-label" style="display:none" data-tr="Ekran Görüntüleri" data-en="Screenshots">Ekran Görüntüleri</span>
+            <h2 class="section-title" data-tr="Her ekran,<br>bir iş akışı." data-en="Every screen,<br>a workflow.">Her ekran,<br>bir iş akışı.</h2>
+        </div>
+
+        <div class="tabs reveal">
+            <button class="tab-btn active" data-tab="pos" onclick="showTab('pos')" data-tr="POS · Kasa" data-en="POS · Cashier">POS · Kasa</button>
+            <button class="tab-btn" data-tab="api" onclick="showTab('api')" data-tr="API · Dashboard" data-en="API · Dashboard">API · Dashboard</button>
+            <button class="tab-btn" data-tab="tv" onclick="showTab('tv')" data-tr="TV · Mutfak" data-en="TV · Kitchen">TV · Kitchen</button>
+            <button class="tab-btn" data-tab="qr" onclick="showTab('qr')" data-tr="QR · Müşteri" data-en="QR · Customer">QR · Müşteri</button>
+        </div>
+
+        <div id="tab-pos" class="screenshots-track reveal">
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/pos1.png')"><img src="/static/sq/pos1.png" alt="POS 1"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/pos2.png')"><img src="/static/sq/pos2.png" alt="POS 2"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/pos3.png')"><img src="/static/sq/pos3.png" alt="POS 3"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/pos4.png')"><img src="/static/sq/pos4.png" alt="POS 4"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/pos5.png')"><img src="/static/sq/pos5.png" alt="POS 5"></div>
+        </div>
+        <div id="tab-api" class="screenshots-track reveal" style="display:none">
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/api1.png')"><img src="/static/sq/api1.png" alt="API 1"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/api2.png')"><img src="/static/sq/api2.png" alt="API 2"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/api3.png')"><img src="/static/sq/api3.png" alt="API 3"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/api4.png')"><img src="/static/sq/api4.png" alt="API 4"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/api5.png')"><img src="/static/sq/api5.png" alt="API 5"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/api6.png')"><img src="/static/sq/api6.png" alt="API 6"></div>
+        </div>
+        <div id="tab-tv" class="screenshots-track reveal" style="display:none">
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/tv.png')"><img src="/static/sq/tv.png" alt="TV"></div>
+        </div>
+        <div id="tab-qr" class="screenshots-track reveal" style="display:none">
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/qr1.png')"><img src="/static/sq/qr1.png" alt="QR 1"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/qr2.png')"><img src="/static/sq/qr2.png" alt="QR 2"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/qr3.png')"><img src="/static/sq/qr3.png" alt="QR 3"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/qr4.png')"><img src="/static/sq/qr4.png" alt="QR 4"></div>
+        </div>
+    </section>
+
+    <!-- ─── PLATFORMS ─── -->
+    <section id="platforms">
+        <div class="reveal">
+            <span class="section-label" style="display:none" data-tr="Platformlar" data-en="Platforms">Platformlar</span>
+            <h2 class="section-title" data-tr="Dört platform,<br>tek ekosistem." data-en="Four platforms,<br>one ecosystem.">Dört platform,<br>tek ekosistem.</h2>
+            <p class="section-sub" data-tr="Tüm bileşenler WebSocket ve REST API üzerinden birbirine bağlıdır. Birinde yapılan değişiklik anında diğerlerine yansır." data-en="All components are connected via WebSocket and REST API. A change in one is instantly reflected across all others.">Tüm bileşenler WebSocket ve REST API üzerinden birbirine bağlıdır. Birinde yapılan değişiklik anında diğerlerine yansır.</p>
+        </div>
+
+        <div class="platforms-grid">
+            <div class="platform-card pos reveal">
+                <span class="platform-icon">🖥️</span>
+                <div class="platform-name" data-tr="App1 — Masaüstü" data-en="App1 — Desktop">App1 — Masaüstü</div>
+                <div class="platform-desc" data-tr="Electron tabanlı Windows uygulaması. Kasa, menü yönetimi, yazıcı entegrasyonu ve tam offline destek." data-en="Electron-based Windows app. Cashier, menu management, printer integration and full offline support.">Electron tabanlı Windows uygulaması. Kasa, menü yönetimi, yazıcı entegrasyonu ve tam offline destek.</div>
+                <span class="platform-tag">Windows · Electron</span>
+            </div>
+            <div class="platform-card mobile reveal" style="transition-delay:0.1s">
+                <span class="platform-icon">📱</span>
+                <div class="platform-name" data-tr="App2 — Android" data-en="App2 — Android">App2 — Android</div>
+                <div class="platform-desc" data-tr="React Native garson uygulaması. Masadan sipariş al, kasaya ilet, anlık bildirim al. WiFi üzerinden güncelleme." data-en="React Native waiter app. Take orders tableside, sync to POS, receive instant notifications. Update via WiFi.">React Native garson uygulaması. Masadan sipariş al, kasaya ilet, anlık bildirim al.</div>
+                <span class="platform-tag">Android · React Native</span>
+            </div>
+            <div class="platform-card web reveal" style="transition-delay:0.2s">
+                <span class="platform-icon">🌐</span>
+                <div class="platform-name" data-tr="Web Panel" data-en="Web Panel">Web Panel</div>
+                <div class="platform-desc" data-tr="Trendyol/YemekSepeti dashboard, API siparişleri, kullanıcı yönetimi ve sistem kontrolü. Her yerden erişim." data-en="Trendyol/YemekSepeti dashboard, API orders, user management and system control. Access from anywhere.">Trendyol/YemekSepeti dashboard, API siparişleri, kullanıcı yönetimi ve sistem kontrolü.</div>
+                <span class="platform-tag">Web · Node.js</span>
+            </div>
+            <div class="platform-card tv reveal" style="transition-delay:0.3s">
+                <span class="platform-icon">📺</span>
+                <div class="platform-name" data-tr="TV Ekranı" data-en="TV Screen">TV Ekranı</div>
+                <div class="platform-desc" data-tr="Mutfak duvarındaki TV için optimize edilmiş sipariş takip ekranı. Spotify bağlantısı, radyo, ciro göstergesi." data-en="Order tracking display optimized for the kitchen wall TV. Spotify connect, radio mode and revenue indicator.">Mutfak duvarındaki TV için optimize edilmiş sipariş takip ekranı. Spotify ve radyo entegrasyonu.</div>
+                <span class="platform-tag">Browser · WebSocket</span>
+            </div>
+        </div>
+    </section>
+
+</div><!-- /sections-wrapper -->
+
+<footer>
+    <p>© 2025 <a href="https://instagram.com/bilalgnd" target="_blank">bilalgnd</a> · Vantage</p>
+</footer>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+    <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightbox-img" src="" alt="Screenshot">
+</div>
+
+<script>
+    /* ── Lang ── */
+    let currentLang = localStorage.getItem('sarac_lang') || 'tr';
+    function toggleLang() {
+        setLang(currentLang === 'tr' ? 'en' : 'tr');
+    }
+    function setLang(lang) {
+        currentLang = lang;
+        localStorage.setItem('sarac_lang', lang);
+        const trSpan = document.getElementById('lang-tr');
+        const enSpan = document.getElementById('lang-en');
+        if (trSpan) trSpan.classList.toggle('active', lang === 'tr');
+        if (enSpan) enSpan.classList.toggle('active', lang === 'en');
+        document.querySelectorAll('[data-tr]').forEach(el => {
+            const text = el.getAttribute('data-' + lang);
+            if (text) el.innerHTML = text;
+        });
+    }
+    setLang(currentLang);
+
+    /* ── Tabs ── */
+    function showTab(name) {
+        ['pos','api','tv','qr'].forEach(t => {
+            document.getElementById('tab-' + t).style.display = (t === name) ? 'grid' : 'none';
+        });
+        document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+            btn.classList.toggle('active', ['pos','api','tv','qr'][i] === name);
+        });
+    }
+
+    /* ── Lightbox ── */
+    function openLightbox(src) {
+        document.getElementById('lightbox-img').src = src;
+        document.getElementById('lightbox').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    /* ── Scroll reveal ── */
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+    }, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    /* ── Hero BG fade on scroll ── */
+    const heroBg = document.getElementById('hero-bg');
+    const scrollBgLayer = document.getElementById('scroll-bg-layer');
+    const sectionsWrapper = document.querySelector('.sections-wrapper');
+    window.addEventListener('scroll', () => {
+        const scrolled = window.scrollY;
+        /* hero bg fade */
+        const fade = Math.max(0, 1 - scrolled / (window.innerHeight * 0.7));
+        heroBg.style.opacity = fade;
+        /* sections bg parallax pan: image scrolls from 0% → 100% as user traverses sections */
+        const wrapperTop = sectionsWrapper.offsetTop;
+        const wrapperH   = sectionsWrapper.offsetHeight;
+        const progress   = Math.max(0, Math.min(1, (scrolled - wrapperTop) / (wrapperH - window.innerHeight)));
+        scrollBgLayer.style.backgroundPositionY = (progress * 100) + '%';
+    }, { passive: true });
+
+    /* ── Portfolio media ── */
+    const applyMedia = (type) => {
+        const panel  = document.getElementById('rightPanel');
+        const video  = document.getElementById('panelVideo');
+        const video2 = document.getElementById('panelVideo2');
+        if (!panel || !video || !video2) return;
+        panel.classList.remove('show-video', 'show-video2');
+        video.pause(); video2.pause();
+        if (type === 'video') {
+            panel.classList.add('show-video');
+            video.play().catch(() => {});
+        } else if (type === 'video2') {
+            panel.classList.add('show-video2');
+            video2.play().catch(() => {});
+        }
+    };
+
+    // Instant playback for server-injected or cached class
+    (() => {
+        const panel  = document.getElementById('rightPanel');
+        const video  = document.getElementById('panelVideo');
+        const video2 = document.getElementById('panelVideo2');
+        const cached = localStorage.getItem('portfolio_media_type');
+
+        if (panel && !panel.classList.contains('show-video') && !panel.classList.contains('show-video2')) {
+            if (cached) applyMedia(cached);
+        } else {
+            if (panel && panel.classList.contains('show-video')) video.play().catch(() => {});
+            if (panel && panel.classList.contains('show-video2')) video2.play().catch(() => {});
+        }
+    })();
+
+    // Background sync with API
+    (async () => {
+        try {
+            const res = await fetch('/api/portfolio-media');
+            const data = await res.json();
+            if (data.type) {
+                localStorage.setItem('portfolio_media_type', data.type);
+                applyMedia(data.type);
+            }
+        } catch(e) {}
+    })();
+</script>
 
 </body>
 </html>

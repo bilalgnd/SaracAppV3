@@ -8,6 +8,11 @@
   <script>
     (function() {
       try {
+        var token = localStorage.getItem('adminToken');
+        if (!token) {
+          window.location.replace('/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search));
+          return;
+        }
         var t = localStorage.getItem('theme');
         if (t === 'light') {
           document.documentElement.classList.remove('dark');
@@ -442,7 +447,7 @@
           <i class="fa-solid fa-layer-group text-sm"></i>
         </div>
         <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden">
-          <h1 class="text-sm font-extrabold tracking-tight text-white">API Orders</h1>
+          <h1 class="text-sm font-extrabold tracking-tight text-white">Vantage API</h1>
           <p class="text-gray-400 text-[9px] font-medium">Kontrol Merkezi</p>
         </div>
       </div>
@@ -467,17 +472,23 @@
         </button>
 
         <button @click="setActiveView('orders_trendyol')" 
-                class="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all text-xs font-medium"
-                :class="activeView === 'orders_trendyol' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'">
-          <i class="fa-solid fa-motorcycle text-sm w-6 text-center text-orange-500 shrink-0"></i>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Trendyol</span>
+                class="w-full flex items-center justify-center group-hover:justify-start px-2.5 py-2 rounded-xl transition-all border text-xs font-bold overflow-hidden h-10 shadow-sm"
+                :class="activeView === 'orders_trendyol' 
+                  ? 'bg-rose-950/60 border-rose-500/70 text-rose-300 shadow-rose-950/50 ring-1 ring-rose-500/40' 
+                  : 'bg-[#220d13]/80 border-rose-500/30 text-rose-400/90 hover:bg-rose-950/40 hover:border-rose-500/50 hover:text-rose-200'"
+                title="Trendyol Siparişleri">
+          <span class="group-hover:hidden font-black text-sm leading-none">T</span>
+          <span class="hidden group-hover:inline-block font-extrabold text-xs ml-2 whitespace-nowrap leading-none tracking-wide">Trendyol</span>
         </button>
 
         <button @click="setActiveView('orders_yemeksepeti')" 
-                class="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all text-xs font-medium"
-                :class="activeView === 'orders_yemeksepeti' ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'">
-          <i class="fa-solid fa-motorcycle text-sm w-6 text-center text-pink-500 shrink-0"></i>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Yemeksepeti</span>
+                class="w-full flex items-center justify-center group-hover:justify-start px-2.5 py-2 rounded-xl transition-all border text-xs font-bold overflow-hidden h-10 shadow-sm"
+                :class="activeView === 'orders_yemeksepeti' 
+                  ? 'bg-fuchsia-950/60 border-fuchsia-500/70 text-fuchsia-200 shadow-fuchsia-950/50 ring-1 ring-fuchsia-500/40' 
+                  : 'bg-[#251023]/80 border-purple-500/30 text-purple-300/90 hover:bg-fuchsia-950/40 hover:border-fuchsia-500/50 hover:text-fuchsia-200'"
+                title="Yemeksepeti Siparişleri">
+          <span class="group-hover:hidden font-black text-sm leading-none">Y</span>
+          <span class="hidden group-hover:inline-block font-extrabold text-xs ml-2 whitespace-nowrap leading-none tracking-wide">Yemeksepeti</span>
         </button>
 
         <div class="my-2 border-t border-gray-800/60"></div>
@@ -531,7 +542,7 @@
         <i class="fa-solid fa-layer-group text-[11px] text-white"></i>
       </div>
       <div>
-        <h1 class="font-extrabold text-xs text-white leading-none">API Orders</h1>
+        <h1 class="font-extrabold text-xs text-white leading-none">Vantage API</h1>
         <p class="text-[9px] text-gray-500 font-medium leading-none mt-0.5">Kontrol Merkezi</p>
       </div>
     </div>
@@ -598,8 +609,8 @@
           <!-- Trendyol -->
           <div class="flex items-center justify-between bg-[#151517] border border-gray-800 rounded-xl px-3.5 py-2.5">
             <div class="flex items-center gap-2.5">
-              <div class="w-7 h-7 rounded-lg bg-orange-500/15 flex items-center justify-center">
-                <i class="fa-solid fa-motorcycle text-orange-400 text-xs"></i>
+              <div class="w-7 h-7 rounded-lg bg-orange-500/15 flex items-center justify-center overflow-hidden">
+                <img src="/static/tryol-bar-narrow-icon.jpg" class="w-6 h-6 rounded-md object-cover" alt="Trendyol" />
               </div>
               <div>
                 <div class="text-xs font-bold text-white">Trendyol</div>
@@ -615,8 +626,8 @@
           <!-- Yemeksepeti -->
           <div class="flex items-center justify-between bg-[#151517] border border-gray-800 rounded-xl px-3.5 py-2.5">
             <div class="flex items-center gap-2.5">
-              <div class="w-7 h-7 rounded-lg bg-pink-500/15 flex items-center justify-center">
-                <i class="fa-solid fa-motorcycle text-pink-400 text-xs"></i>
+              <div class="w-7 h-7 rounded-lg bg-pink-500/15 flex items-center justify-center overflow-hidden">
+                <img src="/static/ysepeti-bar-narrow-icon.png" class="w-6 h-6 rounded-md object-cover" alt="Yemeksepeti" />
               </div>
               <div>
                 <div class="text-xs font-bold text-white">Yemeksepeti</div>
@@ -718,10 +729,15 @@
       <button 
         @click="setActiveView('orders_trendyol'); mobileBottomMore = false"
         class="flex-1 flex flex-col items-center justify-center gap-1 relative transition-all duration-200 active:scale-95"
-        :class="activeView === 'orders_trendyol' && !mobileBottomMore ? 'text-orange-400' : 'text-gray-500 hover:text-gray-300'">
+        :class="activeView === 'orders_trendyol' && !mobileBottomMore ? 'text-rose-400' : 'text-gray-500 hover:text-gray-300'">
         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full transition-all duration-200"
-             :class="activeView === 'orders_trendyol' && !mobileBottomMore ? 'bg-orange-400' : 'bg-transparent'"></div>
-        <i class="fa-solid fa-motorcycle text-xl"></i>
+             :class="activeView === 'orders_trendyol' && !mobileBottomMore ? 'bg-rose-500' : 'bg-transparent'"></div>
+        <div class="w-6 h-6 rounded-lg flex items-center justify-center border text-xs font-black shrink-0 transition-all"
+             :class="activeView === 'orders_trendyol' && !mobileBottomMore
+               ? 'bg-rose-950/90 border-rose-500 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.4)]'
+               : 'bg-[#220d13]/80 border-rose-500/30 text-rose-400/90'">
+          T
+        </div>
         <span class="text-[10px] font-bold leading-none">Trendyol</span>
       </button>
 
@@ -729,10 +745,15 @@
       <button 
         @click="setActiveView('orders_yemeksepeti'); mobileBottomMore = false"
         class="flex-1 flex flex-col items-center justify-center gap-1 relative transition-all duration-200 active:scale-95"
-        :class="activeView === 'orders_yemeksepeti' && !mobileBottomMore ? 'text-pink-400' : 'text-gray-500 hover:text-gray-300'">
+        :class="activeView === 'orders_yemeksepeti' && !mobileBottomMore ? 'text-fuchsia-300' : 'text-gray-500 hover:text-gray-300'">
         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full transition-all duration-200"
-             :class="activeView === 'orders_yemeksepeti' && !mobileBottomMore ? 'bg-pink-400' : 'bg-transparent'"></div>
-        <i class="fa-solid fa-bowl-food text-xl"></i>
+             :class="activeView === 'orders_yemeksepeti' && !mobileBottomMore ? 'bg-fuchsia-500' : 'bg-transparent'"></div>
+        <div class="w-6 h-6 rounded-lg flex items-center justify-center border text-xs font-black shrink-0 transition-all"
+             :class="activeView === 'orders_yemeksepeti' && !mobileBottomMore
+               ? 'bg-fuchsia-950/90 border-fuchsia-500 text-fuchsia-200 shadow-[0_0_10px_rgba(251,191,36,0.4)]'
+               : 'bg-[#251023]/80 border-purple-500/30 text-purple-300/90'">
+          Y
+        </div>
         <span class="text-[10px] font-bold leading-none">YemekSep.</span>
       </button>
 
@@ -848,42 +869,12 @@
 
         <!-- Yemeksepeti Store Toggle -->
         <div class="relative">
-          <button @click="yemeksepetiConfirmOpen = !yemeksepetiConfirmOpen; trendyolConfirmOpen = false" 
-                  class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 border shadow-sm cursor-pointer"
-                  :class="yemeksepetiStoreOpen ? 'bg-pink-500/15 text-pink-400 border-pink-500/30 hover:bg-pink-500/25' : 'bg-rose-500/15 text-rose-400 border-rose-500/30 hover:bg-rose-500/25'"
-                  :title="yemeksepetiStoreOpen ? 'Yemeksepeti Mağazasını Kapat' : 'Yemeksepeti Mağazasını Aç'">
-            <span class="w-2 h-2 rounded-full" :class="yemeksepetiStoreOpen ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'"></span>
+          <button class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 border shadow-sm opacity-80 cursor-default bg-pink-500/10 text-pink-400 border-pink-500/30"
+                  title="Yemeksepeti Entegrasyonu Yakında Hazır Olacaktır">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
             <span>Yemeksepeti:</span>
-            <span class="font-extrabold" x-text="yemeksepetiStoreOpen ? 'AÇIK' : 'KAPALI'"></span>
-            <i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i>
+            <span class="font-extrabold text-[10px] px-1.5 py-0.2 rounded bg-pink-500/20 border border-pink-500/30">YAKINDA</span>
           </button>
-
-          <!-- Inline Dropdown matching exact button width, color and style -->
-          <div x-show="yemeksepetiConfirmOpen" 
-               @click.outside="yemeksepetiConfirmOpen = false"
-               x-transition:enter="transition ease-out duration-150"
-               x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
-               x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-               x-transition:leave="transition ease-in duration-100"
-               x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-               x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
-               class="absolute left-0 right-0 mt-1 rounded-lg shadow-xl p-1.5 z-30 flex items-center justify-between gap-1 text-[11px] border"
-               :class="yemeksepetiStoreOpen ? 'bg-[#1c1415] border-rose-500/40 text-rose-300' : 'bg-[#111d16] border-emerald-500/40 text-emerald-300'"
-               style="display: none;">
-            
-            <button @click="yemeksepetiConfirmOpen = false; executeToggleStoreStatus('yemeksepeti')" 
-                    class="flex-1 py-1 px-1.5 rounded-md font-black text-[11px] transition-all flex items-center justify-center gap-1 border shadow-sm"
-                    :class="yemeksepetiStoreOpen ? 'bg-rose-500/25 hover:bg-rose-500/40 text-rose-200 border-rose-500/50' : 'bg-emerald-500/25 hover:bg-emerald-500/40 text-emerald-200 border-emerald-500/50'">
-              <i class="fa-solid" :class="yemeksepetiStoreOpen ? 'fa-power-off text-rose-400' : 'fa-check text-emerald-400'"></i>
-              <span x-text="yemeksepetiStoreOpen ? 'Kapat' : 'Aç'"></span>
-            </button>
-
-            <button @click="yemeksepetiConfirmOpen = false" 
-                    title="Vazgeç"
-                    class="px-1.5 py-1 rounded-md font-bold text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
-              <i class="fa-solid fa-xmark text-xs"></i>
-            </button>
-          </div>
         </div>
 
       </div>
@@ -932,15 +923,15 @@
       <!-- Satılan Döner Miktarı -->
       <div class="bg-gradient-to-br from-[#18181b] via-[#121214] to-red-950/20 rounded-xl p-3.5 border border-red-500/20 flex flex-col justify-between shadow-lg relative overflow-hidden group">
         <div class="absolute -right-4 -top-4 w-14 h-14 bg-red-500/15 rounded-full blur-xl group-hover:scale-125 transition-transform duration-500"></div>
-        <h3 class="text-gray-400 font-semibold text-[11px] tracking-wide mb-1">Satılan Döner Miktarı</h3>
+        <h3 class="text-gray-400 font-semibold text-[11px] tracking-wide mb-1" x-text="dashboardFilters.range === 'weekly' ? 'Haftalık Satılan Döner' : (dashboardFilters.range === 'monthly' ? 'Aylık Satılan Döner' : (dashboardFilters.range === 'hourly' ? 'Saatlik Satılan Döner' : 'Günlük Satılan Döner'))">Satılan Döner Miktarı</h3>
         <div class="flex justify-between items-end">
           <div>
-             <div class="text-base font-bold text-red-400" x-text="dashboardData.todayEtDonerKg">0.00</div>
-             <div class="text-[9px] text-gray-500 font-medium">kg Et Döner</div>
+             <div class="text-base font-bold text-red-400" x-text="(dashboardData.rangeEtDonerKg ?? dashboardData.todayEtDonerKg) + ' kg'">0.00 kg</div>
+             <div class="text-[9px] text-gray-500 font-medium">Et Döner</div>
           </div>
           <div>
-             <div class="text-base font-bold text-blue-400" x-text="dashboardData.todayTavukDonerKg">0.00</div>
-             <div class="text-[9px] text-gray-500 font-medium">kg Tavuk Döner</div>
+             <div class="text-base font-bold text-blue-400" x-text="(dashboardData.rangeTavukDonerKg ?? dashboardData.todayTavukDonerKg) + ' kg'">0.00 kg</div>
+             <div class="text-[9px] text-gray-500 font-medium">Tavuk Döner</div>
           </div>
         </div>
       </div>
@@ -1068,6 +1059,20 @@
       </div>
       
       <div class="flex-1 overflow-y-auto p-1.5 space-y-1.5">
+        <!-- Yemeksepeti Coming Soon Notice Banner -->
+        <div x-show="activeView === 'orders_yemeksepeti'" class="p-3.5 mb-2 rounded-xl bg-gradient-to-r from-pink-950/50 via-purple-950/30 to-black/50 border border-pink-500/40 flex items-center gap-3 text-xs shadow-lg">
+          <div class="w-9 h-9 rounded-xl bg-pink-500/20 border border-pink-500/30 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-clock-rotate-left text-pink-400 text-base"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-white text-xs flex items-center gap-2 flex-wrap">
+              <span>Yemeksepeti Entegrasyonu</span>
+              <span class="px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 text-[9px] font-extrabold border border-pink-500/40 uppercase tracking-wider">YAKINDA</span>
+            </div>
+            <div class="text-gray-400 text-[11px] mt-0.5 leading-snug">Yemeksepeti canlı sipariş servisi şu an geliştirme aşamasındadır. Çok yakında otomatik aktarım başlayacaktır.</div>
+          </div>
+        </div>
+
         <template x-if="orders.length === 0 && !loadingOrders">
           <div class="text-center py-8 text-gray-500">
             <i class="fa-regular fa-folder-open text-3xl mb-2 opacity-50"></i>
@@ -2150,32 +2155,43 @@
 
             // Fetch Trendyol
             if (this.activeView === 'orders_all' || this.activeView === 'orders_trendyol') {
-              const res = await fetch('/api/tgo/orders?status=all', { headers: { 'Authorization': `Bearer ${this.adminToken}` } });
-              const data = await res.json();
-              if (res.ok && data.content) {
-                const trendyolOrders = data.content.map(o => ({...o, _platform: 'trendyol'}));
-                combinedOrders = combinedOrders.concat(trendyolOrders);
+              try {
+                const res = await fetch('/api/tgo/orders?status=all', { headers: { 'Authorization': `Bearer ${this.adminToken}` } });
+                if (res.ok) {
+                  const data = await res.json();
+                  if (data && data.content) {
+                    const trendyolOrders = data.content.map(o => ({...o, _platform: 'trendyol'}));
+                    combinedOrders = combinedOrders.concat(trendyolOrders);
+                  }
+                }
+              } catch(eTrendyol) {
+                console.warn('Trendyol fetch error:', eTrendyol);
               }
             }
 
-            // Fetch Yemeksepeti
+            // Fetch Yemeksepeti (Hazır değil - hataları sessizce yut)
             if (this.activeView === 'orders_all' || this.activeView === 'orders_yemeksepeti') {
-              const res = await fetch('/api/admin/orders', { headers: { 'Authorization': `Bearer ${this.adminToken}` } });
-              const data = await res.json();
-              if (res.ok && Array.isArray(data)) {
-                const ysOrders = data.map(o => ({...o, _platform: 'yemeksepeti'}));
-                combinedOrders = combinedOrders.concat(ysOrders);
+              try {
+                const res = await fetch('/api/admin/orders', { headers: { 'Authorization': `Bearer ${this.adminToken}` } });
+                if (res.ok) {
+                  const data = await res.json();
+                  if (Array.isArray(data)) {
+                    const ysOrders = data.map(o => ({...o, _platform: 'yemeksepeti'}));
+                    combinedOrders = combinedOrders.concat(ysOrders);
+                  }
+                }
+              } catch(eYemeksepeti) {
+                console.warn('Yemeksepeti fetch error:', eYemeksepeti);
               }
             }
 
             // Sort descending
-            combinedOrders.sort((a, b) => new Date(b.packageCreationDate || 0) - new Date(a.packageCreationDate || 0));
+            combinedOrders.sort((a, b) => new Date(b.packageCreationDate || b.createdAt || 0) - new Date(a.packageCreationDate || a.createdAt || 0));
             this.orders = combinedOrders;
             this.calculateStats();
             
           } catch(e) {
-            console.error(e);
-            Swal.fire({title:'Hata', text:'Siparişler alınırken hata oluştu.', icon:'error', toast:true, position:'top-end', timer:2000, showConfirmButton:false});
+            console.error('fetchOrders error:', e);
           }
           this.loadingOrders = false;
         },

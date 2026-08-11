@@ -18,6 +18,7 @@ const DataModel = mongoose.model('Data', DataSchema);
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password_hash: { type: String, required: true },
+  plain_password: { type: String },
   role: { type: String, enum: ['admin', 'kasa', 'garson'], default: 'garson' },
   account_id: { type: String },
   status: { type: String, enum: ['active', 'suspended'], default: 'active' },
@@ -161,6 +162,22 @@ export class ShopState {
     }
     if (this.systemSettings.dailyQueueNo) this.dailyQueueNo = this.systemSettings.dailyQueueNo;
     if (this.systemSettings.dailyMasaNo) this.dailyMasaNo = this.systemSettings.dailyMasaNo;
+    this.checkDailyReset();
+  }
+
+  checkDailyReset() {
+    const today = new Date().toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul' });
+    if (this.systemSettings.lastResetDate !== today) {
+      this.dailyQueueNo = 1;
+      this.dailyMasaNo = 1;
+      this.systemSettings.dailyQueueNo = 1;
+      this.systemSettings.dailyMasaNo = 1;
+      this.systemSettings.lastResetDate = today;
+      if (this.isInitialized) {
+        this.saveSettings();
+      }
+      console.log(`[ShopState] Gece 12 (00:00) sonrası sıra ve masa numarası 1'e sıfırlandı. Tarih: ${today}`);
+    }
   }
 
   saveOrders() { this.saveToDB('activeOrders', this.activeOrders); }
@@ -179,36 +196,35 @@ export class ShopState {
     this.saveToDB('tgoProcessedOrders', Array.from(this.tgoProcessedOrders)); 
   }
  
- updateCustomMenu(newMenu: any) {
- this.customMenu = newMenu;
- this.saveMenu();
- }
+  updateCustomMenu(newMenu: any) {
+    this.customMenu = newMenu;
+    this.saveMenu();
+  }
 
- getNextQueueNo() {
- const current = this.dailyQueueNo;
- this.dailyQueueNo++;
- this.systemSettings.dailyQueueNo = this.dailyQueueNo;
- this.saveSettings();
- return current;
- }
+  getNextQueueNo() {
+    this.checkDailyReset();
+    const current = this.dailyQueueNo;
+    this.dailyQueueNo++;
+    this.systemSettings.dailyQueueNo = this.dailyQueueNo;
+    this.saveSettings();
+    return current;
+  }
 
- getNextMasaNo() {
- const current = this.dailyMasaNo;
- this.dailyMasaNo++;
- this.systemSettings.dailyMasaNo = this.dailyMasaNo;
- this.saveSettings();
- return current;
- }
+  getNextMasaNo() {
+    this.checkDailyReset();
+    const current = this.dailyMasaNo;
+    this.dailyMasaNo++;
+    this.systemSettings.dailyMasaNo = this.dailyMasaNo;
+    this.saveSettings();
+    return current;
+  }
 
- getFullMenu() {
- if (this.customMenu) return this.customMenu;
- return {
- meat: [],
- chicken: [],
- drinks: [],
- categories: []
- };
- }
+  getFullMenu() {
+    if (this.customMenu && this.customMenu.categories) return this.customMenu;
+    return {
+      categories: []
+    };
+  }
 }
 
 export const shops = new Map<string, ShopState>();

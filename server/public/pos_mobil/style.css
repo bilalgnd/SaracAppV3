@@ -1,0 +1,274 @@
+@font-face {
+  font-family: 'University Roman Bold';
+  src: url('/static/UniversityRomanBold.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+body {
+  background-color: #000000;
+  color: #FFFFFF;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Header */
+.mobile-app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: #000000;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #1C1C1E;
+  transition: background-color 0.3s ease;
+}
+
+.mobile-brand-title {
+  font-family: 'University Roman Bold', 'Outfit', sans-serif;
+  font-size: 24px;
+  letter-spacing: 0.5px;
+  color: #FFFFFF;
+}
+
+.mobile-status-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #4CAF50;
+  box-shadow: 0 0 8px #4CAF50;
+}
+
+.header-action-btn {
+  background: transparent;
+  border: none;
+  color: #FFFFFF;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Category Scroll Bar */
+.category-bar-container {
+  position: sticky;
+  top: 61px;
+  z-index: 90;
+  background-color: #000000;
+  border-bottom: 1px solid #1C1C1E;
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 12px;
+}
+
+.category-bar-container::-webkit-scrollbar {
+  display: none;
+}
+
+.category-tab {
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #9CA3AF;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.category-tab.active {
+  color: #D84315;
+}
+
+.category-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  background-color: #D84315;
+  border-radius: 2px;
+}
+
+/* Product Cards Grid */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 16px;
+  padding-bottom: 100px;
+}
+
+.product-card {
+  height: 120px;
+  border-radius: 18px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease, filter 0.15s ease;
+  border: none;
+}
+
+.product-card:active {
+  transform: scale(0.96);
+  filter: brightness(1.1);
+}
+
+.product-card-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+
+.product-card-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Floating Action Button (Masalar FAB) */
+.masalar-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 16px;
+  z-index: 120;
+  background-color: #D84315;
+  color: #FFFFFF;
+  border: none;
+  padding: 14px 22px;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 900;
+  box-shadow: 0 6px 20px rgba(216, 67, 21, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.2s ease;
+}
+
+.masalar-fab:active {
+  transform: scale(0.94);
+}
+
+/* İlave Bottom Bar */
+.ilave-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 150;
+  background-color: #000000;
+  border-top: 1px solid #222222;
+  padding: 12px 16px calc(env(safe-area-inset-bottom, 12px) + 8px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.8);
+}
+
+/* Modal Overlay & Sheet */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.modal-sheet {
+  width: 100%;
+  max-height: 90vh;
+  max-height: 90dvh;
+  background-color: #181818;
+  border-radius: 24px 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* Sheet Customization Pills */
+.chip-btn {
+  padding: 8px 4px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 10px;
+  border-width: 1.5px;
+  border-style: solid;
+  cursor: pointer;
+  background: transparent;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Quick Drink Button */
+.drink-quick-btn {
+  position: relative;
+  height: 48px;
+  border-radius: 10px;
+  background-color: #1E3A8A;
+  color: #FFFFFF;
+  border: none;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4px;
+}
+
+/* Responsive Table Cards on Açık Masalar Screen */
+.app2-table-card {
+  background-color: #1C1C1E;
+  border: 1px solid #2C2C2E;
+  border-radius: 20px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}

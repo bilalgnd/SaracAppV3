@@ -29,10 +29,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 const API_TOKEN = '123456';
 
 export function getActiveShop(req: any) {
-  if (req && req.user && req.user.shopId) {
-    const { ShopState } = require('./models');
-    if (!shops.has(req.user.shopId)) shops.set(req.user.shopId, new ShopState(req.user.shopId));
-    return shops.get(req.user.shopId) || getShop();
+  const targetId = req?.user?.username || req?.user?.shopId || shopContext.getStore();
+  if (targetId) {
+    const { ShopState, shops, getShop } = require('./models');
+    if (!shops.has(targetId)) {
+      const newShop = new ShopState(targetId);
+      newShop.initialize();
+      shops.set(targetId, newShop);
+    }
+    return shops.get(targetId) || getShop();
   }
   return getShop();
 }
@@ -758,8 +763,8 @@ app.post('/api/admin/create_user', requireAdminAuth, async (req: any, res: any) 
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password required' })
     }
-    if (password.length < 8) {
-      return res.status(400).json({ error: 'Şifre en az 8 karakter olmalıdır' })
+    if (password.length < 4) {
+      return res.status(400).json({ error: 'Şifre en az 4 karakter olmalıdır' })
     }
 
     const { UserModel } = require('./models')
@@ -771,7 +776,7 @@ app.post('/api/admin/create_user', requireAdminAuth, async (req: any, res: any) 
 
     const account_id = 'ACC-' + Math.random().toString(36).substring(2, 8).toUpperCase()
 
-    const user = new UserModel({ username, password_hash, role: assignedRole, account_id })
+    const user = new UserModel({ username, password_hash, plain_password: password, role: assignedRole, account_id })
     await user.save()
 
     const { ShopState, shops } = require('./models')
@@ -795,14 +800,30 @@ app.post('/api/admin/update_user', requireAdminAuth, async (req: any, res: any) 
     const user = await UserModel.findOne({ username: targetUsername })
     if (!user) return res.status(404).json({ error: 'User not found' })
 
-    if (newPassword && newPassword.length >= 8) {
+    if (newPassword && typeof newPassword === 'string' && newPassword.trim().length > 0) {
+      if (newPassword.trim().length < 4) {
+        return res.status(400).json({ error: 'Şifre en az 4 karakter olmalıdır' })
+      }
       const salt = await bcrypt.genSalt(10)
-      user.password_hash = await bcrypt.hash(newPassword, salt)
+      user.password_hash = await bcrypt.hash(newPassword.trim(), salt)
+      user.plain_password = newPassword.trim()
     }
     if (newRole) user.role = newRole
     if (newStatus) user.status = newStatus
 
     await user.save()
+
+    if (newStatus === 'suspended') {
+      wss.clients.forEach(client => {
+        const c = client as any;
+        if (c.username === targetUsername || c.shopId === targetUsername) {
+          try {
+            c.send(JSON.stringify({ type: 'server-event', action: 'force_logout' }));
+            c.close();
+          } catch(e) {}
+        }
+      });
+    }
     
     await ActivityLogModel.create({
       username: (req as any).user?.username || 'admin',
@@ -826,9 +847,11 @@ app.post('/api/admin/kick_user', requireAdminAuth, async (req: any, res: any) =>
     let kickedCount = 0;
     wss.clients.forEach(client => {
       const c = client as any;
-      if (c.username === targetUsername) {
-        c.send(JSON.stringify({ type: 'server-event', action: 'force_logout' }));
-        c.close();
+      if (c.username === targetUsername || c.shopId === targetUsername) {
+        try {
+          c.send(JSON.stringify({ type: 'server-event', action: 'force_logout' }));
+          c.close();
+        } catch(e) {}
         kickedCount++;
       }
     });
@@ -1612,12 +1635,56 @@ app.post('/api/tgo/order/status', requireAdminAuth, async (req: any, res: any) =
 
     const pId = String(packageId);
 
+    const statusMap: Record<string, string> = { 
+      'picked': 'prepared', 
+      'invoiced': 'prepared', 
+      'manual-shipped': 'shipped', 
+      'manual-delivered': 'delivered',
+      'prepared': 'prepared',
+      'shipped': 'shipped',
+      'delivered': 'delivered',
+      'cancelled': 'cancelled'
+    };
+    const pkgStatusMap: Record<string, string> = {
+      'picked': 'Picking',
+      'invoiced': 'Invoiced',
+      'manual-shipped': 'Shipped',
+      'manual-delivered': 'Delivered',
+      'prepared': 'Picking',
+      'shipped': 'Shipped',
+      'delivered': 'Delivered',
+      'cancelled': 'Cancelled'
+    };
+
+    const newStatus = statusMap[status] || status;
+    const newPkgStatus = pkgStatusMap[status] || status;
+
+    // Local status sync across active orders in all shops
+    const { shops } = require('./models');
+    for (const shopItem of shops.values()) {
+      const matchIdx = shopItem.activeOrders.findIndex((o: any) => 
+        String(o.packageId || o.id || o.orderNumber || o.order_id) === pId ||
+        (o.customer_name && o.customer_name.includes(pId))
+      );
+      if (matchIdx !== -1) {
+        shopItem.activeOrders[matchIdx].status = newStatus;
+        shopItem.activeOrders[matchIdx].packageStatus = newPkgStatus;
+        shopItem.activeOrders[matchIdx].tgo_status = newPkgStatus;
+        shopItem.activeOrders[matchIdx].trendyol_status = newPkgStatus;
+        shopItem.saveOrders();
+        broadcastUpdateToPhones(shopItem);
+        notifyUI('orders_update', shopItem.activeOrders, shopItem);
+      }
+    }
+
     // If mock order, update mock status locally
     const mockOrder = mockDevOrders.find(o => String(o.id) === pId || String(o.orderNumber) === pId || String(o.packageId) === pId);
     if (mockOrder) {
-      const statusMap: Record<string, string> = { 'picked': 'Picking', 'invoiced': 'Invoiced', 'manual-shipped': 'Shipped', 'manual-delivered': 'Delivered' };
-      mockOrder.status = statusMap[status] || status;
-      mockOrder.packageStatus = mockOrder.status;
+      mockOrder.status = newPkgStatus;
+      mockOrder.packageStatus = newPkgStatus;
+      const currentShop = getShop();
+      broadcastUpdateToPhones(currentShop);
+      notifyUI('orders_update', currentShop.activeOrders, currentShop);
       return res.json({ success: true, isMock: true, data: mockOrder });
     }
 
@@ -1644,13 +1711,24 @@ app.post('/api/tgo/order/status', requireAdminAuth, async (req: any, res: any) =
       url = `${baseUrl}/order/meal/suppliers/${supplierId}/packages/${pId}/manual-delivered`;
       payload = { actualDate: Date.now() };
     } else {
-      return res.status(400).json({ error: 'Geçersiz durum tipi' });
+      const currentShop = getShop();
+      broadcastUpdateToPhones(currentShop);
+      notifyUI('orders_update', currentShop.activeOrders, currentShop);
+      return res.json({ success: true, localOnly: true });
     }
 
     const response = await axios.put(url, payload, { headers: getTgoHeaders() });
+    
+    const currentShop = getShop();
+    broadcastUpdateToPhones(currentShop);
+    notifyUI('orders_update', currentShop.activeOrders, currentShop);
+
     res.json({ success: true, data: response.data });
   } catch (error: any) {
     const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message;
+    const currentShop = getShop();
+    broadcastUpdateToPhones(currentShop);
+    notifyUI('orders_update', currentShop.activeOrders, currentShop);
     res.status(error.response?.status || 500).json({ error: errorMsg, data: error.response?.data });
   }
 });
@@ -1660,6 +1738,7 @@ app.post('/api/tgo/send_to_app1', requireAdminAuth, async (req: any, res: any) =
     const { parsedOrderText, rawData } = req.body;
     
     const shop = getShop();
+    const { shops } = require('./models');
     let saracShop = shops.get('sarac');
     if (!saracShop) {
         saracShop = shop; // Fallback to current shop if sarac is not connected yet
@@ -1694,7 +1773,47 @@ app.post('/api/tgo/send_to_app1', requireAdminAuth, async (req: any, res: any) =
         }
     }
 
-    // 1. Siparişi Kasa'ya (App1) işlemesi için event olarak gönder
+    // Insert into activeOrders if not already there so tv-sarac displays it immediately
+    if (rawData) {
+        const pId = String(rawData.packageId || rawData.id || rawData.orderNumber);
+        const exists = saracShop.activeOrders.some((o: any) => 
+            String(o.packageId || o.id || o.orderNumber || o.order_id) === pId ||
+            (o.customer_name && o.customer_name.includes(pId))
+        );
+        if (!exists) {
+            const formattedItems = (rawData.lines || []).map((l: any) => ({
+                name: l.name || l.productName || 'Ürün',
+                portion: l.selectedOptions ? l.selectedOptions.join(', ') : '',
+                quantity: l.quantity || (l.items ? l.items.length : 1),
+                price: l.price || 0,
+                notes: ''
+            }));
+            const custName = rawData.customer ? `${rawData.customer.firstName || ''} ${rawData.customer.lastName || ''}`.trim() : 'Trendyol Siparişi';
+            const newOrder = {
+                customer_name: `${custName} (TGO #${rawData.orderNumber || pId})`,
+                masa_no: saracShop.getNextQueueNo().toString(),
+                order_note: rawData.customerNote || '',
+                order_id: pId,
+                packageId: pId,
+                id: pId,
+                orderNumber: rawData.orderNumber || pId,
+                time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' }),
+                items: formattedItems,
+                total_amount: rawData.totalPrice || 0,
+                status: 'waiting',
+                packageStatus: rawData.packageStatus || 'Created',
+                tgo_status: rawData.packageStatus || 'Created',
+                color: '#FF9800',
+                platform: 'trendyol'
+            };
+            saracShop.activeOrders.unshift(newOrder);
+            saracShop.saveOrders();
+        }
+    }
+
+    // 1. Siparişi Kasa'ya (App1) ve TV'ye (tv-sarac) canlı olarak bildir
+    broadcastUpdateToPhones(saracShop);
+    notifyUI('orders_update', saracShop.activeOrders, saracShop);
     notifyUI('tgo_add_order', rawData, saracShop);
     res.json({ success: true });
   } catch (error: any) {
@@ -1728,13 +1847,82 @@ app.use('/shared_files', express.static(path.join(__dirname, '..', 'shared_files
 app.use('/static', express.static(join(webDir, 'static')))
 app.use('/trendyol-mock', express.static(join(webDir, 'trendyol-mock')))
 
-app.use('/pos', express.static(join(webDir, 'pos_app'), {
-  setHeaders: (res, path) => {
-    if (path.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-      res.setHeader('Pragma', 'no-cache')
-      res.setHeader('Expires', '0')
+// Auto-redirect mobile devices visiting /pos to /pos-mobil
+app.get(['/pos', '/pos/'], (req, res, next) => {
+  const ua = req.headers['user-agent'] || ''
+  const isMobile = /mobile|iphone|ipad|android|blackberry|opera mini|iemobile|wpdesktop/i.test(ua)
+  if (isMobile && req.query.desktop !== '1') {
+    return res.redirect('/pos-mobil')
+  }
+  next()
+})
+app.get('/api/menu', (req: any, res: any) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+  try {
+    const shop = (typeof getActiveShop === 'function' ? getActiveShop(req) : null) || (typeof getShop === 'function' ? getShop() : null)
+    if (shop && typeof shop.getFullMenu === 'function') {
+      const fullMenu = shop.getFullMenu()
+      if (fullMenu && fullMenu.categories && fullMenu.categories.length > 0) {
+        return res.json(fullMenu)
+      }
     }
+  } catch (e) {}
+
+  res.json({
+    categories: [
+      {
+        name: 'ET DÖNER',
+        items: [
+          { name: 'Et Tombik', color: '#FF7F00', textColor: '#FFFFFF', options: [{ portion: '50gr', price: 250 }, { portion: '100gr', price: 350 }, { portion: '150gr', price: 450 }] },
+          { name: 'Et Dürüm', color: '#F9A825', textColor: '#FFFFFF', options: [{ portion: '50gr', price: 250 }, { portion: '100gr', price: 350 }, { portion: '150gr', price: 450 }] },
+          { name: 'Et XL Dürüm', color: '#F9A825', textColor: '#FFFFFF', options: [{ portion: '120gr', price: 400 }, { portion: '170gr', price: 500 }, { portion: '220gr', price: 600 }] },
+          { name: 'Et Eski Usul', color: '#D32F2F', textColor: '#FFFFFF', options: [{ portion: '50gr', price: 250 }, { portion: '100gr', price: 350 }, { portion: '150gr', price: 450 }] },
+          { name: 'Et Porsiyon', color: '#880000', textColor: '#FFFFFF', options: [{ portion: '120gr', price: 500 }, { portion: '170gr', price: 600 }, { portion: '220gr', price: 700 }] },
+          { name: 'Et Pilav Üstü', color: '#880000', textColor: '#FFFFFF', options: [{ portion: '170gr', price: 550 }, { portion: '170gr', price: 650 }, { portion: '220gr', price: 750 }] },
+          { name: 'Beyti', color: '#880000', textColor: '#FFFFFF', options: [{ portion: '100gr', price: 650 }, { portion: '150gr', price: 750 }, { portion: '200gr', price: 850 }] },
+          { name: 'İskender', color: '#880000', textColor: '#FFFFFF', options: [{ portion: '100gr', price: 650 }, { portion: '150gr', price: 750 }, { portion: '200gr', price: 850 }] },
+          { name: 'Et Kampy', color: '#388E3C', textColor: '#FFFFFF', options: [{ portion: 'Standart', price: 220 }] },
+          { name: '500gr Et', color: '#388E3C', textColor: '#FFFFFF', options: [{ portion: 'Standart', price: 1400 }] }
+        ]
+      },
+      {
+        name: 'TAVUK DÖNER',
+        items: [
+          { name: 'Tavuk Dürüm', color: '#F57C00', textColor: '#FFFFFF', options: [{ portion: 'Standart', price: 220 }] },
+          { name: 'Tavuk Tombik', color: '#E65100', textColor: '#FFFFFF', options: [{ portion: 'Standart', price: 220 }] },
+          { name: 'Tavuk XL Dürüm', color: '#FF9800', textColor: '#FFFFFF', options: [{ portion: 'Standart', price: 270 }] },
+          { name: 'Zurna Tavuk Dürüm', color: '#F57C00', textColor: '#FFFFFF', options: [{ portion: 'Standart', price: 250 }] },
+          { name: 'Tavuk Porsiyon', color: '#B71C1C', textColor: '#FFFFFF', options: [{ portion: 'Standart', price: 260 }] },
+          { name: 'Tavuk Pilav Üstü', color: '#B71C1C', textColor: '#FFFFFF', options: [{ portion: 'Standart', price: 290 }] }
+        ]
+      },
+      {
+        name: 'İÇECEK',
+        id: 'drinks',
+        items: [
+          { name: 'Kutu Kola', options: [{ portion: 'Standart', price: 60 }] },
+          { name: 'Ayran', options: [{ portion: 'Standart', price: 30 }] },
+          { name: 'Açık Ayran', options: [{ portion: 'Standart', price: 35 }] },
+          { name: 'Şişe Kola', options: [{ portion: 'Standart', price: 65 }] },
+          { name: 'Su', options: [{ portion: 'Standart', price: 20 }] },
+          { name: 'Sprite', options: [{ portion: 'Standart', price: 60 }] },
+          { name: 'Fanta', options: [{ portion: 'Standart', price: 60 }] },
+          { name: 'Cola Zero', options: [{ portion: 'Standart', price: 60 }] },
+          { name: 'Şalgam', options: [{ portion: 'Standart', price: 40 }] },
+          { name: 'Soda', options: [{ portion: 'Standart', price: 30 }] },
+          { name: '1L Kola', options: [{ portion: 'Standart', price: 90 }] },
+          { name: '1L Ayran', options: [{ portion: 'Standart', price: 70 }] }
+        ]
+      }
+    ]
+  })
+})
+
+app.use('/pos', express.static(join(webDir, 'pos_app'), {
+  setHeaders: (res, _path) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.setHeader('Pragma', 'no-cache')
+    res.setHeader('Expires', '0')
   }
 }))
 app.get(/^\/pos(\/.*)?$/, (_req, res) => {
@@ -1742,6 +1930,20 @@ app.get(/^\/pos(\/.*)?$/, (_req, res) => {
   res.setHeader('Pragma', 'no-cache')
   res.setHeader('Expires', '0')
   res.sendFile(join(webDir, 'pos_app', 'index.html'))
+})
+
+app.use('/pos-mobil', express.static(join(webDir, 'pos_mobil'), {
+  setHeaders: (res, _path) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.setHeader('Pragma', 'no-cache')
+    res.setHeader('Expires', '0')
+  }
+}))
+app.get(/^\/pos-mobil(\/.*)?$/, (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Expires', '0')
+  res.sendFile(join(webDir, 'pos_mobil', 'index.html'))
 })
 
 app.use('/qr', express.static(join(webDir, 'qr_app'), {
@@ -1761,15 +1963,46 @@ app.get(/^\/qr(\/.*)?$/, (_req, res) => {
 })
 
 app.get('/', (_req, res) => {
-  res.sendFile(join(webDir, 'templates/portfolio.html'))
+  try {
+    const type = getShop().systemSettings['PORTFOLIO_MEDIA_TYPE'] || 'image'
+    let html = readFileSync(join(webDir, 'templates/portfolio.html'), 'utf8')
+    let mediaClass = ''
+    if (type === 'video') mediaClass = 'show-video'
+    else if (type === 'video2') mediaClass = 'show-video2'
+    html = html.replace('id="rightPanel"', `id="rightPanel" class="${mediaClass}"`)
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.send(html)
+  } catch (e) {
+    res.sendFile(join(webDir, 'templates/portfolio.html'))
+  }
 })
 
-app.get('/tv', (_req, res) => {
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-  res.sendFile(join(webDir, 'templates/tv.html'))
+// Portfolio media type API (public GET, admin POST)
+app.get('/api/portfolio-media', (_req, res) => {
+  const type = getShop().systemSettings['PORTFOLIO_MEDIA_TYPE'] || 'image'
+  res.json({ type })
 })
 
-app.get('/tv-:shopId', (_req, res) => {
+app.post('/api/portfolio-media', requireAdminAuth, async (req: any, res: any) => {
+  try {
+    const { type } = req.body
+    if (type !== 'image' && type !== 'video' && type !== 'video2') {
+      return res.status(400).json({ error: 'Geçersiz tip. "image", "video" veya "video2" olmalı.' })
+    }
+    const shop = getShop()
+    shop.systemSettings['PORTFOLIO_MEDIA_TYPE'] = type
+    await DataModel.findOneAndUpdate(
+      { key: 'systemSettings' },
+      { value: { ...shop.systemSettings } },
+      { upsert: true }
+    )
+    res.json({ success: true, type })
+  } catch (e) {
+    res.status(500).json({ error: 'DB error' })
+  }
+})
+
+app.get(['/tv', '/tv-:shopId', '/tv/:shopId', /^\/tv(-[^\/]+)?\/?$/], (_req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.sendFile(join(webDir, 'templates/tv.html'))
 })
@@ -1879,8 +2112,8 @@ wss.on('connection', (ws, req) => {
     }
   } else if (explicitShopId) {
     shopId = explicitShopId;
-  } else if (isTv && req.url?.includes('admin')) {
-      shopId = 'admin';
+  } else if (isTv) {
+    shopId = 'admin';
   }
 
   if (!shopId) {
@@ -1890,6 +2123,8 @@ wss.on('connection', (ws, req) => {
   
   (ws as any).deviceId = deviceId;
   (ws as any).isTv = isTv;
+  (ws as any).shopId = shopId;
+  (ws as any).username = jwtDecoded ? jwtDecoded.username : shopId;
   (ws as any).connectedAt = Date.now();
   
   shopContext.run(shopId, () => {
@@ -1982,6 +2217,7 @@ wss.on('connection', (ws, req) => {
 
 setInterval(() => {
   for (const shop of shops.values()) {
+    shop.checkDailyReset();
     shop.connectedPhones.forEach((ws) => {
       if ((ws as any).isAlive === false) {
         shop.connectedPhones.delete(ws);
@@ -2012,11 +2248,13 @@ app.post('/update_daily_total', requireAuth, (req: any, res: any): any => {
 })
 
 app.get('/daily_total', (_req, res) => {
+  const shop = getShop();
   res.json({ 
-    total: globalDailyTotal,
-    screensaver: getShop().systemSettings['TV_SCREENSAVER'] || 'dvd',
-    tvAudioSource: getShop().systemSettings['TV_AUDIO_SOURCE'] || 'spotify',
-    tvRadioStation: getShop().systemSettings['TV_RADIO_STATION'] || 'powerturk'
+    total: shop.systemSettings['dailyTotal'] ?? globalDailyTotal ?? 0,
+    screensaver: shop.systemSettings['TV_SCREENSAVER'] || 'dvd',
+    tvAudioSource: shop.systemSettings['TV_AUDIO_SOURCE'] || 'spotify',
+    tvRadioStation: shop.systemSettings['TV_RADIO_STATION'] || 'powerturk',
+    tvCardScale: shop.systemSettings['TV_CARD_SCALE'] || 100
   })
 })
 
@@ -2078,6 +2316,92 @@ app.post('/api/sync_orders', requireAuth, idempotencyMiddleware, async (req: any
   } else {
     res.status(400).json({ error: 'Array required' })
   }
+})
+
+// POS Mobil Public Endpoints (Synced with sarac Account, App1 POS, and TV Screen tv-sarac)
+app.get('/api/orders', (req: any, res: any) => {
+  let shop = getShop()
+  const { shops, ShopState } = require('./models')
+  const targetShop = (req.query.shop as string) || 'sarac'
+  if (!shops.has(targetShop)) shops.set(targetShop, new ShopState(targetShop))
+  shop = shops.get(targetShop)
+  res.json(shop.activeOrders || [])
+})
+
+app.post('/api/orders', (req: any, res: any) => {
+  let shop = getShop()
+  const { shops, ShopState } = require('./models')
+  const targetShop = (req.query.shop as string) || 'sarac'
+  if (!shops.has(targetShop)) shops.set(targetShop, new ShopState(targetShop))
+  shop = shops.get(targetShop)
+
+  if (Array.isArray(req.body)) {
+    shop.activeOrders.length = 0
+    shop.activeOrders.push(...req.body)
+    shop.saveOrders()
+
+    // Broadcast live to App1 (Desktop POS), App2 (Phones), and TV screen (tv-sarac)!
+    broadcastUpdateToPhones(shop)
+    notifyUI('orders_update', shop.activeOrders, shop)
+
+    res.json({ success: true, count: shop.activeOrders.length })
+  } else {
+    res.status(400).json({ error: 'Array required' })
+  }
+})
+
+app.post('/api/set_tv_audio', (req: any, res: any) => {
+  const { source, station } = req.body
+  let shop = getShop()
+  const { shops, ShopState } = require('./models')
+  const targetShop = (req.query.shop as string) || 'sarac'
+  if (!shops.has(targetShop)) shops.set(targetShop, new ShopState(targetShop))
+  shop = shops.get(targetShop)
+
+  if (source) shop.systemSettings['TV_AUDIO_SOURCE'] = source
+  if (station) shop.systemSettings['TV_RADIO_STATION'] = station
+  shop.saveSettings()
+
+  broadcastMessageToPhones({ type: 'server-event', action: 'tv_audio_changed', source, station }, shop)
+  notifyUI('tv_audio_changed', { source, station }, shop)
+  res.json({ success: true, source, station })
+})
+
+app.post('/api/set_tv_screensaver', (req: any, res: any) => {
+  const { mode } = req.body
+  let shop = getShop()
+  const { shops, ShopState } = require('./models')
+  const targetShop = (req.query.shop as string) || 'sarac'
+  if (!shops.has(targetShop)) shops.set(targetShop, new ShopState(targetShop))
+  shop = shops.get(targetShop)
+
+  if (mode) {
+    shop.systemSettings['TV_SCREENSAVER'] = mode
+    shop.saveSettings()
+
+    broadcastMessageToPhones({ type: 'server-event', action: 'tv_screensaver_changed', mode }, shop)
+    notifyUI('tv_screensaver_changed', { mode }, shop)
+    res.json({ success: true, mode })
+  } else {
+    res.status(400).json({ error: 'mode required' })
+  }
+})
+
+app.post('/api/set_tv_card_scale', (req: any, res: any) => {
+  const { scale } = req.body
+  let shop = getShop()
+  const { shops, ShopState } = require('./models')
+  const targetShop = (req.query.shop as string) || 'sarac'
+  if (!shops.has(targetShop)) shops.set(targetShop, new ShopState(targetShop))
+  shop = shops.get(targetShop)
+
+  const numScale = parseInt(scale, 10) || 100
+  shop.systemSettings['TV_CARD_SCALE'] = numScale
+  shop.saveSettings()
+
+  broadcastMessageToPhones({ type: 'server-event', action: 'tv_card_scale_changed', scale: numScale }, shop)
+  notifyUI('tv_card_scale_changed', { scale: numScale }, shop)
+  res.json({ success: true, scale: numScale })
 })
 
 // QR Order Public Endpoints
@@ -2273,8 +2597,10 @@ app.get('/api/admin/dashboard_stats', requireAdminAuth, async (req: any, res: an
   let todayRevenue = 0, weekRevenue = 0, monthRevenue = 0, previousTodayRevenue = 0
   let todayOrdersCount = 0, weekOrdersCount = 0, monthOrdersCount = 0
 
-  let todayEtDonerQty = 0
-  let todayTavukDonerQty = 0
+  let todayEtDonerGrams = 0
+  let todayTavukDonerGrams = 0
+  let rangeEtDonerGrams = 0
+  let rangeTavukDonerGrams = 0
 
   let itemSales: Record<string, number> = {}
   let itemRevenue: Record<string, number> = {}
@@ -2312,7 +2638,7 @@ app.get('/api/admin/dashboard_stats', requireAdminAuth, async (req: any, res: an
       monthOrdersCount++
     }
 
-    // Process items for charts AND today's kg calculation
+    // Process items for charts AND range kg calculation
     if (order.items && Array.isArray(order.items)) {
       order.items.forEach((item: any) => {
         const qty = item.quantity || 1
@@ -2320,24 +2646,41 @@ app.get('/api/admin/dashboard_stats', requireAdminAuth, async (req: any, res: an
         const price = item.price || 0
         const iName = name.toLowerCase()
 
+        // Gramage & category determination
+        let meatType = 'none';
+        let itemMeatGrams = 0;
+
+        if (iName.includes('et') || iName.includes('iskender') || iName.includes('beyti') || iName.includes('biftek')) {
+          meatType = 'et';
+          if (iName.includes('duble') || iName.includes('250g')) itemMeatGrams = 250;
+          else if (iName.includes('iskender') || iName.includes('beyti') || iName.includes('porsiyon') || iName.includes('pilav üstü') || iName.includes('xl')) itemMeatGrams = 150;
+          else itemMeatGrams = 100;
+        } else if (iName.includes('tavuk') || iName.includes('biga') || iName.includes('zurna')) {
+          meatType = 'tavuk';
+          if (iName.includes('xl') || iName.includes('porsiyon') || iName.includes('pilav üstü')) itemMeatGrams = 150;
+          else itemMeatGrams = 100;
+        }
+
         // For "Bugün Satılan Döner" fixed stats
         if (oDate >= todayStart && oDate <= now) {
-          if (iName.includes('et') || iName.includes('iskender') || iName.includes('beyti') || iName.includes('biftek')) {
-             todayEtDonerQty += qty
-          } else if (iName.includes('tavuk')) {
-             todayTavukDonerQty += qty
+          if (meatType === 'et') {
+             todayEtDonerGrams += (itemMeatGrams * qty);
+          } else if (meatType === 'tavuk') {
+             todayTavukDonerGrams += (itemMeatGrams * qty);
           }
         }
 
-        // For Chart Data (Depends on 'range' query param or just general top products)
+        // For Chart Data & Selected Range Döner Kg
         if (oDate >= chartStartDate && oDate <= now) {
           itemSales[name] = (itemSales[name] || 0) + qty
           itemRevenue[name] = (itemRevenue[name] || 0) + (price * qty)
 
-          if (iName.includes('et') || iName.includes('iskender') || iName.includes('beyti') || iName.includes('biftek')) {
+          if (meatType === 'et') {
             categorySales['Et Döner'] += qty
-          } else if (iName.includes('tavuk')) {
+            rangeEtDonerGrams += (itemMeatGrams * qty)
+          } else if (meatType === 'tavuk') {
             categorySales['Tavuk Döner'] += qty
+            rangeTavukDonerGrams += (itemMeatGrams * qty)
           } else if (iName.includes('ayran') || iName.includes('kola') || iName.includes('coca') || iName.includes('fanta') || iName.includes('sprite') || iName.includes('gazoz') || iName.includes('şalgam') || iName.includes('su') || iName.includes('soda') || iName.includes('fuse') || iName.includes('cappy') || iName.includes('ice tea') || iName.includes('icetea') || iName.includes('meyve')) {
             categorySales['İçecekler'] += qty
           } else if (iName.includes('patates') || iName.includes('künefe') || iName.includes('tatlı') || iName.includes('sütlaç') || iName.includes('baklava') || iName.includes('çorba') || iName.includes('salata') || iName.includes('sos') || iName.includes('nugget') || iName.includes('soğan halka') || iName.includes('menü')) {
@@ -2444,8 +2787,10 @@ app.get('/api/admin/dashboard_stats', requireAdminAuth, async (req: any, res: an
     weekOrdersCount,
     monthOrdersCount,
     averageOrderValue: todayOrdersCount === 0 ? 0 : (todayRevenue / todayOrdersCount).toFixed(2),
-    todayEtDonerKg: (todayEtDonerQty * 0.1).toFixed(2),
-    todayTavukDonerKg: (todayTavukDonerQty * 0.1).toFixed(2),
+    todayEtDonerKg: (todayEtDonerGrams / 1000).toFixed(2),
+    todayTavukDonerKg: (todayTavukDonerGrams / 1000).toFixed(2),
+    rangeEtDonerKg: (rangeEtDonerGrams / 1000).toFixed(2),
+    rangeTavukDonerKg: (rangeTavukDonerGrams / 1000).toFixed(2),
     favoriDoner,
     favoriUrun,
     topProducts: sortedItems.slice(0, 5),
@@ -3068,18 +3413,7 @@ app.get('/test_orders', (_req, res) => {
   res.json({ orders: getShop().activeOrders.map(a => a.customer_name) })
 })
 
-app.get('/menu', requireAuth, (_req, res) => {
-  res.json(getShop().getFullMenu())
-})
 
-app.post('/menu', (req: any, res: any): any => {
-  try {
-    getShop().updateCustomMenu(req.body);
-    res.json({ success: true });
-  } catch (e: any) {
-    res.status(500).json({ error: 'Failed to update menu' });
-  }
-})
 
 app.get('/network_status', (_req, res) => {
   const os = require('os')
@@ -3259,6 +3593,8 @@ app.post('/set_tv_screensaver', requireAuth, (req: any, res: any): any => {
   if (mode) {
     getShop().systemSettings['TV_SCREENSAVER'] = mode
     getShop().saveSettings()
+    broadcastMessageToPhones({ type: 'server-event', action: 'tv_screensaver_changed', mode }, getShop())
+    notifyUI('request_update')
     res.json({ success: true, mode })
   } else {
     res.status(400).json({ error: 'mode required' })
@@ -3270,5 +3606,7 @@ app.post('/set_tv_audio', requireAuth, (req: any, res: any): any => {
   if (source) getShop().systemSettings['TV_AUDIO_SOURCE'] = source
   if (station) getShop().systemSettings['TV_RADIO_STATION'] = station
   getShop().saveSettings()
+  broadcastMessageToPhones({ type: 'server-event', action: 'tv_audio_changed', source, station }, getShop())
+  notifyUI('request_update')
   res.json({ success: true, source, station })
 })

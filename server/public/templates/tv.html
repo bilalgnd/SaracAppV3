@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SARACOGLU Mutfak Ekranı</title>
+    <title>Vantage Mutfak Ekranı</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
     <style>
         @font-face {
             font-family: 'University Roman Bold';
@@ -19,13 +20,53 @@
             --border: #333333;
         }
 
+        html, body {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        ::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+
         body {
-            background-color: var(--bg);
+            background-color: #080a0f;
             color: var(--text);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 10px 15px;
             overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        #bgWallpaper {
+            position: fixed;
+            top: -20px;
+            left: -20px;
+            right: -20px;
+            bottom: -20px;
+            background-image: url('/static/tv_bg.png');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            filter: blur(12px) brightness(0.52);
+            transform: scale(1.05);
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        #bgDarkOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.55) 100%);
+            z-index: -1;
+            pointer-events: none;
         }
 
         .header {
@@ -46,9 +87,72 @@
         }
 
         .clock {
-            font-size: 24px;
-            font-weight: bold;
-            color: #ddd;
+            font-size: 19px;
+            font-weight: 800;
+            color: #2ECC71;
+            font-family: 'Consolas', 'Courier New', monospace;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            border-radius: 16px;
+            padding: 6px 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        #spotifyContainer {
+            width: 270px;
+            height: 52px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            padding: 6px 10px;
+            box-sizing: border-box;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(29, 185, 84, 0.4);
+            margin-right: 10px;
+            transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        
+        #spCover {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            object-fit: cover;
+            margin-right: 10px;
+            background: #242424;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        
+        .sp-info {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        #spTitle {
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 700;
+            font-family: system-ui, -apple-system, sans-serif;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 2px;
+        }
+        #spArtist {
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 11px;
+            font-weight: 500;
+            font-family: system-ui, -apple-system, sans-serif;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .grid {
@@ -65,12 +169,19 @@
         }
 
         .order-card {
-            background-color: var(--surface);
-            border: 3px solid var(--border);
-            border-radius: 10px;
-            padding: 12px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-            animation: fadeIn 0.5s ease-out;
+            background: rgba(22, 22, 22, 0.88);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+            backdrop-filter: blur(14px);
+            animation: fadeIn 0.4s ease-out;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .order-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 36px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12);
         }
 
         @keyframes fadeIn {
@@ -88,21 +199,65 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 8px;
-            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 10px;
+            margin-bottom: 12px;
         }
 
         .order-title {
-            font-size: 20px;
-            font-weight: 900;
-            color: #fff;
+            font-size: 19px;
+            font-weight: 800;
+            color: #ffffff;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .order-time {
-            font-size: 16px;
-            color: #ff9800;
-            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .price-badge {
+            background: rgba(46, 204, 113, 0.15);
+            color: #2ECC71;
+            border: 1px solid rgba(46, 204, 113, 0.35);
+            border-radius: 10px;
+            padding: 3px 9px;
+            font-weight: 800;
+            font-size: 15px;
+            font-family: system-ui, -apple-system, sans-serif;
+            text-shadow: 0 0 8px rgba(46, 204, 113, 0.4);
+        }
+
+        .time-badge {
+            background: rgba(255, 152, 0, 0.15);
+            color: #FF9800;
+            border: 1px solid rgba(255, 152, 0, 0.35);
+            border-radius: 10px;
+            padding: 3px 9px;
+            font-weight: 700;
+            font-size: 13px;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        .order-note-box {
+            background: rgba(46, 204, 113, 0.08);
+            border: 1.5px solid rgba(46, 204, 113, 0.45);
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            color: #2ECC71;
+            font-weight: 700;
+            font-size: 14px;
+            font-family: system-ui, -apple-system, sans-serif;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            box-shadow: 0 2px 10px rgba(46, 204, 113, 0.12), inset 0 0 10px rgba(46, 204, 113, 0.05);
         }
 
         .item-list {
@@ -112,29 +267,56 @@
         }
 
         .item {
-            background-color: #2a2a2a;
-            padding: 8px 12px;
-            border-radius: 6px;
-            border-left: 4px solid #555;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
+            padding: 9px 12px;
+            border-radius: 10px;
+            backdrop-filter: blur(8px);
+            transition: background 0.2s;
+        }
+
+        .item.chicken {
+            background: rgba(3, 169, 244, 0.08);
+            border: 1.5px solid rgba(3, 169, 244, 0.35);
         }
         
-        .item.chicken { border-left-color: #03A9F4; background-color: #1a2a35; }
-        .item.drink { border-left-color: #8BC34A; background-color: #1e2e1e; }
+        .item.drink {
+            background: rgba(139, 195, 74, 0.08);
+            border: 1.5px solid rgba(139, 195, 74, 0.35);
+        }
 
         .item-name {
-            font-size: 17px;
-            font-weight: bold;
-            color: #eee;
+            font-size: 16px;
+            font-weight: 700;
+            color: #f5f5f5;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .portion-badge {
+            color: #aaa;
+            font-size: 13px;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 1px 6px;
+            border-radius: 6px;
         }
 
         .item-notes {
-            font-size: 14px;
+            font-size: 13px;
             color: #ff5252;
-            margin-top: 4px;
-            font-weight: bold;
+            margin-top: 5px;
+            font-weight: 700;
             word-break: break-word;
             overflow-wrap: break-word;
             white-space: normal;
+            background: rgba(255, 82, 82, 0.1);
+            border: 1px solid rgba(255, 82, 82, 0.35);
+            padding: 4px 8px;
+            border-radius: 6px;
         }
 
         .empty-state {
@@ -425,19 +607,35 @@
         #dvdLogo {
             position: fixed;
             font-family: 'University Roman Bold', serif;
-            font-size: 64px;
+            font-size: 72px;
             color: #D84315;
             white-space: nowrap;
             user-select: none;
             display: none;
-            z-index: 5;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            letter-spacing: 2px;
+            z-index: 20;
+            text-shadow: 3px 3px 8px rgba(0,0,0,0.9);
+            letter-spacing: 3px;
+        }
+
+        /* DVD modunda header görünür kalır */
+        body.idle-dvd .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            background: rgba(13,13,13,0.85);
+            padding: 8px 15px;
+            margin-bottom: 0;
+            backdrop-filter: blur(6px);
         }
 
         /* Black mode support */
         body.idle-off {
             background-color: black;
+        }
+        body.idle-off #bgWallpaper, body.idle-off #bgDarkOverlay {
+            display: none !important;
         }
         body.idle-off .header, body.idle-off .grid {
             display: none !important;
@@ -446,30 +644,42 @@
     </style>
 </head>
 <body>
-
+    <div id="bgWallpaper"></div>
+    <div id="bgDarkOverlay"></div>
     <div class="header">
-        <h1 style="display:flex; align-items:center;">
-            SARAÇOGLU <span style="margin-left: 8px;">MUTFAK EKRANI</span>
-            <div id="dailyTotalText" style="margin-left: 20px; color: #1DB954; font-size: 24px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; letter-spacing: normal;">0 ₺</div>
-        </h1>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <h1 style="margin: 0; font-family: 'University Roman Bold', serif; letter-spacing: 1.5px; font-size: 28px; color: #ffffff;">
+                VANTAGE
+            </h1>
+            <div id="dailyTotalBadge" style="display: flex; align-items: center; gap: 6px; background: rgba(46, 204, 113, 0.12); border: 1px solid rgba(46, 204, 113, 0.35); border-radius: 20px; padding: 4px 14px; box-shadow: 0 0 12px rgba(46, 204, 113, 0.15);">
+                <span style="font-size: 11px; color: #aaa; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; font-family: system-ui, -apple-system, sans-serif;">GÜNLÜK</span>
+                <span id="dailyTotalText" style="color: #2ECC71; font-size: 18px; font-weight: 800; font-family: system-ui, -apple-system, sans-serif; text-shadow: 0 0 8px rgba(46, 204, 113, 0.4);">0 ₺</span>
+            </div>
+        </div>
         <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="display: flex; align-items: center; background: #181818; border: 1px solid #333; border-radius: 20px; padding: 3px; gap: 4px; margin-right: 10px;">
-                <button id="btnAudioSpotify" onclick="setAudioSource('spotify')" style="background: #1DB954; color: #fff; border: none; padding: 5px 12px; border-radius: 16px; font-weight: bold; font-size: 12px; cursor: pointer; transition: all 0.3s;">🟢 Spotify</button>
-                <button id="btnAudioRadio" onclick="setAudioSource('radio')" style="background: transparent; color: #aaa; border: none; padding: 5px 12px; border-radius: 16px; font-weight: bold; font-size: 12px; cursor: pointer; transition: all 0.3s;">📻 Radyo</button>
+            <div style="display: flex; align-items: center; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 20px; padding: 4px 14px; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                <span style="font-size: 14px; filter: drop-shadow(0 0 4px rgba(46, 204, 113, 0.6));">🔍</span>
+                <input type="range" id="tvCardScaleSlider" min="70" max="200" value="100" step="5" oninput="changeTvCardScale(this.value, true)" style="width: 80px; accent-color: #2ECC71; cursor: pointer;">
+                <span id="tvCardScaleVal" style="font-size: 11px; font-weight: 800; color: #2ECC71; min-width: 34px; text-shadow: 0 0 8px rgba(46, 204, 113, 0.4); font-family: system-ui, -apple-system, sans-serif;">100%</span>
+            </div>
+
+            <div style="display: flex; align-items: center; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 20px; padding: 3px; gap: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                <button id="btnAudioSpotify" onclick="setAudioSource('spotify')" style="background: linear-gradient(135deg, #1DB954, #15883e); color: #fff; border: none; padding: 5px 14px; border-radius: 16px; font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3);">🟢 Spotify</button>
+                <button id="btnAudioRadio" onclick="setAudioSource('radio')" style="background: transparent; color: #aaa; border: none; padding: 5px 14px; border-radius: 16px; font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.3s ease;">📻 Radyo</button>
             </div>
 
             <div id="spotifyContainer">
-                <img id="spCover" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" style="background-color: #242424; border: 1px solid #333;" />
+                <img id="spCover" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" style="background-color: #242424; border: 1px solid rgba(255,255,255,0.1);" />
                 <div class="sp-info">
                     <div id="spTitle">Spotify Bekleniyor...</div>
-                    <div id="spArtist">Telefonunuzdan SARACOGLU Mutfak'i secin</div>
+                    <div id="spArtist">Telefonunuzdan Vantage Mutfak'i secin</div>
                 </div>
             </div>
 
-            <div id="radioContainer" style="display: none; width: 280px; height: 60px; background: #181818; border-radius: 12px; align-items: center; padding: 8px; box-sizing: border-box; border: 2px solid #FF9800; margin-right: 20px;">
-                <div style="width: 44px; height: 44px; border-radius: 6px; background: #FF9800; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-size: 22px;">📻</div>
+            <div id="radioContainer" style="display: none; width: 270px; height: 52px; background: rgba(255, 255, 255, 0.04); border-radius: 16px; align-items: center; padding: 6px 10px; box-sizing: border-box; backdrop-filter: blur(12px); border: 1px solid rgba(255, 152, 0, 0.4); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); margin-right: 10px;">
+                <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #FF9800, #F57C00); display: flex; align-items: center; justify-content: center; margin-right: 10px; font-size: 18px; box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);">📻</div>
                 <div style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
-                    <select id="radioStationSelect" onchange="changeRadioStation(this.value)" style="background: #282828; color: #fff; border: 1px solid #444; border-radius: 6px; padding: 4px 6px; font-size: 13px; font-weight: bold; outline: none; cursor: pointer;">
+                    <select id="radioStationSelect" onchange="changeRadioStation(this.value)" style="background: rgba(0, 0, 0, 0.4); color: #fff; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 2px 6px; font-size: 12px; font-weight: bold; outline: none; cursor: pointer; font-family: system-ui;">
                         <option value="powerturk">⚡ Power Türk</option>
                         <option value="number1fm">⚡ Number1 FM</option>
                         <option value="number1turk">⚡ Number1 Türk</option>
@@ -482,7 +692,7 @@
                         <option value="alemfm">Alem FM</option>
                         <option value="kafaradyo">Kafa Radyo</option>
                     </select>
-                    <div id="radioStatusText" onclick="playRadioStation(activeRadioStation)" style="color: #4CAF50; font-size: 11px; margin-top: 4px; font-weight: bold; cursor: pointer;">● Canlı Çalıyor</div>
+                    <div id="radioStatusText" onclick="playRadioStation(activeRadioStation)" style="color: #4CAF50; font-size: 10px; margin-top: 2px; font-weight: 700; cursor: pointer; font-family: system-ui;">● Canlı Çalıyor</div>
                 </div>
             </div>
 
@@ -495,7 +705,7 @@
         <h2>Sipariş Bekleniyor...</h2>
     </div>
     
-    <div id="dvdLogo">SARACOGLU</div>
+    <div id="dvdLogo">VANTAGE</div>
 
     <div class="grid" id="ordersGrid"></div>
 
@@ -511,7 +721,7 @@
                 </div>
                 <div class="sp-fs-source-text">
                     <span class="sp-fs-source-title">PLAYING ON</span>
-                    <span class="sp-fs-source-desc">SARACOGLU MUTFAK</span>
+                    <span class="sp-fs-source-desc">VANTAGE MUTFAK</span>
                 </div>
             </div>
             <div class="sp-fs-upnext" id="spFsUpNext" style="display: none;">
@@ -526,21 +736,23 @@
             <img id="spFsCover" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="">
             <div class="sp-fs-trackinfo">
                 <h1 id="spFsTitle">Spotify'a Bağlandı</h1>
-                <h2 id="spFsArtist">Cihazlardan SARACOGLU Mutfak'ı seçin</h2>
+                <h2 id="spFsArtist">Cihazlardan Vantage Mutfak'ı seçin</h2>
             </div>
         </div>
         <div class="sp-fs-bottom">
             <div class="sp-fs-controls">
-                <!-- Mute -->
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                <!-- Mute Toggle -->
+                <svg id="spFsMuteBtn" width="28" height="28" viewBox="0 0 24 24" fill="white" style="cursor:pointer;" onclick="toggleSpotifyMute()">
+                    <path id="spFsMutePath" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
                 <!-- Prev -->
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="white" style="cursor:pointer;" onclick="if(spotifyPlayer) spotifyPlayer.previousTrack()"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
                 <!-- Play/Pause -->
-                <div class="sp-fs-play" id="spFsPlayIcon">
+                <div class="sp-fs-play" id="spFsPlayIcon" onclick="if(spotifyPlayer) spotifyPlayer.togglePlay()" style="cursor:pointer;">
                     <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </div>
                 <!-- Next -->
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="white" style="cursor:pointer;" onclick="if(spotifyPlayer) spotifyPlayer.nextTrack()"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
                 <!-- Shuffle -->
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
             </div>
@@ -570,12 +782,27 @@
 
         let ws;
 
+        async function fetchActiveOrders() {
+            try {
+                const res = await fetch(`/api/orders${shopQueryQ}`, { cache: 'no-store' });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) {
+                        renderOrders(data);
+                    }
+                }
+            } catch(e) {
+                console.error("fetchActiveOrders error:", e);
+            }
+        }
+
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             ws = new WebSocket(`${protocol}//${window.location.host}/ws?tv=true${shopQuery}`);
 
             ws.onopen = function() {
                 document.getElementById('clock').style.color = '#4CAF50'; // Green clock when connected
+                fetchActiveOrders();
             };
 
             ws.onmessage = function(event) {
@@ -583,6 +810,15 @@
                     const data = JSON.parse(event.data);
                     if (Array.isArray(data)) {
                         renderOrders(data);
+                    } else if (data && data.type === 'server-event') {
+                        if (data.action === 'orders_update' && Array.isArray(data.data)) {
+                            renderOrders(data.data);
+                        } else if (data.action === 'tv_card_scale_changed') {
+                            const scale = data.scale || (data.data && data.data.scale);
+                            if (scale) applyTvCardScale(scale, false);
+                        } else if (['order_received', 'update_status', 'request_update', 'tgo_add_order', 'order_status_change'].includes(data.action)) {
+                            fetchActiveOrders();
+                        }
                     }
                 } catch(e) { console.error("WebSocket Message Error:", e); }
             };
@@ -638,7 +874,7 @@
             const emptyText = document.getElementById('emptyState');
             
             if (isIdle) {
-                body.classList.remove('idle-glow', 'idle-spotify', 'idle-black');
+                body.classList.remove('idle-glow', 'idle-spotify', 'idle-black', 'idle-dvd');
                 
                 if (screensaverMode === 'glow') {
                     body.classList.add('idle-glow');
@@ -657,6 +893,7 @@
                     emptyText.style.display = 'block';
                 } else {
                     // dvd mode default
+                    body.classList.add('idle-dvd');
                     emptyText.style.display = 'none';
                     if (dvd.style.display !== 'block') {
                         dvd.style.display = 'block';
@@ -664,14 +901,109 @@
                     }
                 }
             } else {
-                body.classList.remove('idle-glow', 'idle-spotify', 'idle-black');
+                body.classList.remove('idle-glow', 'idle-spotify', 'idle-black', 'idle-dvd');
                 dvd.style.display = 'none';
                 stopDvd();
                 emptyText.style.display = 'none';
             }
         }
 
+        let currentTvCardScale = parseInt(localStorage.getItem('tvCardScale') || '100', 10);
+
+        function applyTvCardScale(scale, isUserAction) {
+            const numScale = parseInt(scale, 10) || 100;
+
+            const slider = document.getElementById('tvCardScaleSlider');
+            const label = document.getElementById('tvCardScaleVal');
+            if (slider && parseInt(slider.value, 10) !== numScale) slider.value = numScale;
+            if (label) label.innerText = numScale + '%';
+
+            if (currentTvCardScale === numScale && !isUserAction) {
+                return;
+            }
+
+            currentTvCardScale = numScale;
+            localStorage.setItem('tvCardScale', numScale.toString());
+
+            if (window.currentOrdersList) {
+                renderOrders(window.currentOrdersList);
+            }
+
+            if (isUserAction) {
+                fetch('/api/set_tv_card_scale?shop=sarac', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scale: currentTvCardScale })
+                }).catch(e => {});
+            }
+        }
+
+function formatOrderNote(note) {
+  if (!note || typeof note !== 'string') return '';
+  const trimmed = note.trim();
+  if (!trimmed) return '';
+
+  if (trimmed.includes('\n')) {
+    return trimmed
+      .split('\n')
+      .map(l => l.trim().replace(/^[,.\s-]+|[,.\s-]+$/g, ''))
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  let raw = trimmed;
+  let phone = '';
+  const phoneRegex = /(?:TEL:?\s*)?(?:0?\s*[5][0-9]{2}[\s\.-]?[0-9]{3}[\s\.-]?[0-9]{2}[\s\.-]?[0-9]{2}|0?[5][0-9]{9})/gi;
+  const phoneMatch = raw.match(phoneRegex);
+  if (phoneMatch && phoneMatch.length > 0) {
+    phone = phoneMatch[0].trim();
+    raw = raw.replace(phoneMatch[0], '').trim();
+  }
+
+  let line1 = '';
+  let line2 = '';
+
+  const mahCadMatch = raw.match(/^(.*?\b(?:MAH\.|MAHALLESİ|MAH|CAD\.|CADDESİ|CAD)\b)/i);
+  const fullMahCadMatch = raw.match(/^(.*?\b(?:MAH\.|MAHALLESİ|MAH)\b.*?\b(?:CAD\.|CADDESİ|CAD)\b)/i);
+
+  if (fullMahCadMatch) {
+    line1 = fullMahCadMatch[1].trim();
+    line2 = raw.substring(fullMahCadMatch[1].length).trim();
+  } else if (mahCadMatch) {
+    line1 = mahCadMatch[1].trim();
+    line2 = raw.substring(mahCadMatch[1].length).trim();
+  } else {
+    const sokakMatch = raw.match(/^(.*?)(?=\b\d+\.?\s*(?:SKK|SK|SOKAK)\b|\b(?:SKK|SK|SOKAK)\b|\b(?:NO|N|D|DAİRE|KAT|BLOK)\s*\d+)/i);
+    if (sokakMatch && sokakMatch[1].trim()) {
+      line1 = sokakMatch[1].trim();
+      line2 = raw.substring(sokakMatch[1].length).trim();
+    } else {
+      line1 = raw;
+    }
+  }
+
+  const clean = (s) => s.replace(/^[,.\s-]+|[,.\s-]+$/g, '').trim();
+  line1 = clean(line1);
+  line2 = clean(line2);
+  phone = clean(phone);
+
+  const result = [line1, line2, phone].filter(Boolean);
+  return result.join('\n');
+}
+
+        function changeTvCardScale(val, isUserAction) {
+            applyTvCardScale(val, isUserAction);
+        }
+
         function renderOrders(orders) {
+            const jsonString = JSON.stringify(orders || []);
+            if (window.lastRenderedOrdersJson === jsonString && window.lastRenderedScale === currentTvCardScale) {
+                return;
+            }
+            window.lastRenderedOrdersJson = jsonString;
+            window.lastRenderedScale = currentTvCardScale;
+            window.currentOrdersList = orders;
+
             const grid = document.getElementById('ordersGrid');
             const emptyState = document.getElementById('emptyState');
             
@@ -684,9 +1016,10 @@
 
             manageScreensaver(false);
 
-            // Masonry layout calculation
+            // Masonry layout calculation with TV card scale
             const containerWidth = grid.offsetWidth || window.innerWidth;
-            let numCols = Math.floor(containerWidth / 260);
+            const targetColWidth = Math.max(160, 260 * (currentTvCardScale / 100));
+            let numCols = Math.floor(containerWidth / targetColWidth);
             if (numCols < 1) numCols = 1;
 
             const cols = [];
@@ -700,6 +1033,9 @@
             orders.forEach(order => {
                 const card = document.createElement('div');
                 card.className = 'order-card';
+                if (currentTvCardScale !== 100) {
+                    card.style.zoom = (currentTvCardScale / 100).toString();
+                }
                 if (order.color) {
                     card.style.borderColor = order.color;
                 }
@@ -722,7 +1058,7 @@
                         let displayNotes = item.notes ? item.notes.replace('[YENİ]', '').trim() : '';
                         let notlar = displayNotes ? `<div class="item-notes">${displayNotes}</div>` : '';
                         let prefix = count > 1 ? `${count}x ` : '';
-                        let porsiyonStr = (item.portion && item.portion !== 'Standart') ? ` <span style="color:#aaa; font-size:16px;">(${item.portion})</span>` : '';
+                        let porsiyonStr = (item.portion && item.portion !== 'Standart') ? ` <span class="portion-badge">(${item.portion})</span>` : '';
                         
                         let categoryClass = '';
                         let catColor = '#555';
@@ -747,13 +1083,17 @@
                     });
                 }
 
-                let titlePrefix = order.status === 'prepared' ? '<span style="color:#4CAF50; font-weight:bold; margin-right:8px;">✔</span>' : '';
+                let stLower = (order.packageStatus || order.tgo_status || order.trendyol_status || order.status || '').toLowerCase();
+                let isPrepared = stLower.includes('prepared') || stLower.includes('hazır') || stLower === 'prepared' || stLower.includes('pick') || stLower === 'picking' || stLower === 'invoiced';
+                let isShippedOrDelivered = stLower.includes('deliver') || stLower.includes('ship') || stLower.includes('teslim') || stLower.includes('tamamlan') || stLower === 'delivered' || stLower === 'shipped';
+
+                let titlePrefix = (isPrepared || isShippedOrDelivered) ? '<span style="color:#4CAF50; font-weight:bold; margin-right:8px;">✔</span>' : '';
 
                 let orderBodyHtml = '';
-                if (order.status !== 'prepared') {
-                    let displayNote = order.order_note || '';
+                if (!isPrepared && !isShippedOrDelivered) {
+                    let displayNote = formatOrderNote(order.order_note || '');
                     orderBodyHtml = `
-                        ${displayNote ? `<div style="color:#ff5252; font-weight:bold; font-size:16px; margin-bottom:10px; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; text-align: left;">${displayNote}</div>` : ''}
+                        ${displayNote ? `<div class="order-note-box">${displayNote}</div>` : ''}
                         <div class="item-list">
                             ${itemsHtml}
                         </div>
@@ -779,20 +1119,24 @@
 
                 let trendyolBadgeHtml = '';
                 if (isTrendyol) {
-                    let st = (order.packageStatus || order.tgo_status || order.trendyol_status || order.status || 'created').toLowerCase();
-                    if (st.includes('prepared') || st.includes('hazır') || st === 'prepared') {
-                        trendyolBadgeHtml = ' <span style="background-color:#4CAF50; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">PREPARED</span>';
-                    } else if (st.includes('deliver') || st.includes('ship') || st.includes('pick') || st.includes('teslim') || st.includes('tamamlan') || st === 'delivered') {
-                        trendyolBadgeHtml = ' <span style="background-color:#2196F3; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">DELIVERED</span>';
+                    if (isPrepared) {
+                        trendyolBadgeHtml = ' <span style="background-color:#4CAF50; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">HAZIRLANDI</span>';
+                    } else if (isShippedOrDelivered) {
+                        trendyolBadgeHtml = ' <span style="background-color:#2196F3; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">GÖNDERİLDİ</span>';
+                    } else if (stLower.includes('cancel') || stLower.includes('iptal')) {
+                        trendyolBadgeHtml = ' <span style="background-color:#F44336; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">İPTAL</span>';
                     } else {
-                        trendyolBadgeHtml = ' <span style="background-color:#FF9800; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">CREATED</span>';
+                        trendyolBadgeHtml = ' <span style="background-color:#FF9800; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">YENİ</span>';
                     }
                 }
 
                 card.innerHTML = `
-                    <div class="order-header" ${order.status === 'prepared' ? 'style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;"' : ''}>
+                    <div class="order-header" ${isPrepared || isShippedOrDelivered ? 'style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;"' : ''}>
                         <div class="order-title">${titlePrefix}${titleName} ${order.is_updated ? '<span style="font-size: 0.6em; color: #FF9800;">(Eklendi)</span>' : ''}${trendyolBadgeHtml}</div>
-                        <div class="order-time">${order.total_amount ? `<span style="margin-right: 12px; color: #4CAF50;">${order.total_amount}₺</span>` : ''}${order.time || ''}</div>
+                        <div class="order-time">
+                            ${order.total_amount ? `<span class="price-badge">${order.total_amount}₺</span>` : ''}
+                            ${order.time ? `<span class="time-badge">${order.time}</span>` : ''}
+                        </div>
                     </div>
                     ${orderBodyHtml}
                 `;
@@ -812,6 +1156,7 @@
         }
 
         connectWebSocket();
+        setInterval(fetchActiveOrders, 3000);
 
         let currentSpotifyToken = "";
         let playerReady = false;
@@ -821,6 +1166,36 @@
         let spotifyDuration = 0;
         let lastSpotifyUpdate = 0;
         let currentTrackUri = null;
+        let isSpotifyMuted = false;
+
+        function unlockAudio() {
+            const overlay = document.getElementById('audioUnlockOverlay');
+            if (overlay) overlay.style.display = 'none';
+            if (spotifyPlayer && typeof spotifyPlayer.setVolume === 'function') {
+                spotifyPlayer.setVolume(1.0);
+                isSpotifyMuted = false;
+                updateMuteIcon();
+            }
+        }
+
+        function toggleSpotifyMute() {
+            if (!spotifyPlayer) { unlockAudio(); return; }
+            isSpotifyMuted = !isSpotifyMuted;
+            spotifyPlayer.setVolume(isSpotifyMuted ? 0 : 1.0);
+            updateMuteIcon();
+        }
+
+        function updateMuteIcon() {
+            const path = document.getElementById('spFsMutePath');
+            if (!path) return;
+            if (isSpotifyMuted) {
+                // Muted icon path
+                path.setAttribute('d', 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z');
+            } else {
+                // Unmuted icon path
+                path.setAttribute('d', 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z');
+            }
+        }
 
         function formatTime(ms) {
             const totalSec = Math.floor(ms / 1000);
@@ -852,7 +1227,7 @@
             if (!playerReady || !currentSpotifyToken || spotifyPlayer) return;
 
             spotifyPlayer = new Spotify.Player({
-                name: 'SARACOGLU Mutfak',
+                name: 'Vantage Mutfak',
                 getOAuthToken: async cb => {
                     try {
                         const res = await fetch(`/spotify/token${shopQueryQ}`);
@@ -876,6 +1251,10 @@
                 console.log('Ready with Device ID', device_id);
                 document.getElementById("spTitle").innerText = "Baglandi!";
                 document.getElementById("spArtist").innerText = "Muzik acabilirsiniz";
+                // Android TV DRM dialog OK click counts as user gesture — set volume immediately
+                spotifyPlayer.setVolume(1.0).catch(() => {});
+                isSpotifyMuted = false;
+                updateMuteIcon();
             });
 
             spotifyPlayer.addListener('not_ready', ({ device_id }) => {
@@ -1050,6 +1429,10 @@
                     if (totalData.tvRadioStation && totalData.tvRadioStation !== activeRadioStation) {
                         changeRadioStation(totalData.tvRadioStation);
                     }
+                    const sScale = parseInt(totalData.tvCardScale, 10) || 100;
+                    if (sScale !== currentTvCardScale) {
+                        applyTvCardScale(sScale, false);
+                    }
                 }
             } catch(e) {
                 // ignore fast polling errors
@@ -1087,8 +1470,10 @@
             if (source === 'radio') {
                 btnSp.style.background = 'transparent';
                 btnSp.style.color = '#aaa';
-                btnRad.style.background = '#FF9800';
+                btnSp.style.boxShadow = 'none';
+                btnRad.style.background = 'linear-gradient(135deg, #FF9800, #E68A00)';
                 btnRad.style.color = '#fff';
+                btnRad.style.boxShadow = '0 2px 8px rgba(255, 152, 0, 0.4)';
 
                 spCont.style.display = 'none';
                 radCont.style.display = 'flex';
@@ -1102,8 +1487,10 @@
             } else {
                 btnRad.style.background = 'transparent';
                 btnRad.style.color = '#aaa';
-                btnSp.style.background = '#1DB954';
+                btnRad.style.boxShadow = 'none';
+                btnSp.style.background = 'linear-gradient(135deg, #1DB954, #15883e)';
                 btnSp.style.color = '#fff';
+                btnSp.style.boxShadow = '0 2px 8px rgba(29, 185, 84, 0.4)';
 
                 radCont.style.display = 'none';
                 spCont.style.display = 'flex';
