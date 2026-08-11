@@ -630,11 +630,11 @@
             backdrop-filter: blur(6px);
         }
 
-        /* Black mode support */
+        /* Black mode / Off mode support - keep header visible */
         body.idle-off {
-            background-color: black !important;
+            background-color: #0b0d17 !important;
         }
-        body.idle-off #bgWallpaper, body.idle-off #bgDarkOverlay, body.idle-off #spotifyFullScreen, body.idle-off #dvdLogo, body.idle-off .header, body.idle-off .grid, body.idle-off #emptyState {
+        body.idle-off #spotifyFullScreen, body.idle-off #dvdLogo, body.idle-off .grid {
             display: none !important;
         }
 
@@ -921,7 +921,7 @@
                     body.classList.add('idle-off');
                     dvd.style.display = 'none';
                     stopDvd();
-                    emptyText.style.display = 'none';
+                    emptyText.style.display = 'block';
                 } else {
                     // dvd mode default
                     body.classList.add('idle-dvd');
