@@ -632,12 +632,9 @@
 
         /* Black mode support */
         body.idle-off {
-            background-color: black;
+            background-color: black !important;
         }
-        body.idle-off #bgWallpaper, body.idle-off #bgDarkOverlay {
-            display: none !important;
-        }
-        body.idle-off .header, body.idle-off .grid {
+        body.idle-off #bgWallpaper, body.idle-off #bgDarkOverlay, body.idle-off #spotifyFullScreen, body.idle-off #dvdLogo, body.idle-off .header, body.idle-off .grid, body.idle-off #emptyState {
             display: none !important;
         }
 
@@ -908,7 +905,7 @@
             const emptyText = document.getElementById('emptyState');
             
             if (isIdle) {
-                body.classList.remove('idle-glow', 'idle-spotify', 'idle-black', 'idle-dvd');
+                body.classList.remove('idle-glow', 'idle-spotify', 'idle-black', 'idle-dvd', 'idle-off');
                 
                 if (screensaverMode === 'glow') {
                     body.classList.add('idle-glow');
@@ -924,7 +921,7 @@
                     body.classList.add('idle-off');
                     dvd.style.display = 'none';
                     stopDvd();
-                    emptyText.style.display = 'block';
+                    emptyText.style.display = 'none';
                 } else {
                     // dvd mode default
                     body.classList.add('idle-dvd');
@@ -935,7 +932,7 @@
                     }
                 }
             } else {
-                body.classList.remove('idle-glow', 'idle-spotify', 'idle-black', 'idle-dvd');
+                body.classList.remove('idle-glow', 'idle-spotify', 'idle-black', 'idle-dvd', 'idle-off');
                 dvd.style.display = 'none';
                 stopDvd();
                 emptyText.style.display = 'none';
