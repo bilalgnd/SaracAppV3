@@ -131,8 +131,12 @@ function App() {
         window.dispatchEvent(new CustomEvent('daily-total-updated'))
       }
 
-      if (action === 'request_update' || action === 'order_received' || action === 'order_deleted' || action === 'update_status' || action === 'new_order') {
-        window.api.getOrders().then(handleOrders)
+      if (['request_update', 'orders_update', 'order_received', 'order_deleted', 'update_status', 'new_order'].includes(action)) {
+        if (Array.isArray(data)) {
+          handleOrders(data)
+        } else {
+          window.api.getOrders().then(handleOrders)
+        }
       }
 
       if (action === 'print_receipt' && data && data.customerName) {

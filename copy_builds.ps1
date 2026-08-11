@@ -3,14 +3,14 @@ if (!(Test-Path $distDir)) {
     New-Item -ItemType Directory -Path $distDir
 }
 
-$exePath = "C:\Users\bilal\SARACAPP\SARACAPPV3\app1\dist\saracapp2-6.0.20-setup.exe"
+$exePath = "C:\Users\bilal\SARACAPP\SARACAPPV3\app1\dist\vantage-6.1.0-setup.exe"
 $latestYml = "C:\Users\bilal\SARACAPP\SARACAPPV3\app1\dist\latest.yml"
-$blockmap = "C:\Users\bilal\SARACAPP\SARACAPPV3\app1\dist\saracapp2-6.0.20-setup.exe.blockmap"
+$blockmap = "C:\Users\bilal\SARACAPP\SARACAPPV3\app1\dist\vantage-6.1.0-setup.exe.blockmap"
 $apkPath = "C:\Users\bilal\SARACAPP\SARACAPPV3\app2\app\build\outputs\apk\release\app-release.apk"
 
 if (Test-Path $exePath) {
-    Copy-Item $exePath -Destination "$distDir\SaracAppv6.0.20-setup.exe" -Force
-    Copy-Item $exePath -Destination "$distDir\saracapp2-6.0.20-setup.exe" -Force
+    Copy-Item $exePath -Destination "$distDir\Vantagev6.1.0-setup.exe" -Force
+    Copy-Item $exePath -Destination "$distDir\vantage-6.1.0-setup.exe" -Force
     Write-Host "Copied EXE"
 } else { Write-Host "EXE not found!" }
 
@@ -20,13 +20,13 @@ if (Test-Path $latestYml) {
 } else { Write-Host "latest.yml not found!" }
 
 if (Test-Path $blockmap) {
-    Copy-Item $blockmap -Destination "$distDir\SaracAppv6.0.20-setup.exe.blockmap" -Force
-    Copy-Item $blockmap -Destination "$distDir\saracapp2-6.0.20-setup.exe.blockmap" -Force
+    Copy-Item $blockmap -Destination "$distDir\Vantagev6.1.0-setup.exe.blockmap" -Force
+    Copy-Item $blockmap -Destination "$distDir\vantage-6.1.0-setup.exe.blockmap" -Force
     Write-Host "Copied blockmap"
 } else { Write-Host "blockmap not found!" }
 
 if (Test-Path $apkPath) {
-    Copy-Item $apkPath -Destination "$distDir\SaracAppv6.0.20.apk" -Force
+    Copy-Item $apkPath -Destination "$distDir\Vantagev6.1.0.apk" -Force
     Write-Host "Copied APK"
 } else { Write-Host "APK not found!" }
 

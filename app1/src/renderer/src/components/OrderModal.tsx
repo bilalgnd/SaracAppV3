@@ -143,9 +143,17 @@ export default function OrderModal() {
 
   const allChips = [...ingredients, ...freeExtras, ...paidExtras]
 
-  const isDrink = product.options[0].portion === 'Standart'
+  const drinkNames = ['kola', 'ayran', 'su', 'sprite', 'ice tea', 'fanta', 'zero', 'şalgam', 'salgam', 'soda']
+  const isDrinkCategory = product.category === 'drinks' || 
+    !!(menu?.categories?.find((c: any) => c.items?.some((i: any) => i.name === product.name))?.name?.toUpperCase()?.includes('İÇECEK')) ||
+    !!(menu?.categories?.find((c: any) => c.items?.some((i: any) => i.name === product.name))?.name?.toUpperCase()?.includes('ICECEK'))
+  const isDrink = !!(isDrinkCategory || drinkNames.some(d => {
+    const nameLower = product.name.toLowerCase()
+    if (d === 'su') return /\bsu\b/.test(nameLower)
+    return nameLower.includes(d)
+  }))
 
-  const drinksCat = menu?.categories?.find((c: any) => c.id === 'drinks' || c.name.toUpperCase().includes('ECEK'))
+  const drinksCat = menu?.categories?.find((c: any) => c.id === 'drinks' || c.name.toUpperCase().includes('İÇECEK') || c.name.toUpperCase().includes('ICECEK'))
   const drinksMenu = drinksCat?.items || []
 
   let drinksTotal = 0
@@ -283,19 +291,14 @@ export default function OrderModal() {
               <div style={{ marginTop: 15 }}>
                 <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 5, fontWeight: 'bold' }}>Özel Sipariş Notu:</div>
                 <textarea 
+                  className="cart-input"
+                  placeholder="✍️ Özel not ekleyin..."
                   value={customNote}
                   onChange={e => setCustomNote(e.target.value)}
                   style={{ 
                     width: '100%', 
                     padding: '12px 15px', 
-                    background: 'var(--bg-panel)', 
-                    border: '1px solid #444', 
-                    borderRadius: 8, 
-                    color: 'white', 
-                    outline: 'none',
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    minHeight: '60px',
+                    minHeight: '70px',
                     resize: 'vertical'
                   }}
                 />

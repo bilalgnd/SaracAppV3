@@ -45,7 +45,7 @@ export function connectWebSocket() {
       const msg = JSON.parse(event.data);
       if (Array.isArray(msg)) {
         // It's the activeOrders array from the server
-        notifyListeners('server-event', 'request_update');
+        notifyListeners('server-event', 'orders_update', msg);
       } else {
         if (msg.type === 'new_order') notifyListeners('server-event', 'new_order', msg.order);
         if (msg.type === 'update_order') notifyListeners('server-event', 'update_order', msg.order);
@@ -54,6 +54,7 @@ export function connectWebSocket() {
         if (msg.type === 'menu_update') notifyListeners('server-event', 'menu_update', msg.menu);
         if (msg.type === 'daily_total_update') notifyListeners('server-event', 'daily_total_update', msg.total);
         if (msg.type === 'clear_past_orders') notifyListeners('server-event', 'clear_past_orders');
+        if (msg.type === 'server-event') notifyListeners('server-event', msg.action, msg.data);
       }
     } catch (err) {
       console.error('WS parse err', err);

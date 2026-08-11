@@ -137,10 +137,10 @@ export default function CartPanel() {
         <div className="cart-header" style={{ padding: '10px', backgroundColor: 'transparent', borderBottom: 'none' }}>
         <input 
           className="cart-input" 
-          placeholder="Masa No / İsim" 
+          placeholder="🏷️ Masa No / İsim" 
           value={customerName}
           onChange={(e) => setCustomerName(e.target.value)}
-          style={{ width: '100%', backgroundColor: '#0a0a0a', padding: '10px 12px', fontSize: '16px', fontWeight: 'bold', color: isEditing ? 'var(--primary)' : 'white' }}
+          style={{ width: '100%', padding: '10px 14px', fontSize: '16px', fontWeight: 'bold', color: isEditing ? 'var(--primary)' : 'white' }}
         />
       </div>
 
@@ -173,25 +173,25 @@ export default function CartPanel() {
       </div>
 
       <div style={{ display: 'flex', gap: 10 }}>
-        <button className="btn" style={{ flex: 1, height: 35, backgroundColor: '#424242', color: 'white' }} onClick={clearCart}>
+        <button className="btn btn-danger" style={{ flex: 1, height: 38 }} onClick={clearCart}>
           İptal
         </button>
-        <button className="btn btn-info" style={{ flex: 1, height: 35 }} onClick={handlePrint}>
+        <button className="btn btn-info" style={{ flex: 1, height: 38 }} onClick={handlePrint}>
           Yazdır
         </button>
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 5 }}>
         {!isEditing ? (
-          <button className="btn" style={{ flex: 1, height: 45, backgroundColor: 'var(--primary)', color: 'black' }} onClick={handleSave}>
+          <button className="btn btn-primary" style={{ flex: 1, height: 48, fontSize: 16 }} onClick={handleSave}>
             MASAYI AÇ
           </button>
         ) : (
           <>
-            <button className="btn btn-info" style={{ flex: 1, height: 45 }} onClick={handleUpdate}>
+            <button className="btn btn-info" style={{ flex: 1, height: 48, fontSize: 15 }} onClick={handleUpdate}>
               GÜNCELLE
             </button>
-            <button className="btn btn-success" style={{ flex: 1, height: 45 }} onClick={handleCloseBill}>
+            <button className="btn btn-success" style={{ flex: 1, height: 48, fontSize: 15 }} onClick={handleCloseBill}>
               ÖDENDİ
             </button>
           </>

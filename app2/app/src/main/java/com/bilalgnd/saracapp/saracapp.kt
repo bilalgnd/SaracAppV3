@@ -1548,21 +1548,66 @@ fun AnaEkran() {
 
 @Composable
 fun UrunKarti(urun: Urun, onClick: () -> Unit, onLongClick: () -> Unit) {
+    val n = urun.ad.lowercase(Locale.getDefault())
+    val defaultBg = when {
+        n.contains("kutu kola") || n.contains("sise kola") || n.contains("şişe kola") -> Color(0xFFEF4444)
+        n.contains("ayran") && !n.contains("açık") -> Color(0xFF827717)
+        n.contains("açık ayran") || n.contains("acik ayran") -> Color(0xFF9E9D24)
+        n.contains("zero") -> Color(0xFF333333)
+        n.contains("şalgam") || n.contains("salgam") -> Color(0xFF6A1B9A)
+        n == "su" -> Color(0xFF3B82F6)
+        n.contains("sprite") -> Color(0xFF10B981)
+        n.contains("fanta") -> Color(0xFFF57C00)
+        n.contains("soda") -> Color(0xFF2E7D32)
+        else -> Color(0xFF262020)
+    }
+
     val bgRenk = try {
-        if (!urun.color.isNullOrEmpty()) Color(android.graphics.Color.parseColor(urun.color)) else Color(0xFF242424)
-    } catch (e: Exception) { Color(0xFF242424) }
+        if (!urun.color.isNullOrEmpty()) Color(android.graphics.Color.parseColor(urun.color)) else defaultBg
+    } catch (e: Exception) { defaultBg }
 
     val yaziRengi = try {
         if (!urun.textColor.isNullOrEmpty()) Color(android.graphics.Color.parseColor(urun.textColor)) else Color.White
     } catch (e: Exception) { Color.White }
 
-    val fiyatRengi = yaziRengi
-
-    Card(modifier = Modifier.fillMaxWidth().height(120.dp).pointerInput(Unit) { detectTapGestures(onTap = { onClick() }, onLongPress = { onLongClick() }) }, shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(defaultElevation = 8.dp), colors = CardDefaults.cardColors(containerColor = bgRenk)) {
-        Column(modifier = Modifier.padding(12.dp).fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = urun.ad, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = yaziRengi, textAlign = TextAlign.Center, maxLines = 2, lineHeight = 24.sp, overflow = TextOverflow.Ellipsis)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "${(urun.secenekler?.firstOrNull()?.fiyat ?: 0)} ₺", fontSize = 15.sp, color = fiyatRengi, fontWeight = FontWeight.ExtraBold)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(118.dp)
+            .pointerInput(Unit) { detectTapGestures(onTap = { onClick() }, onLongPress = { onLongClick() }) },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = bgRenk),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33FFFFFF))
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp).fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = urun.ad,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = yaziRengi,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                lineHeight = 22.sp,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Surface(
+                color = Color(0x33000000),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "${(urun.secenekler?.firstOrNull()?.fiyat ?: 0)} ₺",
+                    fontSize = 15.sp,
+                    color = yaziRengi,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                )
+            }
         }
     }
 }

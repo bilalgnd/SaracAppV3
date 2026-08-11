@@ -67,7 +67,7 @@ async function printViaElectron(printerName: string, customerName: string, time:
       </style>
     </head>
     <body>
-      <h1>SARACOGLU DONER</h1>
+      <h1>VANTAGE</h1>
       <div style="font-size: 18px;">Tarih/Saat: ${time}</div>
       <div style="font-size: 18px;">Masa: ${customerName}</div>
       ${orderNote ? `<div style="margin-top: 5px; text-align: center; font-size: 18px; white-space: pre-wrap;">NOT: ${orderNote}</div>` : ''}

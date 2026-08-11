@@ -159,6 +159,60 @@ const processTgoRawData = (rawData: any, currentOrders: any[], saveFn: any, setF
   }
 };
 
+export function formatOrderNote(note: string): string {
+  if (!note || typeof note !== 'string') return '';
+  const trimmed = note.trim();
+  if (!trimmed) return '';
+
+  if (trimmed.includes('\n')) {
+    return trimmed
+      .split('\n')
+      .map(l => l.trim().replace(/^[,.\s-]+|[,.\s-]+$/g, ''))
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  let raw = trimmed;
+
+  let phone = '';
+  const phoneRegex = /(?:TEL:?\s*)?(?:0?\s*[5][0-9]{2}[\s\.-]?[0-9]{3}[\s\.-]?[0-9]{2}[\s\.-]?[0-9]{2}|0?[5][0-9]{9})/gi;
+  const phoneMatch = raw.match(phoneRegex);
+  if (phoneMatch && phoneMatch.length > 0) {
+    phone = phoneMatch[0].trim();
+    raw = raw.replace(phoneMatch[0], '').trim();
+  }
+
+  let line1 = '';
+  let line2 = '';
+
+  const mahCadMatch = raw.match(/^(.*?\b(?:MAH\.|MAHALLESİ|MAH|CAD\.|CADDESİ|CAD)\b)/i);
+  const fullMahCadMatch = raw.match(/^(.*?\b(?:MAH\.|MAHALLESİ|MAH)\b.*?\b(?:CAD\.|CADDESİ|CAD)\b)/i);
+
+  if (fullMahCadMatch) {
+    line1 = fullMahCadMatch[1].trim();
+    line2 = raw.substring(fullMahCadMatch[1].length).trim();
+  } else if (mahCadMatch) {
+    line1 = mahCadMatch[1].trim();
+    line2 = raw.substring(mahCadMatch[1].length).trim();
+  } else {
+    const sokakMatch = raw.match(/^(.*?)(?=\b\d+\.?\s*(?:SKK|SK|SOKAK)\b|\b(?:SKK|SK|SOKAK)\b|\b(?:NO|N|D|DAİRE|KAT|BLOK)\s*\d+)/i);
+    if (sokakMatch && sokakMatch[1].trim()) {
+      line1 = sokakMatch[1].trim();
+      line2 = raw.substring(sokakMatch[1].length).trim();
+    } else {
+      line1 = raw;
+    }
+  }
+
+  const clean = (s: string) => s.replace(/^[,.\s-]+|[,.\s-]+$/g, '').trim();
+  line1 = clean(line1);
+  line2 = clean(line2);
+  phone = clean(phone);
+
+  const result = [line1, line2, phone].filter(Boolean);
+  return result.join('\n');
+}
+
 function TablesGrid() {
   const { orders, setEditingOrder, editingOrderIndex, setOrders, clearCart } = useStore()
   const longPressTimer = useRef<any>(null)
@@ -239,32 +293,6 @@ function TablesGrid() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10, gap: '10px' }}>
-        <input 
-          type="file" 
-          accept=".json" 
-          style={{ display: 'none' }} 
-          id="tgo-json-upload" 
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            try {
-              const text = await file.text();
-              const rawData = JSON.parse(text);
-              processTgoRawData(rawData, useStore.getState().orders, window.api.saveOrders, setOrders);
-            } catch (err) {
-              console.error(err);
-              alert('JSON okunamadı veya parse edilemedi!');
-            }
-            e.target.value = '';
-          }}
-        />
-        <button 
-          className="btn" 
-          style={{ height: 40, padding: '0 20px', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }} 
-          onClick={() => document.getElementById('tgo-json-upload')?.click()}
-        >
-          TGO Ekle
-        </button>
         <button className="btn btn-danger" style={{ height: 40, padding: '0 20px' }} onClick={handleDeleteAll}>
           Tümünü Sil
         </button>
@@ -283,15 +311,6 @@ function TablesGrid() {
             >
               {order.status === 'prepared' && (
                 <div style={{ position: 'absolute', top: 10, left: 10, fontSize: 24, color: 'var(--success)' }}>✔</div>
-              )}
-              {order.customer_name && order.customer_name.includes('(TGO)') && (
-                <button 
-                  className="btn btn-primary" 
-                  style={{ position: 'absolute', top: 5, left: '50%', transform: 'translateX(-50%)', padding: '2px 8px', fontSize: 11, borderRadius: 12 }}
-                  onClick={(e) => { e.stopPropagation(); setTgoOrderAction(order); }}
-                >
-                  TGO İşlemleri
-                </button>
               )}
               {isEditing && (
                 <button 
@@ -317,8 +336,8 @@ function TablesGrid() {
               )}
               <div className="table-name">{order.customer_name}</div>
               {order.order_note && (
-                <div style={{ color: 'var(--danger)', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px', whiteSpace: 'pre-wrap', textAlign: 'center' }}>
-                  📝 {order.order_note}
+                <div style={{ color: 'var(--success)', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px', whiteSpace: 'pre-wrap', textAlign: 'center', lineHeight: 1.35 }}>
+                  📝 {formatOrderNote(order.order_note)}
                 </div>
               )}
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 5, lineHeight: 1.2 }}>
@@ -623,8 +642,8 @@ function MenuGrid({ onEditPrice }: { onEditPrice: (item: any) => void }) {
           <textarea 
             ref={textareaRef}
             className="cart-input" 
-            style={{ width: '100%', fontSize: '14px', minHeight: '130px', backgroundColor: '#0a0a0a', resize: 'vertical', padding: '10px 12px' }}
-            placeholder="Sipariş / Adres Notu" 
+            style={{ width: '100%', fontSize: '14px', minHeight: '130px', resize: 'vertical', padding: '12px 16px' }}
+            placeholder="✍️ Sipariş / Adres Notu..." 
             value={orderNote}
             onChange={handleNoteChange}
             onKeyDown={handleKeyDown}

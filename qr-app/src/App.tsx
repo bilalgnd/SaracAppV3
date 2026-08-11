@@ -35,8 +35,93 @@ type CartItem = {
 // Constants for Ingredients
 const DEFAULT_INGREDIENTS = ['Soğan', 'Domates', 'Patates']
 
+const PRODUCT_TRANSLATIONS: Record<string, string> = {
+  // Categories
+  'ET DÖNER': 'BEEF DONER',
+  'TAVUK DÖNER': 'CHICKEN DONER',
+  'İÇECEK': 'DRINKS',
+  'İÇECEKLER': 'DRINKS',
+
+  // Products - Beef
+  'Et Tombik': 'Beef Pita Doner',
+  'Et Dürüm': 'Beef Doner Wrap',
+  'Et XL Dürüm': 'Beef XL Doner Wrap',
+  'Et Eski Usul': 'Classic Beef Doner',
+  'Et Porsiyon': 'Beef Doner Plate',
+  'Et Pilav Üstü': 'Beef Doner over Rice',
+  'Beyti': 'Beef Beyti Doner',
+  'İskender': 'Iskender Kebab',
+  'Et Kampy': 'Beef Kampy Doner',
+  '500gr Et': '500g Beef Doner',
+
+  // Products - Chicken
+  'Tavuk Tombik': 'Chicken Pita Doner',
+  'Tavuk Dürüm': 'Chicken Doner Wrap',
+  'Tavuk XL Dürüm': 'Chicken XL Doner Wrap',
+  'Tavuk Eski Usul': 'Classic Chicken Doner',
+  'Hatay Usulü': 'Hatay Style Chicken Wrap',
+  'Biga Döneri': 'Biga Style Chicken Doner',
+  'Tavuk Porsiyon': 'Chicken Doner Plate',
+  'Tavuk Pilav Üstü': 'Chicken Doner over Rice',
+  'Tavuk Kampy': 'Chicken Kampy Doner',
+  '500gr Tavuk': '500g Chicken Doner',
+
+  // Drinks
+  'Kutu Kola': 'Canned Coca-Cola',
+  'Ayran': 'Ayran',
+  'Açık Ayran': 'Draft Ayran',
+  'Şişe Kola': 'Bottle Coca-Cola',
+  'Su': 'Water',
+  'Sprite': 'Sprite',
+  'Ice Tea': 'Ice Tea',
+  'Fanta': 'Fanta',
+  'Cola Zero': 'Coca-Cola Zero',
+  'Şalgam': 'Turnip Juice',
+  'Soda': 'Sparkling Water',
+  '1L Kola': '1L Coca-Cola',
+  '1L Ayran': '1L Ayran',
+
+  // Ingredients
+  'Soğan': 'Onion',
+  'Domates': 'Tomato',
+  'Patates': 'Fries',
+
+  // Portions
+  'Standart': 'Standard',
+  'Tek': 'Single',
+  'Duble': 'Double',
+  'Dublex': 'Double',
+}
+
+function translateText(text: string, lang: 'tr' | 'en'): string {
+  if (lang === 'tr' || !text) return text
+  if (PRODUCT_TRANSLATIONS[text]) return PRODUCT_TRANSLATIONS[text]
+
+  return text
+    .replace(/\bTombik\b/gi, 'Pita Doner')
+    .replace(/\bTavuk\b/gi, 'Chicken')
+    .replace(/\bEt\b/gi, 'Beef')
+    .replace(/\bDürüm\b/gi, 'Wrap')
+    .replace(/\bPorsiyon\b/gi, 'Plate')
+    .replace(/\bPilav Üstü\b/gi, 'over Rice')
+    .replace(/\bEski Usul\b/gi, 'Classic')
+    .replace(/\bHatay Usulü\b/gi, 'Hatay Style')
+    .replace(/\bAçık Ayran\b/gi, 'Draft Ayran')
+    .replace(/\bKutu\b/gi, 'Canned')
+    .replace(/\bŞişe\b/gi, 'Bottle')
+    .replace(/\bKola\b/gi, 'Cola')
+    .replace(/gr\b/gi, 'g')
+}
+
 export default function App() {
+  const [lang, setLang] = useState<'tr' | 'en'>(() => (localStorage.getItem('sarac_lang') as 'tr' | 'en') || 'tr')
   const [customerName, setCustomerName] = useState('')
+
+  const toggleLang = () => {
+    const newLang = lang === 'tr' ? 'en' : 'tr'
+    setLang(newLang)
+    localStorage.setItem('sarac_lang', newLang)
+  }
   const [isNameSet, setIsNameSet] = useState(false)
   const [menuData, setMenuData] = useState<MenuResponse | null>(null)
   const [activeCategoryId, setActiveCategoryId] = useState<string>('')
@@ -345,20 +430,29 @@ export default function App() {
   // Name Prompt Screen
   if (!isNameSet) {
     return (
-      <div className="auth-container">
+      <div className="auth-container" style={{ position: 'relative' }}>
+        <div style={{ position: 'absolute', top: '16px', right: '18px' }}>
+          <div id="lang-toggle" onClick={toggleLang}>
+            <button id="btn-lang" type="button" title="Dil değiştir / Change language">
+              <span id="lang-tr" className={lang === 'tr' ? 'active' : ''}>TR</span>
+              <span className="lang-divider">/</span>
+              <span id="lang-en" className={lang === 'en' ? 'active' : ''}>EN</span>
+            </button>
+          </div>
+        </div>
         <div className="auth-card">
-          <h1>Hoş Geldiniz 👋</h1>
-          <p>Siparişinizi doğru şekilde teslim edebilmemiz için lütfen adınızı girin.</p>
+          <h1>{lang === 'tr' ? 'Hoş Geldiniz 👋' : 'Welcome 👋'}</h1>
+          <p>{lang === 'tr' ? 'Siparişinizi doğru şekilde teslim edebilmemiz için lütfen adınızı girin.' : 'Please enter your name so we can deliver your order correctly.'}</p>
           <form onSubmit={handleNameSubmit}>
             <input 
               type="text" 
               className="auth-input"
-              placeholder="Adınız..." 
+              placeholder={lang === 'tr' ? 'Adınız...' : 'Your Name...'} 
               value={customerName}
               onChange={e => setCustomerName(e.target.value)}
               required
             />
-            <button type="submit" className="btn">Menüye Geç</button>
+            <button type="submit" className="btn">{lang === 'tr' ? 'Menüye Geç' : 'Enter Menu'}</button>
           </form>
         </div>
       </div>
@@ -371,10 +465,10 @@ export default function App() {
 
   const getDisplayStatus = (status: string) => {
     const s = status.toLowerCase();
-    if (s.includes('prep') || s.includes('hazır')) return 'Hazırlanıyor';
-    if (s.includes('served') || s.includes('yola')) return 'Servis Yapıldı';
-    if (s.includes('tamam') || s.includes('done') || s.includes('iptal')) return 'Tamamlandı';
-    if (s.includes('waiting') || s.includes('bekliyor') || s.includes('yeni')) return 'Onay Bekliyor';
+    if (s.includes('prep') || s.includes('hazır')) return lang === 'tr' ? 'Hazırlanıyor' : 'Preparing';
+    if (s.includes('served') || s.includes('yola')) return lang === 'tr' ? 'Servis Yapıldı' : 'Served';
+    if (s.includes('tamam') || s.includes('done') || s.includes('iptal')) return lang === 'tr' ? 'Tamamlandı' : 'Completed';
+    if (s.includes('waiting') || s.includes('bekliyor') || s.includes('yeni')) return lang === 'tr' ? 'Onay Bekliyor' : 'Awaiting Approval';
     return status;
   }
 
@@ -382,38 +476,49 @@ export default function App() {
     <>
       <div className="app-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontFamily: 'UniversityRomanBold, sans-serif', letterSpacing: '1px' }}>SARACOGLU DONER</h2>
-          <button 
-            onClick={() => {
-              localStorage.removeItem('qr_customer_name');
-              localStorage.removeItem('qr_active_order_id');
-              localStorage.removeItem('qr_active_order_items');
-              localStorage.removeItem('qr_active_order_total');
-              setCustomerName('');
-              setIsNameSet(false);
-              setTrackingOrderId(null);
-              setTrackingOrderItems([]);
-              setTrackingOrderTotal(0);
-              setCart([]);
-              setServerOrderStatus('');
-              setOrderStatus('idle');
-            }}
-            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#aaa', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
-          >
-            Çıkış Yap
-          </button>
+          <div>
+            <h2 style={{ fontFamily: "'UniversityRomanBold', sans-serif", letterSpacing: '1px', fontSize: '28px', color: '#ffffff' }}>VANTAGE</h2>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div id="lang-toggle" onClick={toggleLang}>
+              <button id="btn-lang" type="button" title="Dil değiştir / Change language">
+                <span id="lang-tr" className={lang === 'tr' ? 'active' : ''}>TR</span>
+                <span className="lang-divider">/</span>
+                <span id="lang-en" className={lang === 'en' ? 'active' : ''}>EN</span>
+              </button>
+            </div>
+            <button 
+              className="btn-logout"
+              onClick={() => {
+                localStorage.removeItem('qr_customer_name');
+                localStorage.removeItem('qr_active_order_id');
+                localStorage.removeItem('qr_active_order_items');
+                localStorage.removeItem('qr_active_order_total');
+                setCustomerName('');
+                setIsNameSet(false);
+                setTrackingOrderId(null);
+                setTrackingOrderItems([]);
+                setTrackingOrderTotal(0);
+                setCart([]);
+                setServerOrderStatus('');
+                setOrderStatus('idle');
+              }}
+            >
+              {lang === 'tr' ? 'Çıkış Yap' : 'Log Out'}
+            </button>
+          </div>
         </div>
-        <p style={{ marginTop: '8px' }}>👋 Merhaba, {customerName}</p>
+        <p style={{ marginTop: '8px' }}>👋 {lang === 'tr' ? 'Merhaba' : 'Hello'}, {customerName}</p>
       </div>
 
       <div className="category-tabs">
-        {categories.map(cat => (
+        {categories.map((cat, idx) => (
           <div 
             key={cat.id} 
-            className={`cat-tab ${activeCategoryId === cat.id ? 'active' : ''}`}
+            className={`cat-tab theme-${idx % 5} ${activeCategoryId === cat.id ? 'active' : ''}`}
             onClick={() => setActiveCategoryId(cat.id)}
           >
-            {cat.name}
+            {translateText(cat.name, lang)}
           </div>
         ))}
       </div>
@@ -425,9 +530,9 @@ export default function App() {
           return (
             <div className="menu-item" key={idx}>
               <div>
-                <div className="item-name">{item.name}</div>
+                <div className="item-name">{translateText(item.name, lang)}</div>
                 {item.options.length > 1 && (
-                  <div className="item-desc">Farklı porsiyon seçenekleri mevcut</div>
+                  <div className="item-desc">{lang === 'tr' ? 'Farklı porsiyon seçenekleri mevcut' : 'Multiple portion options available'}</div>
                 )}
               </div>
               <div className="item-bottom">
@@ -436,7 +541,7 @@ export default function App() {
                   className="add-btn" 
                   onClick={() => {
                     if (trackingOrderId) {
-                      alert('Mevcut siparişiniz sonuçlanmadan yeni sipariş ekleyemezsiniz.');
+                      alert(lang === 'tr' ? 'Mevcut siparişiniz sonuçlanmadan yeni sipariş ekleyemezsiniz.' : 'You cannot add a new order until your current order is completed.');
                       return;
                     }
                     openProductModal(item);
@@ -455,7 +560,7 @@ export default function App() {
         <div className="cart-fab" onClick={() => setIsCartOpen(true)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <ShoppingBag />
-            <span>{cartItemCount} Ürün</span>
+            <span>{cartItemCount} {lang === 'tr' ? 'Ürün' : 'Items'}</span>
           </div>
           <span>{cartTotal} ₺</span>
         </div>
@@ -465,7 +570,7 @@ export default function App() {
         <div className="cart-fab" onClick={() => setIsTrackingVisible(true)} style={{ bottom: cartItemCount > 0 ? '90px' : '20px', backgroundColor: '#3b82f6', zIndex: 99 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Clock />
-            <span>Siparişim ({getDisplayStatus(serverOrderStatus)})</span>
+            <span>{lang === 'tr' ? 'Siparişim' : 'My Order'} ({getDisplayStatus(serverOrderStatus)})</span>
           </div>
         </div>
       )}
@@ -476,7 +581,7 @@ export default function App() {
           <div className="bottom-sheet" onClick={e => e.stopPropagation()}>
             <div className="sheet-handle"></div>
             <div className="sheet-header">
-              <h3>{selectedProduct.name}</h3>
+              <h3>{translateText(selectedProduct.name, lang)}</h3>
               <button onClick={() => setSelectedProduct(null)} style={{ background: 'none', border: 'none', color: 'white' }}>
                 <X size={24} />
               </button>
@@ -484,7 +589,7 @@ export default function App() {
             
             {selectedProduct.options.length > 1 && (
               <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '14px', color: 'var(--text-dim)', marginBottom: '12px' }}>Porsiyon Seçin</h4>
+                <h4 style={{ fontSize: '14px', color: 'var(--text-dim)', marginBottom: '12px' }}>{lang === 'tr' ? 'Porsiyon Seçin' : 'Select Portion'}</h4>
                 <div>
                   {selectedProduct.options.map((opt, i) => (
                     <div 
@@ -496,7 +601,7 @@ export default function App() {
                       }}
                       onClick={() => setSelectedPortion(opt)}
                     >
-                      <span className="portion-name">{opt.portion}</span>
+                      <span className="portion-name">{translateText(opt.portion, lang)}</span>
                       <span className="portion-price">{opt.price} ₺</span>
                     </div>
                   ))}
@@ -505,7 +610,7 @@ export default function App() {
             )}
 
             <div className="ingredients-section">
-              <h4>İçindekiler (Çıkarmak için dokunun)</h4>
+              <h4>{lang === 'tr' ? 'İçindekiler (Çıkarmak için dokunun)' : 'Ingredients (Tap to remove)'}</h4>
               <div className="ingredients-list">
                 {DEFAULT_INGREDIENTS.map(ing => (
                   <div 
@@ -513,14 +618,14 @@ export default function App() {
                     className={`ingredient-chip ${keptIngredients[ing] ? 'selected' : 'unselected'}`}
                     onClick={() => setKeptIngredients({...keptIngredients, [ing]: !keptIngredients[ing]})}
                   >
-                    {ing}
+                    {translateText(ing, lang)}
                   </div>
                 ))}
               </div>
             </div>
 
             <button className="btn" style={{ marginTop: '10px' }} onClick={handleAddFromModal}>
-              Sepete Ekle - {selectedPortion.price} ₺
+              {lang === 'tr' ? 'Sepete Ekle' : 'Add to Cart'} - {selectedPortion.price} ₺
             </button>
           </div>
         </div>
@@ -532,7 +637,7 @@ export default function App() {
           <div className="bottom-sheet" onClick={e => e.stopPropagation()}>
             <div className="sheet-handle"></div>
             <div className="sheet-header">
-              <h3>Sepetim</h3>
+              <h3>{lang === 'tr' ? 'Sepetim' : 'My Cart'}</h3>
               <button onClick={() => setIsCartOpen(false)} style={{ background: 'none', border: 'none', color: 'white' }}>
                 <X size={24} />
               </button>
@@ -540,13 +645,13 @@ export default function App() {
             
             <div style={{ paddingBottom: '10px' }}>
               {cart.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '20px 0' }}>Sepetiniz boş.</div>
+                <div style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '20px 0' }}>{lang === 'tr' ? 'Sepetiniz boş.' : 'Your cart is empty.'}</div>
               ) : (
                 cart.map((item) => (
                   <div className="cart-item" key={item.cartId}>
                     <div className="cart-item-info">
-                      <h4>{item.name}</h4>
-                      {item.portion !== 'Standart' && <span style={{ fontSize: '13px', color: 'var(--text-dim)', display: 'block' }}>{item.portion}</span>}
+                      <h4>{translateText(item.name, lang)}</h4>
+                      {item.portion !== 'Standart' && <span style={{ fontSize: '13px', color: 'var(--text-dim)', display: 'block' }}>{translateText(item.portion, lang)}</span>}
                       {item.notes && <span style={{ fontSize: '12px', color: 'var(--danger)', display: 'block', marginTop: '2px' }}>- {item.notes}</span>}
                       <p style={{ marginTop: '4px' }}>{item.price * item.qty} ₺</p>
                     </div>
@@ -563,7 +668,7 @@ export default function App() {
             {cart.length > 0 && (
               <>
                 <div className="cart-total">
-                  <span>Toplam</span>
+                  <span>{lang === 'tr' ? 'Toplam' : 'Total'}</span>
                   <span>{cartTotal} ₺</span>
                 </div>
                 <button 
@@ -571,7 +676,7 @@ export default function App() {
                   onClick={submitOrder}
                   disabled={orderStatus === 'submitting'}
                 >
-                  {orderStatus === 'submitting' ? 'Sipariş İletiliyor...' : 'Siparişi Onayla'}
+                  {orderStatus === 'submitting' ? (lang === 'tr' ? 'Sipariş İletiliyor...' : 'Submitting Order...') : (lang === 'tr' ? 'Siparişi Onayla' : 'Confirm Order')}
                 </button>
               </>
             )}

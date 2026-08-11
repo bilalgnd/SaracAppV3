@@ -131,11 +131,74 @@ body {
   gap: 6px;
 }
 
-/* Category Tabs */
+/* ─── Lang Toggle (Single Pill) ─── */
+#lang-toggle {
+  display: inline-block;
+}
+#lang-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  transition: all 0.25s ease;
+  letter-spacing: 0.05em;
+  user-select: none;
+}
+#lang-toggle button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+#lang-toggle button span {
+  transition: color 0.25s ease;
+}
+#lang-toggle button span.active {
+  color: #c4b5fd;
+  font-weight: 800;
+}
+#lang-toggle .lang-divider {
+  opacity: 0.3;
+  font-weight: 400;
+  font-size: 10px;
+  margin: 0 1px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-logout {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #d4d4d8;
+  padding: 6px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+}
+.btn-logout:hover {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: #ffe4e6;
+  transform: translateY(-2px);
+}
+
+/* Category Tabs (Pill Buttons matching portfolio) */
 .category-tabs {
   display: flex;
   overflow-x: auto;
-  gap: 12px;
+  gap: 10px;
   padding: 16px 24px;
   background: var(--bg);
   position: sticky;
@@ -148,22 +211,91 @@ body {
 }
 
 .cat-tab {
-  padding: 12px 24px;
-  border-radius: 100px;
-  background: var(--surface);
-  color: var(--text-dim);
-  border: 1px solid var(--border);
+  padding: 10px 22px;
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   white-space: nowrap;
-  font-weight: 600;
-  font-size: 15px;
-  transition: all 0.3s ease;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  user-select: none;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.cat-tab.active {
-  background: var(--text);
-  color: #000;
-  border-color: var(--text);
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+.cat-tab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.cat-tab:active {
+  transform: scale(0.95);
+}
+
+/* 5 Theme colors for category pills */
+.cat-tab.theme-0 {
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #ffe4e6;
+}
+.cat-tab.theme-0.active {
+  background: rgba(244, 63, 94, 0.35);
+  border-color: rgba(244, 63, 94, 0.7);
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(244, 63, 94, 0.45);
+}
+
+.cat-tab.theme-1 {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #d1fae5;
+}
+.cat-tab.theme-1.active {
+  background: rgba(16, 185, 129, 0.35);
+  border-color: rgba(16, 185, 129, 0.7);
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.45);
+}
+
+.cat-tab.theme-2 {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  color: #f3e8ff;
+}
+.cat-tab.theme-2.active {
+  background: rgba(168, 85, 247, 0.35);
+  border-color: rgba(168, 85, 247, 0.7);
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.45);
+}
+
+.cat-tab.theme-3 {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fef3c7;
+}
+.cat-tab.theme-3.active {
+  background: rgba(245, 158, 11, 0.35);
+  border-color: rgba(245, 158, 11, 0.7);
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.45);
+}
+
+.cat-tab.theme-4 {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #e0f2fe;
+}
+.cat-tab.theme-4.active {
+  background: rgba(56, 189, 248, 0.35);
+  border-color: rgba(56, 189, 248, 0.7);
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
 }
 
 /* Menu Grid */
