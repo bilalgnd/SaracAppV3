@@ -29,17 +29,17 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 const API_TOKEN = '123456';
 
 export function getActiveShop(req: any) {
-  const targetId = req?.user?.username || req?.user?.shopId || shopContext.getStore();
-  if (targetId) {
-    const { ShopState, shops, getShop } = require('./models');
-    if (!shops.has(targetId)) {
-      const newShop = new ShopState(targetId);
-      newShop.initialize();
-      shops.set(targetId, newShop);
-    }
-    return shops.get(targetId) || getShop();
+  let targetId = req?.query?.shop || req?.query?.shopId || req?.user?.username || req?.user?.shopId || shopContext.getStore();
+  if (!targetId || targetId === 'admin' || targetId === 'bilalgnd' || targetId === 'default') {
+    targetId = 'sarac';
   }
-  return getShop();
+  const { ShopState, shops, getShop } = require('./models');
+  if (!shops.has(targetId)) {
+    const newShop = new ShopState(targetId);
+    newShop.initialize();
+    shops.set(targetId, newShop);
+  }
+  return shops.get(targetId) || getShop();
 }
 export interface SystemLog {
   time: string;
@@ -963,7 +963,7 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
     // Fallback: Check if token matches any shop's API_TOKEN
     const { shops, getShop } = require('./models')
     if (token === getShop().systemSettings.API_TOKEN) {
-      return shopContext.run('admin', () => next())
+      return shopContext.run('sarac', () => next())
     }
     for (const [sId, shop] of shops.entries()) {
       if (shop.systemSettings && shop.systemSettings['API_TOKEN'] === token) {
@@ -2111,9 +2111,13 @@ wss.on('connection', (ws, req) => {
       }
     }
   } else if (explicitShopId) {
-    shopId = explicitShopId;
+    shopId = (explicitShopId === 'admin' || explicitShopId === 'bilalgnd') ? 'sarac' : explicitShopId;
   } else if (isTv) {
-    shopId = 'admin';
+    shopId = 'sarac';
+  }
+
+  if (!shopId || shopId === 'admin' || shopId === 'bilalgnd') {
+    shopId = 'sarac';
   }
 
   if (!shopId) {
@@ -2300,7 +2304,7 @@ app.post('/api/sync_orders', requireAuth, idempotencyMiddleware, async (req: any
     shop.activeOrders.push(...req.body)
     shop.saveOrders()
     broadcastUpdateToPhones(shop)
-    notifyUI('orders_update', null, shop)
+    notifyUI('orders_update', shop.activeOrders, shop)
 
     const { ActivityLogModel } = require('./models')
     try {

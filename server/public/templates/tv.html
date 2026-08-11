@@ -811,8 +811,25 @@
                     if (Array.isArray(data)) {
                         renderOrders(data);
                     } else if (data && data.type === 'server-event') {
-                        if (data.action === 'orders_update' && Array.isArray(data.data)) {
-                            renderOrders(data.data);
+                        if (data.action === 'orders_update') {
+                            if (Array.isArray(data.data)) {
+                                renderOrders(data.data);
+                            } else {
+                                fetchActiveOrders();
+                            }
+                        } else if (data.action === 'tv_screensaver_changed') {
+                            const mode = data.mode || (data.data && data.data.mode);
+                            if (mode) {
+                                screensaverMode = mode;
+                                if (isCurrentlyIdle) {
+                                    manageScreensaver(true);
+                                }
+                            }
+                        } else if (data.action === 'tv_audio_changed') {
+                            const src = data.source || (data.data && data.data.source);
+                            const stn = data.station || (data.data && data.data.station);
+                            if (src && src !== activeAudioSource) setAudioSource(src);
+                            if (stn && stn !== activeRadioStation) changeRadioStation(stn);
                         } else if (data.action === 'tv_card_scale_changed') {
                             const scale = data.scale || (data.data && data.data.scale);
                             if (scale) applyTvCardScale(scale, false);
@@ -841,16 +858,33 @@
             const dvd = document.getElementById('dvdLogo');
             function animate() {
                 const rect = dvd.getBoundingClientRect();
-                if (x + rect.width >= window.innerWidth || x <= 0) {
-                    dx = -dx;
+                const maxX = Math.max(1, window.innerWidth - (rect.width || 120));
+                const maxY = Math.max(1, window.innerHeight - (rect.height || 60));
+
+                if (x >= maxX) {
+                    x = maxX;
+                    dx = -Math.abs(dx);
+                    colorIdx = (colorIdx + 1) % colors.length;
+                    dvd.style.color = colors[colorIdx];
+                } else if (x <= 0) {
+                    x = 0;
+                    dx = Math.abs(dx);
                     colorIdx = (colorIdx + 1) % colors.length;
                     dvd.style.color = colors[colorIdx];
                 }
-                if (y + rect.height >= window.innerHeight || y <= 0) {
-                    dy = -dy;
+
+                if (y >= maxY) {
+                    y = maxY;
+                    dy = -Math.abs(dy);
+                    colorIdx = (colorIdx + 1) % colors.length;
+                    dvd.style.color = colors[colorIdx];
+                } else if (y <= 0) {
+                    y = 0;
+                    dy = Math.abs(dy);
                     colorIdx = (colorIdx + 1) % colors.length;
                     dvd.style.color = colors[colorIdx];
                 }
+
                 x += dx;
                 y += dy;
                 dvd.style.left = x + 'px';

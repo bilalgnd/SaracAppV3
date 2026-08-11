@@ -230,16 +230,16 @@ export class ShopState {
 export const shops = new Map<string, ShopState>();
 
 export function getShop(): ShopState {
- let shopId = shopContext.getStore() || 'admin';
- if (shopId === 'bilalgnd') {
-   shopId = 'admin';
- }
- if (!shops.has(shopId)) {
- const shop = new ShopState(shopId);
- shops.set(shopId, shop);
- shop.initialize();
- }
- return shops.get(shopId)!;
+  let shopId = shopContext.getStore() || 'sarac';
+  if (!shopId || shopId === 'admin' || shopId === 'bilalgnd' || shopId === 'default') {
+    shopId = 'sarac';
+  }
+  if (!shops.has(shopId)) {
+    const shop = new ShopState(shopId);
+    shops.set(shopId, shop);
+    shop.initialize();
+  }
+  return shops.get(shopId)!;
 }
 export async function initializeModels() {
   const adminShop = new ShopState('admin');
