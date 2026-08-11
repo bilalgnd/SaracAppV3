@@ -91,6 +91,32 @@ export function sendLogToServer(type: 'success' | 'error' | 'warning' | 'info', 
   } catch (e) {}
 }
 
+export async function fetchCloudOrders() {
+  try {
+    const res = await axios.get(`${CLOUD_URL}/api/orders?shop=sarac`);
+    if (Array.isArray(res.data)) {
+      activeOrders = res.data;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('server-event', { action: 'orders_update', data: activeOrders });
+      }
+      return activeOrders;
+    }
+  } catch (e: any) {
+    console.error('fetchCloudOrders error:', e.message);
+  }
+  return activeOrders;
+}
+
+export async function syncActiveOrdersWithCloud(orders: any[]) {
+  activeOrders = orders;
+  try {
+    await axios.post(`${CLOUD_URL}/api/orders?shop=sarac`, orders);
+  } catch (e: any) {}
+  try {
+    await axios.post(`${CLOUD_URL}/api/sync_orders`, orders);
+  } catch (e: any) {}
+}
+
 function connectWebSocket() {
   const token = systemSettings.API_TOKEN || ''
   
@@ -110,6 +136,7 @@ function connectWebSocket() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('server-event', { action: 'network_status', status: 'online' })
     }
+    fetchCloudOrders()
     
     // Heartbeat mechanism to detect drops quickly
     if (pingInterval) clearInterval(pingInterval);
@@ -337,14 +364,27 @@ function connectWebSocket() {
              });
            });
         }
+        if (parsed.action === 'tv_screensaver_changed' && parsed.mode) {
+          systemSettings.TV_SCREENSAVER = parsed.mode;
+          saveSettings();
+        }
+        if (parsed.action === 'orders_update') {
+          if (Array.isArray(parsed.data)) {
+            activeOrders = parsed.data;
+          } else {
+            fetchCloudOrders();
+          }
+        } else if (['order_received', 'update_status', 'request_update', 'tgo_add_order', 'order_status_change', 'siparis'].includes(parsed.action)) {
+          fetchCloudOrders();
+        }
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('server-event', parsed)
+          mainWindow.webContents.send('server-event', { action: parsed.action || 'orders_update', data: activeOrders })
         }
       } else if (Array.isArray(parsed)) {
         // It's the active orders array
         activeOrders = parsed
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('server-event', { action: 'orders_update' })
+          mainWindow.webContents.send('server-event', { action: 'orders_update', data: parsed })
         }
       }
     } catch (e) {
@@ -440,6 +480,15 @@ async function fetchInitialData() {
     console.error('Failed to fetch menu:', e.message)
   }
   try {
+    const sRes = await axios.get(`${CLOUD_URL}/api/settings`, { timeout: 3000 })
+    if (sRes.data) {
+      if (sRes.data.TV_SCREENSAVER) systemSettings.TV_SCREENSAVER = sRes.data.TV_SCREENSAVER;
+      if (sRes.data.TV_AUDIO_SOURCE) systemSettings.TV_AUDIO_SOURCE = sRes.data.TV_AUDIO_SOURCE;
+      if (sRes.data.TV_RADIO_STATION) systemSettings.TV_RADIO_STATION = sRes.data.TV_RADIO_STATION;
+      saveSettings()
+    }
+  } catch(e) {}
+  try {
     await axios.get(`${CLOUD_URL}/api/daily_report`)
     // Mock or extract past orders if needed
   } catch(e) {}
@@ -458,7 +507,10 @@ async function createWindow(): Promise<void> {
 
   // Move startFileWatcher down
 
+  app.setName('Vantage')
+
   mainWindow = new BrowserWindow({
+    title: 'Vantage',
     width: 1366,
     height: 768,
     minWidth: 1024,
@@ -520,7 +572,7 @@ async function createWindow(): Promise<void> {
 }
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.saracoglu.pos')
+  electronApp.setAppUserModelId('com.vantage.app')
   
   if (!is.dev) {
     autoUpdater.checkForUpdatesAndNotify()
@@ -535,8 +587,12 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // ---- IPC Handlers ----
-  ipcMain.handle('get-orders', () => activeOrders)
+  ipcMain.handle('get-orders', async () => {
+    if (!activeOrders || activeOrders.length === 0) {
+      await fetchCloudOrders()
+    }
+    return activeOrders
+  })
   ipcMain.handle('get-menu', async () => {
     if (!fullMenu) await fetchInitialData()
     return fullMenu
@@ -594,7 +650,20 @@ app.whenReady().then(() => {
   ipcMain.handle('update-trendyol-store-status', async (_, status) => await updateTrendyolStoreStatus(status))
   ipcMain.handle('restart-tv-tunnel', getTvUrlWithShop)
   
-  ipcMain.handle('get-settings', () => systemSettings)
+  ipcMain.handle('get-settings', async () => {
+    try {
+      if (systemSettings.API_TOKEN) {
+        const res = await axios.get(`${CLOUD_URL}/api/settings`, { timeout: 3000 });
+        if (res.data) {
+          if (res.data.TV_SCREENSAVER) systemSettings.TV_SCREENSAVER = res.data.TV_SCREENSAVER;
+          if (res.data.TV_AUDIO_SOURCE) systemSettings.TV_AUDIO_SOURCE = res.data.TV_AUDIO_SOURCE;
+          if (res.data.TV_RADIO_STATION) systemSettings.TV_RADIO_STATION = res.data.TV_RADIO_STATION;
+          saveSettings();
+        }
+      }
+    } catch(e) {}
+    return systemSettings;
+  })
   ipcMain.on('save-settings', async (_, settings) => {
     const oldToken = systemSettings.API_TOKEN;
     console.log('[SETTINGS SAVE] Received settings:', JSON.stringify(settings));
@@ -716,8 +785,7 @@ app.whenReady().then(() => {
 
   ipcMain.on('save-orders', async (_, newOrders) => {
     try {
-      activeOrders = newOrders
-      await axios.post(`${CLOUD_URL}/api/sync_orders`, newOrders)
+      await syncActiveOrdersWithCloud(newOrders)
     } catch(e: any) {
       console.error('save-orders error:', e.message)
     }
