@@ -38,6 +38,8 @@ const api = {
   register: (credentials: any) => ipcRenderer.invoke('register', credentials),
   exportMenu: (token?: string) => ipcRenderer.invoke('export-menu', token),
   importMenu: (token: string, data: any) => ipcRenderer.invoke('import-menu', { token, data }),
+  getPairCode: () => ipcRenderer.invoke('get-pair-code'),
+  refreshPairCode: () => ipcRenderer.invoke('refresh-pair-code'),
   
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),

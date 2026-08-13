@@ -65,8 +65,8 @@ export async function initializeModels() {
   }
 
   // Update Settings (Google Drive / win-unpacked)
-  if (!systemSettings["UPDATE_DRIVE_LINK"]) {
-    systemSettings["UPDATE_DRIVE_LINK"] = "https://drive.google.com/drive/folders/175wvFtIF4P1OlgkBCwffNi2i90Rch8EA?usp=sharing";
+  if (!systemSettings["UPDATE_DRIVE_LINK"] || systemSettings["UPDATE_DRIVE_LINK"].includes('175wvFtIF4P1OlgkBCwffNi2i90Rch8EA')) {
+    systemSettings["UPDATE_DRIVE_LINK"] = "https://drive.google.com/drive/folders/1Ts9NytIbJ-ipsNL9NCFXr3DiXbvQps0l?usp=drive_link";
     changed = true;
   }
   if (!systemSettings["UPDATE_LOCAL_PATH"]) {

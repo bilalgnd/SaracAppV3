@@ -36,6 +36,8 @@ declare global {
       exportApiKeys: (settings: any) => Promise<{success: boolean, error?: string}>
       exportMenu: () => Promise<any>
       importMenu: (data: any) => Promise<any>
+      getPairCode: () => Promise<{ success: boolean, code?: string, qrData?: string, shopId?: string, error?: string }>
+      refreshPairCode: () => Promise<{ success: boolean, code?: string, qrData?: string, shopId?: string, error?: string }>
       checkForUpdates: () => Promise<void>
       downloadUpdate: () => Promise<void>
       installUpdate: () => Promise<void>

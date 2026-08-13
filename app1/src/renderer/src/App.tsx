@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import Swal from 'sweetalert2'
 import { useStore } from './store'
 import Sidebar from './components/Sidebar'
@@ -7,6 +7,7 @@ import CartPanel from './components/CartPanel'
 import OrderModal from './components/OrderModal'
 import SettingsModal from './components/SettingsModal'
 import FileShareModal from './components/FileShareModal'
+import PairModal from './components/PairModal'
 
 import TitleBar from './components/TitleBar'
 
@@ -179,6 +180,14 @@ function App() {
     }
   }, [isLoggedIn, setOrders, setMenu])
 
+  const [isPairOpen, setIsPairOpen] = useState(false)
+
+  useEffect(() => {
+    const handleOpenPair = () => setIsPairOpen(true)
+    window.addEventListener('open-pair-modal', handleOpenPair)
+    return () => window.removeEventListener('open-pair-modal', handleOpenPair)
+  }, [])
+
   return (
     <>
       <TitleBar />
@@ -193,6 +202,7 @@ function App() {
             <OrderModal />
             <SettingsModal />
             <FileShareModal />
+            <PairModal isOpen={isPairOpen} onClose={() => setIsPairOpen(false)} />
           </div>
         </div>
       )}

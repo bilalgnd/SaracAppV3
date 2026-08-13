@@ -374,11 +374,13 @@ function connectWebSocket() {
           } else {
             fetchCloudOrders();
           }
-        } else if (['order_received', 'update_status', 'request_update', 'tgo_add_order', 'order_status_change', 'siparis'].includes(parsed.action)) {
+        } else if (['order_received', 'update_status', 'request_update', 'order_status_change', 'siparis'].includes(parsed.action)) {
           fetchCloudOrders();
         }
+
+        const eventData = parsed.data !== undefined ? parsed.data : activeOrders;
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('server-event', { action: parsed.action || 'orders_update', data: activeOrders })
+          mainWindow.webContents.send('server-event', { action: parsed.action || 'orders_update', data: eventData })
         }
       } else if (Array.isArray(parsed)) {
         // It's the active orders array
@@ -518,7 +520,7 @@ async function createWindow(): Promise<void> {
     show: false,
     autoHideMenuBar: true,
     frame: false,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -754,6 +756,48 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('get-pair-code', async () => {
+    try {
+      if (!systemSettings.PAIR_CODE) {
+        systemSettings.PAIR_CODE = '123456'
+        await saveSettings()
+      }
+      const code = systemSettings.PAIR_CODE || '123456'
+      const token = systemSettings.API_TOKEN || '123456'
+      const qrData = JSON.stringify({
+        app: 'saracapp',
+        type: 'pair',
+        code: code,
+        token: token,
+        shopId: 'sarac',
+        url: 'https://bilalgnd.shop'
+      })
+      return { success: true, code, qrData, shopId: 'sarac' }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
+  })
+
+  ipcMain.handle('refresh-pair-code', async () => {
+    try {
+      const newCode = Math.floor(100000 + Math.random() * 900000).toString()
+      systemSettings.PAIR_CODE = newCode
+      await saveSettings()
+      const token = systemSettings.API_TOKEN || '123456'
+      const qrData = JSON.stringify({
+        app: 'saracapp',
+        type: 'pair',
+        code: newCode,
+        token: token,
+        shopId: 'sarac',
+        url: 'https://bilalgnd.shop'
+      })
+      return { success: true, code: newCode, qrData, shopId: 'sarac' }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
+  })
+
   ipcMain.on('save-menu', async (_, newMenu) => {
     fullMenu = newMenu
     try {
@@ -945,28 +989,59 @@ app.whenReady().then(() => {
     app.quit()
   })
 
+  // Windows Başlangıcında Otomatik Başlama (Arka Planda)
+  try {
+    if (!is.dev) {
+      app.setLoginItemSettings({
+        openAtLogin: true,
+        openAsHidden: true,
+        args: ['--hidden']
+      })
+    }
+  } catch (e: any) {
+    console.error('Failed to set login item settings:', e.message)
+  }
+
   createWindow()
 
+  // Global Kısayol: Ctrl+Alt+S (Öne Getir / Gizle)
   globalShortcut.register('CommandOrControl+Alt+S', () => {
-    if (mainWindow) {
-      mainWindow.show()
-      mainWindow.focus()
-    }
+    toggleMainWindow()
   })
 
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow()
+    } else {
+      showAndFocusMainWindow()
+    }
   })
 })
+
+function showAndFocusMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
+  mainWindow.focus()
+  mainWindow.setAlwaysOnTop(true)
+  mainWindow.setAlwaysOnTop(false)
+}
+
+function toggleMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (mainWindow.isVisible() && !mainWindow.isMinimized()) {
+    mainWindow.hide()
+  } else {
+    showAndFocusMainWindow()
+  }
+}
 
 app.on('before-quit', () => {
   isQuitting = true
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  // Tamamen gizli mod: Arka planda çalışmaya devam etsin
 })
 
 app.on('will-quit', () => {

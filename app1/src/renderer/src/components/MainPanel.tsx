@@ -335,19 +335,55 @@ function TablesGrid() {
                 </button>
               )}
               <div className="table-name">{order.customer_name}</div>
+              {order.createdBy && order.createdBy !== 'Kasa' && (
+                <div style={{
+                  display: 'inline-block',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  color: '#fff',
+                  backgroundColor: order.color || '#10b981',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  marginBottom: '6px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                }}>
+                  👤 {order.createdBy}
+                </div>
+              )}
               {order.order_note && (
                 <div style={{ color: 'var(--success)', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px', whiteSpace: 'pre-wrap', textAlign: 'center', lineHeight: 1.35 }}>
                   📝 {formatOrderNote(order.order_note)}
                 </div>
               )}
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 5, lineHeight: 1.2 }}>
-                {order.items.map((it, i) => (
-                  <div key={i} style={{ marginBottom: 3 }}>
-                    <span style={{ color: '#fff' }}>{it.quantity && it.quantity > 1 ? `${it.quantity}x ` : ''}{it.name}</span>
-                    {it.portion && it.portion !== 'Standart' && <span style={{ color: '#aaa', marginLeft: 4 }}>({it.portion})</span>}
-                    {it.notes && <div style={{ color: '#ff5252', fontSize: 11, paddingLeft: 8 }}>- {it.notes}</div>}
-                  </div>
-                ))}
+              <div className="order-modal-body" style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 5, lineHeight: 1.3, maxHeight: '170px', overflowY: 'auto', paddingRight: 2 }}>
+                {(() => {
+                  const groupedMap = new Map<string, { name: string; portion?: string; notes?: string; quantity: number }>()
+                  for (const it of order.items) {
+                    const qty = it.quantity || 1
+                    const portion = (it.portion && it.portion !== 'Standart') ? it.portion : ''
+                    const notes = it.notes ? String(it.notes).trim() : ''
+                    const key = `${it.name}|${portion}|${notes}`
+                    if (groupedMap.has(key)) {
+                      groupedMap.get(key)!.quantity += qty
+                    } else {
+                      groupedMap.set(key, { name: it.name, portion, notes, quantity: qty })
+                    }
+                  }
+                  return Array.from(groupedMap.values()).map((it, i) => (
+                    <div key={i} style={{ marginBottom: 3 }}>
+                      <span style={{ color: '#fff', fontWeight: it.quantity > 1 ? '700' : '500' }}>
+                        {it.quantity > 1 && (
+                          <span style={{ color: 'var(--primary)', fontWeight: '800', marginRight: 4, backgroundColor: 'rgba(245, 78, 78, 0.15)', padding: '1px 5px', borderRadius: '4px', fontSize: '11px' }}>
+                            {it.quantity}x
+                          </span>
+                        )}
+                        {it.name}
+                      </span>
+                      {it.portion && <span style={{ color: '#aaa', marginLeft: 4 }}>({it.portion})</span>}
+                      {it.notes && <div style={{ color: '#ff5252', fontSize: 11, paddingLeft: 8 }}>- {it.notes}</div>}
+                    </div>
+                  ))
+                })()}
               </div>
               {isEditing && <div style={{ fontSize: 11, color: 'var(--primary)', marginBottom: 5 }}>(Düzenleniyor)</div>}
               <div className="table-total">{order.total_amount} ₺</div>

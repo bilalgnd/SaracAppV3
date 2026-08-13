@@ -16,6 +16,8 @@ export interface Order {
   total_amount: number
   status: 'waiting' | 'prepared' | 'served' | 'Tamamlandı' | 'İptal'
   color?: string
+  createdBy?: string
+  packageId?: string
   order_note?: string
   completedAt?: string
 }

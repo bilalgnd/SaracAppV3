@@ -1,35 +1,41 @@
 import { useState, useEffect, useRef } from 'react'
 import { useStore } from '../store'
 
+interface ItemConfig {
+  selectedPortion: string
+  currentPrice: number
+  chips: Record<string, boolean>
+  customNote: string
+}
+
 export default function OrderModal() {
   const [isOpen, setIsOpen] = useState(false)
   const [product, setProduct] = useState<any>(null)
   
-  const [quantity, setQuantity] = useState(1)
-  const [selectedPortion, setSelectedPortion] = useState('')
-  const [currentPrice, setCurrentPrice] = useState(0)
-  
-  const [chips, setChips] = useState<Record<string, boolean>>({})
+  const [items, setItems] = useState<ItemConfig[]>([])
+  const [activeIndex, setActiveIndex] = useState(0)
   const [drinkCounts, setDrinkCounts] = useState<Record<string, number>>({})
-  const [customNote, setCustomNote] = useState('')
-
-  const drinkTimerRef = useRef<any>(null)
-  const drinkDragging = useRef(false)
-  const drinkLongPressed = useRef(false)
 
   const { addToCart, menu } = useStore()
+
+  const createDefaultItem = (prod: any): ItemConfig => {
+    const defOpt = prod?.options?.find((o: any) => o.portion === '100gr') || prod?.options?.[0] || { portion: 'Standart', price: 0 }
+    return {
+      selectedPortion: defOpt.portion,
+      currentPrice: defOpt.price,
+      chips: {},
+      customNote: ''
+    }
+  }
 
   useEffect(() => {
     const handleOpen = (e: any) => {
       const item = e.detail
       setProduct(item)
-      setQuantity(1)
-      const defOpt = item.options.find((o: any) => o.portion === '100gr') || item.options[0]
-      setSelectedPortion(defOpt.portion)
-      setCurrentPrice(defOpt.price)
-      setChips({})
+      const initialItem = createDefaultItem(item)
+      setItems([initialItem])
+      setActiveIndex(0)
       setDrinkCounts({})
-      setCustomNote('')
       setIsOpen(true)
     }
 
@@ -37,18 +43,29 @@ export default function OrderModal() {
     return () => window.removeEventListener('open-order-modal', handleOpen)
   }, [])
 
-  if (!isOpen || !product) return null
+  if (!isOpen || !product || items.length === 0) return null
+
+  const activeItem = items[activeIndex] || items[0]
 
   const handlePortionSelect = (portion: string, price: number) => {
-    setSelectedPortion(portion)
-    setCurrentPrice(price)
+    setItems(prev => {
+      const next = [...prev]
+      next[activeIndex] = {
+        ...next[activeIndex],
+        selectedPortion: portion,
+        currentPrice: price
+      }
+      return next
+    })
   }
 
   const toggleChip = (name: string) => {
-    setChips(prev => {
-      const next = { ...prev, [name]: !prev[name] }
-      
-      if (next[name]) {
+    setItems(prev => {
+      const next = [...prev]
+      const currentChips = { ...next[activeIndex].chips }
+      currentChips[name] = !currentChips[name]
+
+      if (currentChips[name]) {
         const pairs = [
           ['siz', 'li'], ['sız', 'lı'], ['suz', 'lu'], ['süz', 'lü']
         ]
@@ -56,16 +73,59 @@ export default function OrderModal() {
         for (const [neg, pos] of pairs) {
           if (name.endsWith(neg)) {
             const opp = name.substring(0, name.length - neg.length) + pos
-            if (next[opp]) next[opp] = false
+            if (currentChips[opp]) currentChips[opp] = false
           }
           if (name.endsWith(pos)) {
             const opp = name.substring(0, name.length - pos.length) + neg
-            if (next[opp]) next[opp] = false
+            if (currentChips[opp]) currentChips[opp] = false
           }
         }
       }
+
+      next[activeIndex] = {
+        ...next[activeIndex],
+        chips: currentChips
+      }
       return next
     })
+  }
+
+  const handleCustomNoteChange = (note: string) => {
+    setItems(prev => {
+      const next = [...prev]
+      next[activeIndex] = {
+        ...next[activeIndex],
+        customNote: note
+      }
+      return next
+    })
+  }
+
+  const handleIncreaseQuantity = () => {
+    setItems(prev => {
+      const lastItem = prev[prev.length - 1] || createDefaultItem(product)
+      const newItem: ItemConfig = {
+        selectedPortion: lastItem.selectedPortion,
+        currentPrice: lastItem.currentPrice,
+        chips: { ...lastItem.chips },
+        customNote: lastItem.customNote
+      }
+      const next = [...prev, newItem]
+      setActiveIndex(next.length - 1)
+      return next
+    })
+  }
+
+  const handleDecreaseQuantity = () => {
+    if (items.length > 1) {
+      setItems(prev => {
+        const next = prev.slice(0, -1)
+        if (activeIndex >= next.length) {
+          setActiveIndex(next.length - 1)
+        }
+        return next
+      })
+    }
   }
 
   const getChipColor = (name: string) => {
@@ -91,28 +151,35 @@ export default function OrderModal() {
     return '#455A64'
   }
 
+  const paidExtrasMap: Record<string, number> = menu?.paidExtras || menu?.extras || { 'Cheddar': 70, 'Kaşarlı': 70 }
+  const paidExtras = Object.keys(paidExtrasMap)
+
+  const getItemExtraPrice = (chipsObj: Record<string, boolean>) => {
+    let extra = 0
+    Object.entries(paidExtrasMap).forEach(([name, price]) => {
+      if (chipsObj[name]) extra += Number(price) || 0
+    })
+    return extra
+  }
+
   const handleAdd = () => {
-    const notesArr = Object.keys(chips).filter(k => chips[k])
-    if (customNote.trim()) {
-      notesArr.push(customNote.trim())
-    }
-    const notesStr = notesArr.join(', ')
+    // Add each configured item to cart
+    items.forEach(it => {
+      const notesArr = Object.keys(it.chips).filter(k => it.chips[k])
+      if (it.customNote.trim()) {
+        notesArr.push(it.customNote.trim())
+      }
+      const notesStr = notesArr.join(', ')
+      const extra = getItemExtraPrice(it.chips)
+      const itemTotalPrice = it.currentPrice + extra
 
-    // calculate extra price
-    let extraPrice = 0
-    if (chips['Cheddar']) extraPrice += 70 // hardcoded example, should use models
-    if (chips['Kaşarlı']) extraPrice += 70
-
-    const itemPrice = (currentPrice + extraPrice)
-
-    for (let i = 0; i < quantity; i++) {
       addToCart({
         name: product.name,
-        portion: selectedPortion,
-        price: itemPrice,
+        portion: it.selectedPortion,
+        price: itemTotalPrice,
         notes: notesStr
       })
-    }
+    })
 
     // Add drinks
     Object.entries(drinkCounts).forEach(([drinkName, count]) => {
@@ -121,14 +188,12 @@ export default function OrderModal() {
         const drinksMenu = drinksCat?.items || []
         const drinkItem = drinksMenu.find((d: any) => d.name === drinkName)
         if (drinkItem) {
-          for (let i = 0; i < count; i++) {
-            addToCart({
-              name: drinkItem.name,
-              portion: drinkItem.options[0].portion,
-              price: drinkItem.options[0].price,
-              notes: ''
-            })
-          }
+          addToCart({
+            name: drinkItem.name,
+            portion: drinkItem.options[0]?.portion || 'Standart',
+            price: drinkItem.options[0]?.price || 0,
+            notes: ''
+          })
         }
       }
     })
@@ -136,10 +201,32 @@ export default function OrderModal() {
     setIsOpen(false)
   }
 
-  const ingredients = ['Soğansız', 'Domatessiz', 'Patatessiz', 'Ketçapsız', 'Mayonezsiz', 'Turşusuz', 
-                       'Soğanlı', 'Domatesli', 'Patatesli', 'Ketçaplı', 'Mayonezli', 'Turşulu']
-  const freeExtras = ['Sade Et', 'Soslu', 'Gemi', 'Kayık', 'Acılı', 'Karışık']
-  const paidExtras = ['Cheddar', 'Kaşarlı']
+  const toWithout = (name: string) => {
+    const lower = name.toLowerCase()
+    const lastVowel = [...lower].reverse().find(c => 'aeıioöuü'.includes(c))
+    if (['a', 'ı'].includes(lastVowel || '')) return name + 'sız'
+    if (['e', 'i'].includes(lastVowel || '')) return name + 'siz'
+    if (['o', 'u'].includes(lastVowel || '')) return name + 'suz'
+    if (['ö', 'ü'].includes(lastVowel || '')) return name + 'süz'
+    return name + 'sız'
+  }
+
+  const toWith = (name: string) => {
+    const lower = name.toLowerCase()
+    const lastVowel = [...lower].reverse().find(c => 'aeıioöuü'.includes(c))
+    if (['a', 'ı'].includes(lastVowel || '')) return name + 'lı'
+    if (['e', 'i'].includes(lastVowel || '')) return name + 'li'
+    if (['o', 'u'].includes(lastVowel || '')) return name + 'lu'
+    if (['ö', 'ü'].includes(lastVowel || '')) return name + 'lü'
+    return name + 'lı'
+  }
+
+  const rawIngredients: string[] = menu?.ingredients || ['Soğan', 'Domates', 'Patates', 'Ketçap', 'Mayonez', 'Turşu']
+  const ingredients = [
+    ...rawIngredients.map(toWithout),
+    ...rawIngredients.map(toWith)
+  ]
+  const freeExtras: string[] = menu?.freeExtras || ['Sade Et', 'Soslu', 'Gemi', 'Kayık', 'Acılı', 'Karışık']
 
   const allChips = [...ingredients, ...freeExtras, ...paidExtras]
 
@@ -164,29 +251,90 @@ export default function OrderModal() {
     }
   })
   
-  let extraPrice = 0
-  if (chips['Cheddar']) extraPrice += 70
-  if (chips['Kaşarlı']) extraPrice += 70
-  
-  const displayTotal = (currentPrice + extraPrice) * quantity + drinksTotal
+  const itemsTotal = items.reduce((sum, it) => sum + it.currentPrice + getItemExtraPrice(it.chips), 0)
+  const displayTotal = itemsTotal + drinksTotal
 
   return (
     <div className="modal-overlay" onClick={() => setIsOpen(false)}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
+        {/* Header */}
         <div style={{ padding: '20px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontSize: 24, margin: 0 }}>{product.name}</h2>
           <div style={{ display: 'flex', alignItems: 'center', background: '#1e1e1e', borderRadius: 25, border: '2px solid var(--primary)', padding: '2px 8px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
-            <button className="btn" style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', color: '#fff', fontSize: 24, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0 }} onClick={() => setQuantity(Math.max(1, quantity - 1))}>−</button>
-            <span style={{ width: 40, textAlign: 'center', fontSize: 22, fontWeight: '900', color: 'var(--primary)', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{quantity}</span>
-            <button className="btn" style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', color: '#fff', fontSize: 24, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0 }} onClick={() => setQuantity(quantity + 1)}>+</button>
+            <button className="btn" style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', color: '#fff', fontSize: 24, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0 }} onClick={handleDecreaseQuantity}>−</button>
+            <span style={{ width: 40, textAlign: 'center', fontSize: 22, fontWeight: '900', color: 'var(--primary)', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{items.length}</span>
+            <button className="btn" style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', color: '#fff', fontSize: 24, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0 }} onClick={handleIncreaseQuantity}>+</button>
           </div>
         </div>
 
-        <div style={{ padding: '10px 20px', flex: 1, overflowY: 'auto' }}>
-          {/* Portions */}
+        {/* Tabs for Multiple Items */}
+        {items.length > 1 && (
+          <div 
+            className="order-tabs-bar"
+            onWheel={(e) => {
+              e.currentTarget.scrollLeft += e.deltaY;
+            }}
+            style={{ 
+              display: 'flex', 
+              gap: '8px', 
+              overflowX: 'auto', 
+              padding: '10px 20px 12px', 
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              backgroundColor: 'rgba(0,0,0,0.25)'
+            }}
+          >
+            {items.map((it, idx) => {
+              const isSel = activeIndex === idx
+              const portionText = it.selectedPortion && it.selectedPortion !== 'Standart' ? it.selectedPortion : 'Standart'
+              return (
+                <button
+                  key={idx}
+                  ref={el => {
+                    if (isSel && el) {
+                      el.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
+                    }
+                  }}
+                  className="btn"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    backgroundColor: isSel ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
+                    color: isSel ? '#fff' : '#bbb',
+                    border: isSel ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.12)',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: isSel ? '0 2px 10px rgba(245, 78, 78, 0.4)' : 'none'
+                  }}
+                  onClick={() => setActiveIndex(idx)}
+                >
+                  <span style={{
+                    backgroundColor: isSel ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.12)',
+                    borderRadius: '6px',
+                    padding: '2px 6px',
+                    fontSize: '11px',
+                    fontWeight: '800'
+                  }}>
+                    {idx + 1}
+                  </span>
+                  <span>{portionText}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        <div className="order-modal-body" style={{ padding: '15px 20px', flex: 1, overflowY: 'auto' }}>
+          {/* Portions for active item */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
             {product.options.map((opt: any, i: number) => {
-              const isSel = selectedPortion === opt.portion
+              const isSel = activeItem.selectedPortion === opt.portion
               return (
                 <button
                   key={i}
@@ -205,10 +353,11 @@ export default function OrderModal() {
             })}
           </div>
 
+          {/* Chips for active item */}
           {!isDrink && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
               {allChips.map((chip, i) => {
-                const isSel = !!chips[chip]
+                const isSel = !!activeItem.chips[chip]
                 const color = getChipColor(chip)
                 return (
                   <button
@@ -227,9 +376,10 @@ export default function OrderModal() {
                   </button>
                 )
               })}
-              </div>
+            </div>
           )}
 
+          {/* Drinks & Custom Note */}
           {!isDrink && drinksMenu.length > 0 && (
             <div style={{ marginTop: 20 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
@@ -237,64 +387,27 @@ export default function OrderModal() {
                   const count = drinkCounts[drink.name] || 0
                   const dColor = getDrinkColor(drink.name)
                   return (
-                    <button
+                    <DrinkButtonItem
                       key={i}
-                      className="btn"
-                      style={{
-                        position: 'relative',
-                        height: 50,
-                        backgroundColor: dColor,
-                        color: 'white',
-                        border: 'none',
-                        fontSize: 14,
-                        fontWeight: 'bold',
-                        touchAction: 'pan-y'
-                      }}
-                      onPointerDown={() => {
-                        drinkDragging.current = false
-                        drinkLongPressed.current = false
-                        drinkTimerRef.current = setTimeout(() => {
-                          if (!drinkDragging.current) {
-                            drinkLongPressed.current = true
-                            if (navigator.vibrate) navigator.vibrate(50)
-                            setDrinkCounts(prev => ({ ...prev, [drink.name]: Math.max(0, (prev[drink.name] || 0) - 1) }))
-                          }
-                        }, 400)
-                      }}
-                      onPointerMove={() => {
-                        drinkDragging.current = true
-                        if (drinkTimerRef.current) clearTimeout(drinkTimerRef.current)
-                      }}
-                      onPointerUp={() => {
-                        if (drinkTimerRef.current) clearTimeout(drinkTimerRef.current)
-                        if (!drinkDragging.current && !drinkLongPressed.current) {
-                          setDrinkCounts(prev => ({ ...prev, [drink.name]: (prev[drink.name] || 0) + 1 }))
-                        }
-                        drinkLongPressed.current = false
-                      }}
-                    >
-                      {drink.name}
-                      {count > 0 && (
-                        <div style={{
-                          position: 'absolute', top: -5, right: -5, background: 'white', color: 'black',
-                          borderRadius: '50%', width: 20, height: 20, fontSize: 12, display: 'flex',
-                          alignItems: 'center', justifyContent: 'center', border: `2px solid ${dColor}`
-                        }}>
-                          {count}
-                        </div>
-                      )}
-                    </button>
+                      drink={drink}
+                      count={count}
+                      dColor={dColor}
+                      onIncrement={() => setDrinkCounts(prev => ({ ...prev, [drink.name]: (prev[drink.name] || 0) + 1 }))}
+                      onDecrement={() => setDrinkCounts(prev => ({ ...prev, [drink.name]: Math.max(0, (prev[drink.name] || 0) - 1) }))}
+                    />
                   )
                 })}
               </div>
               
               <div style={{ marginTop: 15 }}>
-                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 5, fontWeight: 'bold' }}>Özel Sipariş Notu:</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 5, fontWeight: 'bold' }}>
+                  {items.length > 1 ? `${activeIndex + 1}. Ürün İçin Özel Sipariş Notu:` : 'Özel Sipariş Notu:'}
+                </div>
                 <textarea 
                   className="cart-input"
                   placeholder="✍️ Özel not ekleyin..."
-                  value={customNote}
-                  onChange={e => setCustomNote(e.target.value)}
+                  value={activeItem.customNote}
+                  onChange={e => handleCustomNoteChange(e.target.value)}
                   style={{ 
                     width: '100%', 
                     padding: '12px 15px', 
@@ -307,6 +420,7 @@ export default function OrderModal() {
           )}
         </div>
 
+        {/* Footer */}
         <div style={{ padding: '15px 20px', background: 'var(--bg-card)', display: 'flex', gap: 10 }}>
           <button className="btn" style={{ flex: 1, height: 50, backgroundColor: '#424242', color: 'white' }} onClick={() => setIsOpen(false)}>
             İptal
@@ -317,5 +431,116 @@ export default function OrderModal() {
         </div>
       </div>
     </div>
+  )
+}
+
+function DrinkButtonItem({
+  drink,
+  count,
+  dColor,
+  onIncrement,
+  onDecrement
+}: {
+  drink: any
+  count: number
+  dColor: string
+  onIncrement: () => void
+  onDecrement: () => void
+}) {
+  const timerRef = useRef<any>(null)
+  const isLongPressRef = useRef(false)
+
+  const handleStart = (_e: React.SyntheticEvent) => {
+    isLongPressRef.current = false
+    if (timerRef.current) clearTimeout(timerRef.current)
+    
+    timerRef.current = setTimeout(() => {
+      isLongPressRef.current = true
+      if (navigator.vibrate) navigator.vibrate(50)
+      onDecrement()
+    }, 400)
+  }
+
+  const handleEnd = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (isLongPressRef.current) {
+      isLongPressRef.current = false
+      return
+    }
+    onIncrement()
+  }
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    handleEnd()
+    onDecrement()
+  }
+
+  return (
+    <button
+      type="button"
+      className="btn"
+      style={{
+        position: 'relative',
+        height: 50,
+        backgroundColor: dColor,
+        color: 'white',
+        border: count > 0 ? '2px solid rgba(255,255,255,0.9)' : 'none',
+        borderRadius: '8px',
+        fontSize: 14,
+        fontWeight: 'bold',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        boxShadow: count > 0 ? '0 4px 10px rgba(0,0,0,0.35)' : 'none',
+        transform: count > 0 ? 'scale(1.02)' : 'none',
+        transition: 'transform 0.1s ease, border 0.1s ease',
+        cursor: 'pointer'
+      }}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
+      onMouseDown={handleStart}
+      onMouseUp={handleEnd}
+      onMouseLeave={handleEnd}
+      onTouchStart={handleStart}
+      onTouchEnd={handleEnd}
+      onTouchCancel={handleEnd}
+    >
+      {drink.name}
+      {count > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 2,
+            right: 2,
+            backgroundColor: '#ffffff',
+            color: '#111111',
+            borderRadius: '50%',
+            width: 22,
+            height: 22,
+            fontSize: 12,
+            fontWeight: '900',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: `2px solid ${dColor}`,
+            boxShadow: '0 2px 5px rgba(0,0,0,0.4)',
+            zIndex: 10,
+            boxSizing: 'border-box',
+            pointerEvents: 'none'
+          }}
+        >
+          {count}
+        </div>
+      )}
+    </button>
   )
 }

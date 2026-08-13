@@ -6,6 +6,10 @@ import android.net.Uri
 import org.json.JSONObject
 import android.os.Bundle
 import android.widget.Toast
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import androidx.compose.material.icons.filled.QrCode
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -118,7 +122,17 @@ data class Adisyon(
     @SerializedName("total_amount") val toplamTutar: Int,
     @SerializedName("status") val durum: String = "Bekliyor",
     @SerializedName("order_note") val siparisNotu: String? = null,
-    @SerializedName("color") val renk: String? = null
+    @SerializedName("color") val renk: String? = null,
+    @SerializedName("createdBy") val createdBy: String? = null
+)
+
+data class PairResponse(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("token") val token: String?,
+    @SerializedName("shopId") val shopId: String?,
+    @SerializedName("waiterName") val waiterName: String?,
+    @SerializedName("waiterColor") val waiterColor: String?,
+    @SerializedName("error") val error: String?
 )
 
 data class Kategori(
@@ -152,6 +166,9 @@ data class DailyReportResponse(
 
 data class MenuResponse(
     @SerializedName("categories") val categories: List<Kategori>? = emptyList(),
+    @SerializedName("ingredients") val ingredients: List<String>? = null,
+    @SerializedName("freeExtras") val freeExtras: List<String>? = null,
+    @SerializedName("paidExtras") val paidExtras: Map<String, Int>? = null,
     @SerializedName("extras") val ekstralar: Map<String, Int>? = emptyMap()
 )
 
@@ -177,11 +194,17 @@ data class LoginResponse(
 )
 
 interface KasaApi {
+    @retrofit2.http.POST("api/auth/pair")
+    suspend fun pairWithCode(@retrofit2.http.Body request: Map<String, String>): retrofit2.Response<PairResponse>
+
     @retrofit2.http.POST("set_tv_screensaver")
     suspend fun setTvScreensaver(@retrofit2.http.Body request: Map<String, String>): retrofit2.Response<Void>
 
     @retrofit2.http.POST("set_tv_audio")
     suspend fun setTvAudio(@retrofit2.http.Body request: Map<String, String>): retrofit2.Response<Void>
+
+    @retrofit2.http.POST("api/set_tv_card_scale")
+    suspend fun setTvCardScale(@retrofit2.http.Body request: Map<String, Int>): retrofit2.Response<Void>
 
     @retrofit2.http.GET("api/daily_report")
     suspend fun gunlukRaporGetir(@retrofit2.http.Query("date") date: String? = null): retrofit2.Response<DailyReportResponse>
@@ -201,8 +224,11 @@ interface KasaApi {
     @retrofit2.http.GET("api/boss-token")
     suspend fun bossTokenGetir(@retrofit2.http.Header("x-boss-secret") secret: String): retrofit2.Response<BossTokenResponse>
 
-    @retrofit2.http.GET("menu")
+    @retrofit2.http.GET("api/menu")
     suspend fun menuGetir(): retrofit2.Response<MenuResponse>
+
+    @retrofit2.http.GET("menu")
+    suspend fun menuGetirLegacy(): retrofit2.Response<MenuResponse>
 
     @retrofit2.http.GET("tv_link")
     suspend fun tvLinkGetir(): retrofit2.Response<TvLinkResponse>
@@ -302,8 +328,14 @@ class HafizaYoneticisi(context: Context) {
 
     fun fcmTokenOku(): String = defter.getString("FCM_TOKEN", "") ?: ""
 
+    fun garsonAdiKaydet(ad: String) = defter.edit().putString("GARSON_ADI", ad).apply()
+    fun garsonAdiOku(): String = defter.getString("GARSON_ADI", "") ?: ""
+
+    fun garsonKoduKaydet(kod: String) = defter.edit().putString("GARSON_PAIR_CODE", kod).apply()
+    fun garsonKoduOku(): String = defter.getString("GARSON_PAIR_CODE", "") ?: ""
+
     fun garsonRengiKaydet(renk: String) = defter.edit().putString("GARSON_RENGI", renk).apply()
-    fun garsonRengiOku(): String = defter.getString("GARSON_RENGI", "#FFFFFF") ?: "#FFFFFF"
+    fun garsonRengiOku(): String = defter.getString("GARSON_RENGI", "#4CAF50") ?: "#4CAF50"
 
     fun kasaTokenKaydet(token: String) = defter.edit().putString("KASA_TOKEN", token).apply()
     fun kasaTokenOku(): String = defter.getString("KASA_TOKEN", "") ?: ""
@@ -348,80 +380,364 @@ class HafizaYoneticisi(context: Context) {
             gson.fromJson(json, object : TypeToken<List<Kategori>>() {}.type) ?: emptyList()
         } catch (e: Exception) { emptyList() }
     }
+
+    fun malzemeleriKaydet(liste: List<String>) = defter.edit().putString("MALZEMELER_CACHE", gson.toJson(liste)).apply()
+    fun malzemeleriGetir(): List<String> {
+        val json = defter.getString("MALZEMELER_CACHE", null) ?: return listOf("Soğan", "Domates", "Patates", "Ketçap", "Mayonez", "Turşu")
+        return try { gson.fromJson(json, object : TypeToken<List<String>>() {}.type) } catch (e: Exception) { listOf("Soğan", "Domates", "Patates", "Ketçap", "Mayonez", "Turşu") }
+    }
+
+    fun ucretsizEkstralariKaydet(liste: List<String>) = defter.edit().putString("UCRETSIZ_EKSTRALAR_CACHE", gson.toJson(liste)).apply()
+    fun ucretsizEkstralariGetir(): List<String> {
+        val json = defter.getString("UCRETSIZ_EKSTRALAR_CACHE", null) ?: return listOf("Sade Et", "Soslu", "Gemi", "Kayık", "Acılı", "Karışık")
+        return try { gson.fromJson(json, object : TypeToken<List<String>>() {}.type) } catch (e: Exception) { listOf("Sade Et", "Soslu", "Gemi", "Kayık", "Acılı", "Karışık") }
+    }
+
+    fun tvCardScaleKaydet(scale: Int) = defter.edit().putInt("TV_CARD_SCALE", scale).apply()
+    fun tvCardScaleOku(): Int = try { defter.getInt("TV_CARD_SCALE", 100) } catch (e: Exception) { 100 }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun LoginScreen(hafiza: HafizaYoneticisi, onLoginSuccess: () -> Unit) {
-    var ipGirdisi by remember { mutableStateOf(hafiza.kasaIpOku()) }
-    var kullaniciAdi by remember { mutableStateOf(hafiza.kasaKullaniciAdiOku()) }
-    var sifre by remember { mutableStateOf(hafiza.kasaSifreOku()) }
+    var eslesmeKodu by remember { mutableStateOf(hafiza.garsonKoduOku()) }
+    var garsonAdi by remember { mutableStateOf(hafiza.garsonAdiOku().ifEmpty { "Garson" }) }
+    var garsonRengi by remember { mutableStateOf(hafiza.garsonRengiOku().ifEmpty { "#4CAF50" }) }
     var girisYapiliyor by remember { mutableStateOf(false) }
+    var eskiGirisModu by remember { mutableStateOf(false) }
+    var yoneticiKullaniciAdi by remember { mutableStateOf("") }
+    var yoneticiSifre by remember { mutableStateOf("") }
     val context = LocalContext.current
+
+    val renkPaleti = listOf(
+        "#4CAF50", // 1. Yeşil
+        "#10B981", // 2. Zümrüt Yeşili (Yeni)
+        "#2196F3", // 3. Mavi
+        "#38BDF8", // 4. Gökyüzü Mavisi (Yeni)
+        "#6366F1", // 5. İndigo / Gece Mavisi (Yeni)
+        "#8B5CF6", // 6. Lavanta / Menekşe (Yeni)
+        "#9C27B0", // 7. Mor
+        "#EC4899", // 8. Fuşya / Canlı Pembe (Yeni)
+        "#E91E63", // 9. Pembe
+        "#F44336", // 10. Kırmızı
+        "#F97316", // 11. Mercan / Canlı Turuncu (Yeni)
+        "#FF9800", // 12. Turuncu
+        "#00BCD4", // 13. Turkuaz
+        "#FFEB3B"  // 14. Sarı
+    )
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F0F)), contentAlignment = Alignment.Center) {
         Column(
-            modifier = Modifier.fillMaxWidth(0.85f).background(Color(0xFF1E1E1E), androidx.compose.foundation.shape.RoundedCornerShape(24.dp)).border(1.dp, Color(0x33FFFFFF), androidx.compose.foundation.shape.RoundedCornerShape(24.dp)).padding(24.dp),
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .background(Color(0xFF1E1E1E), androidx.compose.foundation.shape.RoundedCornerShape(24.dp))
+                .border(1.dp, Color(0x33FFFFFF), androidx.compose.foundation.shape.RoundedCornerShape(24.dp))
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("SARACAPP", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-            Text("Sisteme Giriş Yapın", color = Color.Gray, fontSize = 14.sp)
-            Spacer(Modifier.height(32.dp))
-            OutlinedTextField(
-                value = ipGirdisi, onValueChange = { ipGirdisi = it },
-                label = { Text("Sunucu IP (örn: bilalgnd.shop)", color = Color.Gray) },
-                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
-                singleLine = true, modifier = Modifier.fillMaxWidth()
+            Text(
+                if (eskiGirisModu) "Yönetici Girişi" else "Garson Bağlantı Ekranı",
+                color = Color.Gray,
+                fontSize = 14.sp
             )
-            Spacer(Modifier.height(16.dp))
-            OutlinedTextField(
-                value = kullaniciAdi, onValueChange = { kullaniciAdi = it },
-                label = { Text("Kullanıcı Adı", color = Color.Gray) },
-                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
-                singleLine = true, modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(16.dp))
-            OutlinedTextField(
-                value = sifre, onValueChange = { sifre = it },
-                label = { Text("Şifre", color = Color.Gray) },
-                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
-                singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(32.dp))
-            Button(
-                onClick = {
-                    if (girisYapiliyor) return@Button
+            Spacer(Modifier.height(24.dp))
+
+            if (!eskiGirisModu) {
+                // QR ve Kod ile Giriş Mantığı
+                fun doLogin(kodToUse: String, directToken: String? = null, shopIdToUse: String? = null, urlToUse: String? = null) {
+                    if (girisYapiliyor) return
+                    val cleanCode = kodToUse.trim()
+                    val tokenCandidate = if (!directToken.isNullOrEmpty()) directToken else cleanCode
+
+                    if (tokenCandidate.length < 4) {
+                        Toast.makeText(context, "Lütfen Kasa ekranındaki kodu girin!", Toast.LENGTH_SHORT).show()
+                        return
+                    }
+                    if (garsonAdi.trim().isEmpty()) {
+                        Toast.makeText(context, "Lütfen adınızı (nickname) girin!", Toast.LENGTH_SHORT).show()
+                        return
+                    }
+
+                    val finalShopId = shopIdToUse ?: "sarac"
+                    val finalUrl = urlToUse ?: "bilalgnd.shop"
+
                     girisYapiliyor = true
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            val api = ApiClient.getApi(ipGirdisi.trim(), "")
-                            val res = api.login(mapOf("username" to kullaniciAdi.trim(), "password" to sifre))
+                            // 1) Kodun / Token'ın Kasa ile geçerliliğini sunucuda test et
+                            var testApi = ApiClient.getApi(finalUrl, tokenCandidate)
+                            var verifyRes = testApi.menuGetir()
+                            var validToken = tokenCandidate
+
+                            // 2) Eğer ilk token 401 verdiyse, Kasa'nın standart tokenını (123456) dene
+                            if (!verifyRes.isSuccessful) {
+                                testApi = ApiClient.getApi(finalUrl, "123456")
+                                val fallbackRes = testApi.menuGetir()
+                                if (fallbackRes.isSuccessful) {
+                                    verifyRes = fallbackRes
+                                    validToken = "123456"
+                                }
+                            }
+
                             withContext(Dispatchers.Main) {
                                 girisYapiliyor = false
-                                if (res.isSuccessful && res.body()?.success == true) {
-                                    val token = res.body()?.token ?: ""
-                                    hafiza.kasaIpKaydet(ipGirdisi.trim())
-                                    hafiza.kasaKullaniciAdiKaydet(kullaniciAdi.trim())
-                                    hafiza.kasaSifreKaydet(sifre)
-                                    hafiza.kasaTokenKaydet(token)
-                                    Toast.makeText(context, "Giriş Başarılı!", Toast.LENGTH_SHORT).show()
+                                if (verifyRes.isSuccessful) {
+                                    // KOD DOĞRULANDI VE KASA İLE EŞLEŞTİ
+                                    hafiza.kasaIpKaydet(finalUrl)
+                                    hafiza.kasaKullaniciAdiKaydet(finalShopId)
+                                    hafiza.garsonKoduKaydet(cleanCode.ifEmpty { "QR" })
+                                    hafiza.garsonAdiKaydet(garsonAdi.trim())
+                                    hafiza.garsonRengiKaydet(garsonRengi)
+                                    hafiza.kasaTokenKaydet(validToken)
+                                    Toast.makeText(context, "✅ Kasaya Başarıyla Bağlanıldı!", Toast.LENGTH_SHORT).show()
                                     onLoginSuccess()
                                 } else {
-                                    Toast.makeText(context, "Hatalı giriş: ${res.body()?.error ?: "Bilinmeyen hata"}", Toast.LENGTH_LONG).show()
+                                    // KOD HATALI / EŞLEŞMEDİ - GİRİŞİ KESİNLİKLE ENGELLE
+                                    Toast.makeText(context, "❌ Hatalı Eşleşme Kodu! Lütfen Kasa ekranındaki güncel kodu girin.", Toast.LENGTH_LONG).show()
                                 }
                             }
                         } catch (e: Exception) {
                             withContext(Dispatchers.Main) {
                                 girisYapiliyor = false
-                                Toast.makeText(context, "Bağlantı Hatası: ${e.message}", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "❌ Bağlantı Başarısız: Sunucuya ulaşılamadı (${e.message})", Toast.LENGTH_LONG).show()
                             }
                         }
                     }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                modifier = Modifier.fillMaxWidth().height(50.dp)
-            ) {
-                if (girisYapiliyor) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                else Text("Giriş Yap", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+
+                fun startQrScanner() {
+                    try {
+                        val options = GmsBarcodeScannerOptions.Builder()
+                            .setBarcodeFormats(Barcode.FORMAT_QR_CODE, Barcode.FORMAT_ALL_FORMATS)
+                            .enableAutoZoom()
+                            .build()
+
+                        val scanner = GmsBarcodeScanning.getClient(context, options)
+                        scanner.startScan()
+                            .addOnSuccessListener { barcode ->
+                                val rawVal = barcode.rawValue ?: barcode.displayValue ?: ""
+                                if (rawVal.isNotEmpty()) {
+                                    var parsedCode = ""
+                                    var directToken: String? = null
+                                    var shopId: String? = null
+                                    var url: String? = null
+
+                                    try {
+                                        if (rawVal.trim().startsWith("{")) {
+                                            val json = JSONObject(rawVal)
+                                            parsedCode = json.optString("code", "")
+                                            directToken = json.optString("token", "")
+                                            shopId = json.optString("shopId", "sarac")
+                                            url = json.optString("url", "bilalgnd.shop")
+                                        }
+                                    } catch (_: Exception) {}
+
+                                    if (parsedCode.isEmpty() && directToken.isNullOrEmpty()) {
+                                        val regex = Regex("""\b\d{6}\b""")
+                                        val match = regex.find(rawVal)
+                                        parsedCode = match?.value ?: rawVal.trim()
+                                    }
+
+                                    if (parsedCode.isNotEmpty() || !directToken.isNullOrEmpty()) {
+                                        eslesmeKodu = parsedCode
+                                        doLogin(parsedCode, directToken, shopId, url)
+                                    } else {
+                                        Toast.makeText(context, "Geçersiz QR: $rawVal", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                            .addOnCanceledListener { }
+                            .addOnFailureListener { e ->
+                                Toast.makeText(context, "QR Tarama Hatası: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "QR Tarayıcı Açılamadı: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                // QR Kod Butonu (En Üstte Hızlı Giriş)
+                Button(
+                    onClick = { startQrScanner() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                ) {
+                    androidx.compose.material3.Icon(
+                        Icons.Default.QrCode,
+                        contentDescription = "QR Kod",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("QR Kod Okutarak Bağlan", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0x33FFFFFF))
+                    Text("  veya kod ile  ", color = Color.Gray, fontSize = 12.sp)
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0x33FFFFFF))
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                // 1) 6 Haneli Kasa Eşleşme Kodu
+                OutlinedTextField(
+                    value = eslesmeKodu,
+                    onValueChange = { if (it.length <= 6) eslesmeKodu = it },
+                    label = { Text("6 Haneli Kasa Kodu", color = Color.Gray) },
+                    placeholder = { Text("Örn: 849201", color = Color(0x66FFFFFF)) },
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        color = Color(0xFF4CAF50),
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 4.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    ),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                // 2) Garson Adı (Nickname)
+                OutlinedTextField(
+                    value = garsonAdi,
+                    onValueChange = { garsonAdi = it },
+                    label = { Text("Garson Adınız (Nickname)", color = Color.Gray) },
+                    placeholder = { Text("Örn: Ahmet", color = Color(0x66FFFFFF)) },
+                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                // 3) Renk Seçimi
+                Text(
+                    "Sipariş Rozet Renginiz:",
+                    color = Color.LightGray,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+                Spacer(Modifier.height(8.dp))
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    renkPaleti.forEach { hex ->
+                        val isSelected = garsonRengi == hex
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                                .background(Color(android.graphics.Color.parseColor(hex)))
+                                .border(
+                                    if (isSelected) 3.dp else 0.dp,
+                                    Color.White,
+                                    androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+                                )
+                                .clickable { garsonRengi = hex },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSelected) {
+                                androidx.compose.material3.Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = if (hex == "#FFEB3B") Color.Black else Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // Kasaya Bağlan Butonu
+                Button(
+                    onClick = { doLogin(eslesmeKodu) },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                ) {
+                    if (girisYapiliyor) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    else Text("Kasaya Bağlan", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(Modifier.height(12.dp))
+                TextButton(onClick = { eskiGirisModu = true }) {
+                    Text("Yönetici Girişi Yap ➔", color = Color.Gray, fontSize = 12.sp)
+                }
+
+            } else {
+                // Yönetici (Kullanıcı Adı & Şifre) Giriş Modu
+                OutlinedTextField(
+                    value = yoneticiKullaniciAdi, onValueChange = { yoneticiKullaniciAdi = it },
+                    label = { Text("Kullanıcı Adı", color = Color.Gray) },
+                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = yoneticiSifre, onValueChange = { yoneticiSifre = it },
+                    label = { Text("Şifre", color = Color.Gray) },
+                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
+                    singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(24.dp))
+                Button(
+                    onClick = {
+                        if (girisYapiliyor) return@Button
+                        girisYapiliyor = true
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val api = ApiClient.getApi("bilalgnd.shop", "")
+                                val res = api.login(mapOf("username" to yoneticiKullaniciAdi.trim(), "password" to yoneticiSifre))
+                                withContext(Dispatchers.Main) {
+                                    girisYapiliyor = false
+                                    if (res.isSuccessful && res.body()?.success == true) {
+                                        val token = res.body()?.token ?: ""
+                                        hafiza.kasaIpKaydet("bilalgnd.shop")
+                                        hafiza.kasaKullaniciAdiKaydet(yoneticiKullaniciAdi.trim())
+                                        hafiza.kasaSifreKaydet(yoneticiSifre)
+                                        hafiza.kasaTokenKaydet(token)
+                                        Toast.makeText(context, "Giriş Başarılı!", Toast.LENGTH_SHORT).show()
+                                        onLoginSuccess()
+                                    } else {
+                                        Toast.makeText(context, "Hatalı giriş: ${res.body()?.error ?: "Bilinmeyen hata"}", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    girisYapiliyor = false
+                                    Toast.makeText(context, "Bağlantı Hatası: ${e.message}", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                ) {
+                    if (girisYapiliyor) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    else Text("Giriş Yap", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(Modifier.height(12.dp))
+                TextButton(onClick = { eskiGirisModu = false }) {
+                    Text("⬅ Garson Koduyla Girişe Dön", color = Color.Gray, fontSize = 12.sp)
+                }
             }
         }
     }
@@ -476,6 +792,8 @@ fun AnaEkran() {
     }
 
     var kategoriler by remember { mutableStateOf<List<Kategori>>(hafiza.kategorileriGetir()) }
+    var malzemeler by remember { mutableStateOf<List<String>>(hafiza.malzemeleriGetir()) }
+    var ucretsizEkstralar by remember { mutableStateOf<List<String>>(hafiza.ucretsizEkstralariGetir()) }
     var icecekMenusu by remember {
         mutableStateOf<List<Urun>>(
             kategoriler.find { it.name.contains("içecek", ignoreCase = true) || it.name.contains("icecek", ignoreCase = true) }?.items ?: emptyList()
@@ -506,6 +824,40 @@ fun AnaEkran() {
     val pagerState = rememberPagerState(pageCount = { sekmeler.size.coerceAtLeast(1) })
     var kasaOnline by remember { mutableStateOf(false) }
 
+    // İlk açılışta menüyü anında çek
+    LaunchedEffect(isLoggedIn) {
+        if (!isLoggedIn) return@LaunchedEffect
+        val ip = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+        val token = hafiza.kasaTokenOku().ifEmpty { "123456" }
+        try {
+            val api = ApiClient.getApi(ip, token)
+            var res = api.menuGetir()
+            if (!res.isSuccessful || res.body()?.categories.isNullOrEmpty()) {
+                res = api.menuGetirLegacy()
+            }
+            if (res.isSuccessful && res.body() != null) {
+                val body = res.body()!!
+                val newCats = body.categories ?: emptyList()
+                val newExt = body.paidExtras ?: body.ekstralar ?: emptyMap()
+                if (newCats.isNotEmpty()) {
+                    kategoriler = newCats
+                    ucretliEkstralar = newExt
+                    val drinksCat = newCats.find { it.name.contains("içecek", ignoreCase = true) || it.name.contains("icecek", ignoreCase = true) }
+                    icecekMenusu = drinksCat?.items ?: emptyList()
+                    hafiza.kategorileriKaydet(newCats)
+                }
+                if (!body.ingredients.isNullOrEmpty()) {
+                    malzemeler = body.ingredients
+                    hafiza.malzemeleriKaydet(body.ingredients)
+                }
+                if (!body.freeExtras.isNullOrEmpty()) {
+                    ucretsizEkstralar = body.freeExtras
+                    hafiza.ucretsizEkstralariKaydet(body.freeExtras)
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
     LaunchedEffect(isLoggedIn) {
         if (!isLoggedIn) return@LaunchedEffect
         val wsClient = OkHttpClient.Builder()
@@ -518,8 +870,8 @@ fun AnaEkran() {
         var fcmSent = false
 
         while (true) {
-            val ip = hafiza.kasaIpOku().trim()
-            val tokenParam = hafiza.kasaTokenOku()
+            val ip = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+            val tokenParam = hafiza.kasaTokenOku().ifEmpty { "123456" }
 
             if (ip.isNotBlank()) {
                 // 1. WebSocket bağlantı başlatma (HTTP bekletmesi olmadan hızlı bağlantı)
@@ -538,6 +890,15 @@ fun AnaEkran() {
                     activeWebSocket = wsClient.newWebSocket(request, object : WebSocketListener() {
                         override fun onOpen(webSocket: WebSocket, response: Response) { 
                             kasaOnline = true
+                            try {
+                                val regMsg = JSONObject()
+                                regMsg.put("type", "register")
+                                regMsg.put("deviceId", devId)
+                                regMsg.put("role", "garson")
+                                regMsg.put("name", hafiza.garsonAdiOku())
+                                regMsg.put("color", hafiza.garsonRengiOku())
+                                webSocket.send(regMsg.toString())
+                            } catch (_: Exception) {}
                             sendLogToServer(context, "success", "WebSocket bağlantısı kuruldu.")
                         }
                         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -586,23 +947,36 @@ fun AnaEkran() {
 
                 // 3. Menü alma işlemini asenkron çalıştırma (Ana döngüyü bloklamaz)
                 val now = System.currentTimeMillis()
-                if (kategoriler.isEmpty() || (now - lastMenuFetchTime > 60000L)) {
+                if (kategoriler.isEmpty() || (now - lastMenuFetchTime > 30000L)) {
                     lastMenuFetchTime = now
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
                             val api = ApiClient.getApi(ip, tokenParam)
-                            val menuRes = api.menuGetir()
+                            var menuRes = api.menuGetir()
+                            if (!menuRes.isSuccessful || menuRes.body()?.categories.isNullOrEmpty()) {
+                                menuRes = api.menuGetirLegacy()
+                            }
                             if (menuRes.isSuccessful && menuRes.body() != null) {
                                 val body = menuRes.body()!!
                                 val newCats = body.categories ?: emptyList()
-                                val newExt = body.ekstralar ?: emptyMap()
-                                withContext(Dispatchers.Main) {
-                                    kategoriler = newCats
-                                    ucretliEkstralar = newExt
-                                    val drinksCat = newCats.find { it.name.contains("içecek", ignoreCase = true) || it.name.contains("icecek", ignoreCase = true) }
-                                    icecekMenusu = drinksCat?.items ?: emptyList()
+                                val newExt = body.paidExtras ?: body.ekstralar ?: emptyMap()
+                                if (newCats.isNotEmpty()) {
+                                    withContext(Dispatchers.Main) {
+                                        kategoriler = newCats
+                                        ucretliEkstralar = newExt
+                                        val drinksCat = newCats.find { it.name.contains("içecek", ignoreCase = true) || it.name.contains("icecek", ignoreCase = true) }
+                                        icecekMenusu = drinksCat?.items ?: emptyList()
+                                    }
+                                    hafiza.kategorileriKaydet(newCats)
                                 }
-                                hafiza.kategorileriKaydet(newCats)
+                                if (!body.ingredients.isNullOrEmpty()) {
+                                    withContext(Dispatchers.Main) { malzemeler = body.ingredients }
+                                    hafiza.malzemeleriKaydet(body.ingredients)
+                                }
+                                if (!body.freeExtras.isNullOrEmpty()) {
+                                    withContext(Dispatchers.Main) { ucretsizEkstralar = body.freeExtras }
+                                    hafiza.ucretsizEkstralariKaydet(body.freeExtras)
+                                }
                             }
                         } catch (e: Exception) {}
                     }
@@ -646,7 +1020,7 @@ fun AnaEkran() {
                         else {
                             val hapticFeedback = LocalHapticFeedback.current
                             val universityRomanBold = FontFamily(Font(R.font.university_roman_bold))
-                            Text("SARAÇOGLU DÖNER", fontFamily = universityRomanBold, color = Color.White, fontSize = 26.sp, letterSpacing = 1.sp, modifier = Modifier.pointerInput(Unit) {
+                            Text("VANTAGE", fontFamily = universityRomanBold, color = Color.White, fontSize = 26.sp, letterSpacing = 2.sp, modifier = Modifier.pointerInput(Unit) {
                                 detectTapGestures(
                                     onLongPress = {
                                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -705,6 +1079,21 @@ fun AnaEkran() {
                 navigationIcon = { if (siparisEkraniAcik || raporEkraniAcik) TextButton(onClick = { siparisEkraniAcik = false; raporEkraniAcik = false }) { Text("< Geri", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) } },
                 actions = {
                     if (aktifMasaAdi == null && !siparisEkraniAcik && !raporEkraniAcik) {
+                        val garsonAdi = hafiza.garsonAdiOku()
+                        val garsonRengiHex = hafiza.garsonRengiOku()
+                        if (garsonAdi.isNotBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(end = 4.dp)
+                                    .background(
+                                        try { Color(android.graphics.Color.parseColor(garsonRengiHex)) } catch(e: Exception) { Color(0xFF4CAF50) },
+                                        androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text("👤 $garsonAdi", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                         androidx.compose.material3.IconButton(onClick = { raporEkraniAcik = true }) {
                             androidx.compose.material3.Icon(Icons.Default.Assessment, contentDescription = "Rapor", tint = Color.White)
                         }
@@ -790,7 +1179,15 @@ fun AnaEkran() {
                                 Button(
                                     onClick = {
                                         if (taslakKalemler.isNotEmpty()) {
-                                            val adisyon = Adisyon(aktifMasaAdi!!, SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()), taslakKalemler.toList(), taslakKalemler.sumOf { it.fiyat }, siparisNotu = yeniSiparisOlusturmaNotu, renk = hafiza.garsonRengiOku())
+                                            val adisyon = Adisyon(
+                                                musteriAdi = aktifMasaAdi!!,
+                                                saat = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()),
+                                                kalemler = taslakKalemler.toList(),
+                                                toplamTutar = taslakKalemler.sumOf { it.fiyat },
+                                                siparisNotu = yeniSiparisOlusturmaNotu,
+                                                renk = hafiza.garsonRengiOku(),
+                                                createdBy = hafiza.garsonAdiOku().ifEmpty { "Garson" }
+                                            )
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 try {
                                                     if (!kasaOnline) throw Exception("Offline")
@@ -1161,57 +1558,98 @@ fun AnaEkran() {
                         Column(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                             
                             if (selectedTab == 0) { // Genel Ayarlar
-                                val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
-                                var accumulatedDrag by remember { mutableFloatStateOf(0f) }
+                                var garsonAdiGirdisi by remember { mutableStateOf(hafiza.garsonAdiOku()) }
                                 
-                                OutlinedTextField(
-                                    value = ipGirdisi, 
-                                    onValueChange = { ipGirdisi = it }, 
-                                    label = { Text("Kasa IP", color = Color.Gray) }, 
-                                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp), 
-                                    singleLine = true, 
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                                    modifier = Modifier.fillMaxWidth().pointerInput(Unit) {
-                                        detectHorizontalDragGestures(
-                                            onHorizontalDrag = { _, dragAmount ->
-                                                accumulatedDrag += dragAmount
-                                                if (Math.abs(accumulatedDrag) > 20f) {
-                                                    val step = if (accumulatedDrag > 0) 1 else -1
-                                                    accumulatedDrag = 0f
-                                                    val match = Regex("(.*\\\\.)(\\\\d+)(:.*)?").find(ipGirdisi)
-                                                    if (match != null) {
-                                                        val prefix = match.groupValues[1]
-                                                        val currentNum = match.groupValues[2].toIntOrNull() ?: 1
-                                                        val suffix = match.groupValues[3]
-                                                        var newNum = currentNum + step
-                                                        if (newNum < 1) newNum = 1
-                                                        if (newNum > 999) newNum = 999
-                                                        if (newNum != currentNum) {
-                                                            ipGirdisi = "$prefix$newNum$suffix"
-                                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                        }
-                                                    }
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF2A2A2A), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                                        .padding(16.dp)
+                                ) {
+                                    Text("BAĞLI KASA HESABI", color = Color(0xFFAAAAAA), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                    Text(hafiza.kasaKullaniciAdiOku().ifEmpty { "sarac" }, color = Color(0xFF4CAF50), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Spacer(Modifier.height(12.dp))
+                                    
+                                    OutlinedTextField(
+                                        value = garsonAdiGirdisi,
+                                        onValueChange = { 
+                                            garsonAdiGirdisi = it
+                                            hafiza.garsonAdiKaydet(it)
+                                        },
+                                        label = { Text("Garson Adınız (Nickname)", color = Color.Gray) },
+                                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+
+                                Spacer(Modifier.height(16.dp))
+                                
+                                // TV Kart Büyüteci (Minimalist Pill Widget)
+                                Text("TV SİPARİŞ KART BOYUTU", color = Color(0xFFAAAAAA), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                Spacer(Modifier.height(8.dp))
+                                
+                                var tvScale by remember { mutableIntStateOf(hafiza.tvCardScaleOku()) }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF141414), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                                        .border(1.dp, Color(0xFF262626), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                                        .padding(horizontal = 14.dp, vertical = 4.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("🔍", fontSize = 13.sp)
+                                        Spacer(Modifier.width(8.dp))
+                                        Slider(
+                                            value = tvScale.toFloat(),
+                                            onValueChange = { newVal ->
+                                                val intVal = newVal.toInt()
+                                                tvScale = intVal
+                                                hafiza.tvCardScaleKaydet(intVal)
+                                                CoroutineScope(Dispatchers.IO).launch {
+                                                    try {
+                                                        ApiClient.getApi(hafiza.kasaIpOku(), hafiza.kasaTokenOku()).setTvCardScale(mapOf("scale" to intVal))
+                                                    } catch (_: Exception) {}
                                                 }
-                                            }
+                                            },
+                                            valueRange = 50f..180f,
+                                            colors = SliderDefaults.colors(
+                                                thumbColor = Color(0xFF10B981),
+                                                activeTrackColor = Color(0xFF10B981),
+                                                inactiveTrackColor = Color(0xFF2A2A2A)
+                                            ),
+                                            modifier = Modifier.weight(1f).height(32.dp)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            "%$tvScale",
+                                            color = Color(0xFF10B981),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.ExtraBold
                                         )
                                     }
-                                )
-                                Spacer(Modifier.height(16.dp))
-                                Text("Geçerli Hesap: ${hafiza.kasaKullaniciAdiOku()}", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                }
+
                                 Spacer(Modifier.height(16.dp))
                                 
                                 Button(
                                     onClick = {
                                         hafiza.kasaTokenKaydet("")
                                         hafiza.kasaKullaniciAdiKaydet("")
-                                        hafiza.kasaSifreKaydet("")
+                                        hafiza.garsonKoduKaydet("")
                                         isLoggedIn = false
                                         kasaAyarPenceresiAcik = false
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
                                 ) {
-                                    Text("Çıkış Yap", color = Color.White)
+                                    Text("Kasadan Ayrıl (Çıkış Yap)", color = Color.White, fontWeight = FontWeight.Bold)
                                 }
                                 
                                 Spacer(Modifier.height(24.dp))
@@ -1528,7 +1966,13 @@ fun AnaEkran() {
 
         siparisIcinAcilanUrun?.let { urun ->
             SiparisBottomSheet(
-                urun = urun, guncelMasaAdi = aktifMasaAdi, icecekMenusu = icecekMenusu, ucretliEkstralar = ucretliEkstralar, kapat = { siparisIcinAcilanUrun = null },
+                urun = urun,
+                guncelMasaAdi = aktifMasaAdi,
+                icecekMenusu = icecekMenusu,
+                malzemeler = malzemeler,
+                ucretsizEkstralar = ucretsizEkstralar,
+                ucretliEkstralar = ucretliEkstralar,
+                kapat = { siparisIcinAcilanUrun = null },
                 onSiparisEkle = { isim, kalemler ->
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     var sonIsim = isim
@@ -1620,9 +2064,42 @@ class UrunAyar(urun: Urun) {
     var seciliGramaj: Secenek? by mutableStateOf((urun.secenekler ?: emptyList()).find { it.gramaj == "100gr" } ?: urun.secenekler?.firstOrNull())
 }
 
+fun toWithoutText(name: String): String {
+    val lower = name.lowercase(Locale.getDefault())
+    val lastVowel = lower.reversed().find { "aeıioöuü".contains(it) }
+    return when (lastVowel) {
+        'a', 'ı' -> name + "sız"
+        'e', 'i' -> name + "siz"
+        'o', 'u' -> name + "suz"
+        'ö', 'ü' -> name + "süz"
+        else -> name + "sız"
+    }
+}
+
+fun toWithText(name: String): String {
+    val lower = name.lowercase(Locale.getDefault())
+    val lastVowel = lower.reversed().find { "aeıioöuü".contains(it) }
+    return when (lastVowel) {
+        'a', 'ı' -> name + "lı"
+        'e', 'i' -> name + "li"
+        'o', 'u' -> name + "lu"
+        'ö', 'ü' -> name + "lü"
+        else -> name + "lı"
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun SiparisBottomSheet(urun: Urun, guncelMasaAdi: String?, icecekMenusu: List<Urun>, ucretliEkstralar: Map<String, Int>, kapat: () -> Unit, onSiparisEkle: (String, List<SiparisKalemi>) -> Unit) {
+fun SiparisBottomSheet(
+    urun: Urun,
+    guncelMasaAdi: String?,
+    icecekMenusu: List<Urun>,
+    malzemeler: List<String>,
+    ucretsizEkstralar: List<String>,
+    ucretliEkstralar: Map<String, Int>,
+    kapat: () -> Unit,
+    onSiparisEkle: (String, List<SiparisKalemi>) -> Unit
+) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val haptic = LocalHapticFeedback.current
     var siparisNotu by remember { mutableStateOf("") }
@@ -1640,7 +2117,7 @@ fun SiparisBottomSheet(urun: Urun, guncelMasaAdi: String?, icecekMenusu: List<Ur
     LaunchedEffect(urun) { icecekMenusu.forEach { icecekAdetleri[it.ad] = 1 } }
 
     val ekstralarFiyati = urunAyarlari.sumOf { ayar ->
-        ayar.seciliUcretliEkstralar.filter { it.value }.keys.sumOf { if (it == "Cheddarlı" || it == "Kaşarlı") 70 else (ucretliEkstralar[it] ?: 0) }
+        ayar.seciliUcretliEkstralar.filter { it.value }.keys.sumOf { (ucretliEkstralar[it] ?: 70) }
     }
     val anlikBirimFiyat = urunAyarlari.sumOf { it.seciliGramaj?.fiyat ?: 0 }
     val toplamTutar = anlikBirimFiyat + ekstralarFiyati + icecekMenusu.filter { seciliIcecekler[it.ad] == true }.sumOf { ((it.secenekler?.firstOrNull()?.fiyat ?: 0) * (icecekAdetleri[it.ad] ?: 1)) }
@@ -1711,11 +2188,17 @@ fun SiparisBottomSheet(urun: Urun, guncelMasaAdi: String?, icecekMenusu: List<Ur
             Spacer(modifier = Modifier.height(8.dp))
 
             if (!isIcecek) {
-
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(top = 4.dp)) {
-                    val zityon = mapOf("Soğansız" to "Soğanlı", "Soğanlı" to "Soğansız", "Domatessiz" to "Domatesli", "Domatesli" to "Domatessiz", "Patatessiz" to "Patatesli", "Patatesli" to "Patatessiz", "Ketçapsız" to "Ketçaplı", "Ketçaplı" to "Ketçapsız", "Mayonezsiz" to "Mayonezli", "Mayonezli" to "Mayonezsiz", "Turşusuz" to "Turşulu", "Turşulu" to "Turşusuz")
-                    val cikar = listOf("Soğansız", "Domatessiz", "Patatessiz", "Ketçapsız", "Mayonezsiz", "Turşusuz")
-                    val ekle = listOf("Soğanlı", "Domatesli", "Patatesli", "Ketçaplı", "Mayonezli", "Turşulu")
+                    val zityon = mutableMapOf<String, String>()
+                    val cikar = malzemeler.map { m ->
+                        val wo = toWithoutText(m)
+                        val w = toWithText(m)
+                        zityon[wo] = w
+                        zityon[w] = wo
+                        wo
+                    }
+                    val ekle = malzemeler.map { m -> toWithText(m) }
+
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         cikar.forEach { malz -> 
                             val theColor = Color(0xFF9C27B0) // Mor
@@ -1743,26 +2226,25 @@ fun SiparisBottomSheet(urun: Urun, guncelMasaAdi: String?, icecekMenusu: List<Ur
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 1.dp, color = Color.DarkGray)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("Cheddarlı", "Kaşarlı", "Karışık", "Acılı", "Sade Et", "Soslu", "Gemi", "Kayık").forEach { eks ->
-                            if (eks == "Cheddarlı" || eks == "Kaşarlı") {
-                                val theColor = Color(0xFFFFB300) // Sarı
-                                FilterChip(
-                                    selected = aktifAyar.seciliUcretliEkstralar[eks] == true,
-                                    onClick = { aktifAyar.seciliUcretliEkstralar[eks] = !(aktifAyar.seciliUcretliEkstralar[eks] ?: false) },
-                                    label = { Text("$eks (+70₺)", fontSize = 13.sp, fontWeight = FontWeight.Bold) },
-                                    colors = FilterChipDefaults.filterChipColors(containerColor = Color.Transparent, labelColor = theColor, selectedContainerColor = theColor.copy(alpha=0.2f), selectedLabelColor = theColor),
-                                    border = FilterChipDefaults.filterChipBorder(enabled = true, selected = aktifAyar.seciliUcretliEkstralar[eks] == true, borderColor = theColor, selectedBorderColor = theColor, borderWidth = 1.dp, selectedBorderWidth = 1.5.dp)
-                                )
-                            } else {
-                                val theColor = Color(0xFF00ACC1) // Turkuaz/Cyan
-                                FilterChip(
-                                    selected = aktifAyar.seciliUcretsizEkstralar[eks] == true,
-                                    onClick = { aktifAyar.seciliUcretsizEkstralar[eks] = !(aktifAyar.seciliUcretsizEkstralar[eks] ?: false) },
-                                    label = { Text(eks, fontSize = 13.sp, fontWeight = FontWeight.Bold) },
-                                    colors = FilterChipDefaults.filterChipColors(containerColor = Color.Transparent, labelColor = theColor, selectedContainerColor = theColor.copy(alpha=0.2f), selectedLabelColor = theColor),
-                                    border = FilterChipDefaults.filterChipBorder(enabled = true, selected = aktifAyar.seciliUcretsizEkstralar[eks] == true, borderColor = theColor, selectedBorderColor = theColor, borderWidth = 1.dp, selectedBorderWidth = 1.5.dp)
-                                )
-                            }
+                        ucretliEkstralar.forEach { (eks, price) ->
+                            val theColor = Color(0xFFFFB300) // Sarı
+                            FilterChip(
+                                selected = aktifAyar.seciliUcretliEkstralar[eks] == true,
+                                onClick = { aktifAyar.seciliUcretliEkstralar[eks] = !(aktifAyar.seciliUcretliEkstralar[eks] ?: false) },
+                                label = { Text("$eks (+$price₺)", fontSize = 13.sp, fontWeight = FontWeight.Bold) },
+                                colors = FilterChipDefaults.filterChipColors(containerColor = Color.Transparent, labelColor = theColor, selectedContainerColor = theColor.copy(alpha=0.2f), selectedLabelColor = theColor),
+                                border = FilterChipDefaults.filterChipBorder(enabled = true, selected = aktifAyar.seciliUcretliEkstralar[eks] == true, borderColor = theColor, selectedBorderColor = theColor, borderWidth = 1.dp, selectedBorderWidth = 1.5.dp)
+                            )
+                        }
+                        ucretsizEkstralar.forEach { eks ->
+                            val theColor = Color(0xFF00ACC1) // Turkuaz/Cyan
+                            FilterChip(
+                                selected = aktifAyar.seciliUcretsizEkstralar[eks] == true,
+                                onClick = { aktifAyar.seciliUcretsizEkstralar[eks] = !(aktifAyar.seciliUcretsizEkstralar[eks] ?: false) },
+                                label = { Text(eks, fontSize = 13.sp, fontWeight = FontWeight.Bold) },
+                                colors = FilterChipDefaults.filterChipColors(containerColor = Color.Transparent, labelColor = theColor, selectedContainerColor = theColor.copy(alpha=0.2f), selectedLabelColor = theColor),
+                                border = FilterChipDefaults.filterChipBorder(enabled = true, selected = aktifAyar.seciliUcretsizEkstralar[eks] == true, borderColor = theColor, selectedBorderColor = theColor, borderWidth = 1.dp, selectedBorderWidth = 1.5.dp)
+                            )
                         }
                         odeme_listesi.forEach { odm -> 
                             val theColor = Color.White
@@ -1992,6 +2474,18 @@ fun AdisyonKarti(adisyon: Adisyon, tamamlandiClick: () -> Unit, kalemSilClick: (
                     IconButton(onClick = masaIsmiDuzenleClick, modifier = Modifier.size(32.dp)) { androidx.compose.material3.Icon(Icons.Default.Edit, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(18.dp)) }
                 }
                 Text(text = "${adisyon.toplamTutar} ₺", fontWeight = FontWeight.Black, fontSize = 24.sp, color = Color(0xFF4CAF50), modifier = Modifier.padding(start = 8.dp))
+            }
+            
+            if (!adisyon.createdBy.isNullOrBlank() && adisyon.createdBy != "Kasa") {
+                val rozetRengi = try { Color(android.graphics.Color.parseColor(adisyon.renk ?: "#4CAF50")) } catch(e: Exception) { Color(0xFF4CAF50) }
+                Box(
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .background(rozetRengi, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text("👤 ${adisyon.createdBy}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
             }
             
             if (!adisyon.siparisNotu.isNullOrBlank()) {

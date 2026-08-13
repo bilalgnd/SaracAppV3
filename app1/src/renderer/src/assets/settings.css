@@ -49,57 +49,65 @@
 
 .settings-sidebar {
   width: 250px;
-  background-color: #1A1A1A;
-  border-right: 1px solid #2A2A2A;
+  background-color: #141414;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
-  padding: 20px 0;
+  padding: 20px 12px;
+  gap: 6px;
 }
 
 .settings-sidebar-header {
-  padding: 0 20px 20px 20px;
-  border-bottom: 1px solid #2A2A2A;
-  margin-bottom: 10px;
+  padding: 0 10px 16px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 8px;
 }
 
 .settings-sidebar-header h2 {
   font-size: 20px;
-  font-weight: 700;
-  color: #eee;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
 }
 
 .settings-tab {
-  padding: 12px 20px;
-  color: #9E9E9E;
-  background: transparent;
-  border: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  margin: 2px 0;
+  color: #a3a3a3;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
   text-align: left;
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  user-select: none;
 }
 
 .settings-tab:hover {
-  background-color: #252525;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
 .settings-tab.active {
-  background-color: #2A2A2A;
-  color: #FF9800;
-  font-weight: 600;
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  color: #ffffff;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 18px rgba(225, 29, 72, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateX(4px);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 .settings-tab.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background-color: #FF9800;
+  display: none;
 }
 
 .settings-content {
@@ -111,17 +119,26 @@
 
 /* Slim scrollbar for premium feel */
 .settings-content::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
 }
 .settings-content::-webkit-scrollbar-track {
   background: transparent;
 }
 .settings-content::-webkit-scrollbar-thumb {
-  background: #444;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 .settings-content::-webkit-scrollbar-thumb:hover {
-  background: #666;
+  background: rgba(255, 255, 255, 0.38);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.settings-content::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .settings-section-title {

@@ -21,7 +21,7 @@ extraResources:
     to: "bin"
 win:
   executableName: Vantage
-  icon: resources/icon.png
+  icon: resources/icon.ico
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

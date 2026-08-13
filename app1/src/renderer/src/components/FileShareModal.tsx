@@ -121,11 +121,39 @@ export default function FileShareModal() {
 
   return (
     <div className="modal-overlay" onClick={() => setIsOpen(false)}>
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: 600, height: 500, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-          <h2>Ortak Dosya Paylaşımı</h2>
-          <button className="btn" onClick={() => setIsOpen(false)} style={{ padding: 8, background: 'transparent', color: 'white' }}>
-            <X size={24} />
+      <div 
+        className="modal-content" 
+        onClick={e => e.stopPropagation()} 
+        style={{ 
+          width: 620, 
+          maxHeight: '88vh', 
+          padding: '24px', 
+          display: 'flex', 
+          flexDirection: 'column',
+          boxSizing: 'border-box'
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: '#fff' }}>Ortak Dosya Paylaşımı</h2>
+          <button 
+            className="btn" 
+            onClick={() => setIsOpen(false)} 
+            style={{ 
+              width: '36px', 
+              height: '36px', 
+              borderRadius: '50%', 
+              backgroundColor: '#2A2A2A', 
+              color: '#aaa', 
+              border: 'none', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              padding: 0
+            }}
+          >
+            <X size={20} />
           </button>
         </div>
 
@@ -136,56 +164,57 @@ export default function FileShareModal() {
           onClick={() => document.getElementById('file-upload')?.click()}
           style={{
             border: `2px dashed ${isDragging ? 'var(--primary)' : '#444'}`,
-            borderRadius: 10,
-            padding: 30,
+            borderRadius: 12,
+            padding: '24px',
             textAlign: 'center',
             cursor: 'pointer',
-            backgroundColor: isDragging ? 'rgba(var(--primary-rgb), 0.1)' : 'rgba(255,255,255,0.05)',
-            marginBottom: 20
+            backgroundColor: isDragging ? 'rgba(245, 78, 78, 0.1)' : 'rgba(255,255,255,0.03)',
+            marginBottom: '16px',
+            transition: 'all 0.2s'
           }}
         >
-          <UploadCloud size={48} style={{ color: 'var(--primary)', marginBottom: 10 }} />
-          <h3>Dosyayı Buraya Sürükleyin</h3>
-          <p style={{ color: '#888', marginTop: 5 }}>veya seçmek için tıklayın</p>
+          <UploadCloud size={44} style={{ color: 'var(--primary)', marginBottom: 8 }} />
+          <h3 style={{ margin: 0, fontSize: '16px', color: '#fff' }}>Dosyayı Buraya Sürükleyin</h3>
+          <p style={{ color: '#888', marginTop: 4, marginBottom: 0, fontSize: '13px' }}>veya seçmek için tıklayın</p>
           <input type="file" id="file-upload" style={{ display: 'none' }} onChange={handleFileSelect} />
         </div>
         
         {uploading && (
-          <div style={{ marginBottom: 20, padding: '15px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10 }}>
+          <div style={{ marginBottom: 16, padding: '14px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Yükleniyor...</span>
-              <span style={{ color: '#fff' }}>%{uploadProgress}</span>
+              <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '13px' }}>Yükleniyor...</span>
+              <span style={{ color: '#fff', fontSize: '13px' }}>%{uploadProgress}</span>
             </div>
-            <div style={{ height: 8, backgroundColor: '#333', borderRadius: 4, overflow: 'hidden', marginBottom: 15 }}>
+            <div style={{ height: 6, backgroundColor: '#333', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
               <div style={{ height: '100%', width: `${uploadProgress}%`, backgroundColor: 'var(--primary)', transition: 'width 0.2s' }}></div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <button className="btn" onClick={cancelUpload} style={{ padding: '8px 20px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 'bold' }}>
+              <button className="btn" onClick={cancelUpload} style={{ padding: '6px 18px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
                 İptal Et
               </button>
             </div>
           </div>
         )}
 
-        <div style={{ flex: 1, overflowY: 'auto', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: 10 }}>
+        <div className="order-modal-body" style={{ flex: 1, minHeight: '180px', maxHeight: '280px', overflowY: 'auto', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 12, padding: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
           {files.length === 0 ? (
-            <div style={{ textAlign: 'center', color: '#888', padding: 20 }}>Henüz dosya yüklenmemiş.</div>
+            <div style={{ textAlign: 'center', color: '#888', padding: '30px 20px', fontSize: '14px' }}>Henüz dosya yüklenmemiş.</div>
           ) : (
             files.map((file, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', padding: 10, borderBottom: '1px solid #333' }}>
-                <FileText size={24} style={{ color: '#ccc', marginRight: 15 }} />
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', borderBottom: idx !== files.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', borderRadius: 8, transition: 'background 0.15s' }}>
+                <FileText size={22} style={{ color: '#9ca3af', marginRight: 12, flexShrink: 0 }} />
                 <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{ fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{file.name}</div>
-                  <div style={{ fontSize: 12, color: '#888' }}>
+                  <div style={{ fontWeight: '600', fontSize: '14px', color: '#eee', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{file.name}</div>
+                  <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
                     {(file.size / 1024 / 1024).toFixed(2)} MB • {new Date(file.time).toLocaleString('tr-TR')}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button className="btn" onClick={() => downloadFile(file.name)} style={{ padding: '6px 12px', backgroundColor: 'var(--primary)', color: 'white' }}>
-                    <Download size={16} />
+                <div style={{ display: 'flex', gap: 8, marginLeft: 12, flexShrink: 0 }}>
+                  <button className="btn" onClick={() => downloadFile(file.name)} title="İndir" style={{ padding: '6px 10px', backgroundColor: 'var(--primary)', color: 'white', borderRadius: 6 }}>
+                    <Download size={15} />
                   </button>
-                  <button className="btn" onClick={() => deleteFile(file.name)} style={{ padding: '6px 12px', backgroundColor: '#ef4444', color: 'white' }}>
-                    <Trash2 size={16} />
+                  <button className="btn" onClick={() => deleteFile(file.name)} title="Sil" style={{ padding: '6px 10px', backgroundColor: '#ef4444', color: 'white', borderRadius: 6 }}>
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </div>

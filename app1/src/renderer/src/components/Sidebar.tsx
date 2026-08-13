@@ -1,7 +1,7 @@
 import { customConfirm } from "../utils/alert"
 import { useState, useEffect } from 'react'
 import { useStore } from '../store'
-import { LayoutGrid, Beef, Drumstick, Tags, Coffee, Settings, LogOut, RefreshCcw, UserX, FolderUp } from 'lucide-react'
+import { LayoutGrid, Beef, Drumstick, Tags, Coffee, Settings, LogOut, RefreshCcw, UserX } from 'lucide-react'
 
 export default function Sidebar() {
   const { activeTab, setActiveTab, menu } = useStore()
@@ -144,13 +144,6 @@ export default function Sidebar() {
       </div>
 
       <div className="sidebar-bottom">
-        <button 
-          className="btn" 
-          style={{ height: 44, backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'white', marginBottom: '8px', border: '1px solid rgba(255,255,255,0.08)' }}
-          onClick={() => window.dispatchEvent(new CustomEvent('open-fileshare-modal'))}
-        >
-          <FolderUp size={18} style={{ marginRight: 8 }} /> Dosya Paylaşım
-        </button>
         <button 
           className="btn" 
           style={{ height: 44, backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.08)' }}
