@@ -878,61 +878,13 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('check-for-updates', async () => {
-    const updateSource = systemSettings.UPDATE_SOURCE || 'auto'
-    mainWindow?.webContents.send('updater-event', { action: 'checking', source: updateSource })
-
-    if (updateSource === 'unpacked') {
-      try {
-        const customRes = await checkCustomUpdate()
-        if (customRes.hasUpdate) {
-          mainWindow?.webContents.send('updater-event', {
-            action: 'update-available',
-            data: { version: customRes.version || 'Son Sürüm (Yerel/Unpacked Farklılıklar Mevcut)', custom: true, source: 'unpacked' }
-          })
-        } else {
-          mainWindow?.webContents.send('updater-event', {
-            action: 'update-not-available',
-            data: { version: 'Güncel', reason: customRes.reason || 'Yerel unpacked klasöründe yeni güncelleme yok.', source: 'unpacked' }
-          })
-        }
-      } catch (e: any) {
-        mainWindow?.webContents.send('updater-event', { action: 'error', data: `Yerel kontrol hatası: ${e.message}`, source: 'unpacked' })
-      }
-      return
-    }
-
-    if (updateSource === 'github') {
-      if (!is.dev) {
-        try {
-          await autoUpdater.checkForUpdates()
-        } catch (e: any) {
-          mainWindow?.webContents.send('updater-event', { action: 'error', data: `GitHub kontrol hatası: ${e.message}`, source: 'github' })
-        }
-      } else {
-        mainWindow?.webContents.send('updater-event', { action: 'update-not-available', data: { version: 'Geliştirme Ortamı (GitHub)', source: 'github' } })
-      }
-      return
-    }
-
-    // Default 'auto' mode: try unpacked first, fallback to github
-    try {
-      const customRes = await checkCustomUpdate()
-      if (customRes.hasUpdate) {
-        mainWindow?.webContents.send('updater-event', {
-          action: 'update-available',
-          data: { version: customRes.version || 'Son Sürüm (Farklılıklar Mevcut)', custom: true, source: 'unpacked' }
-        })
-        return
-      }
-    } catch (e: any) {
-      console.log('Custom update check skipped/failed, trying autoUpdater:', e.message)
-    }
+    mainWindow?.webContents.send('updater-event', { action: 'checking' })
 
     if (!is.dev) {
       try {
         await autoUpdater.checkForUpdates()
       } catch (e: any) {
-        mainWindow?.webContents.send('updater-event', { action: 'error', data: e.message, source: 'github' })
+        mainWindow?.webContents.send('updater-event', { action: 'error', data: e.message })
       }
     } else {
       mainWindow?.webContents.send('updater-event', { action: 'update-not-available', data: { version: 'Geliştirme Ortamı' } })
@@ -940,33 +892,14 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('download-update', async () => {
-    const updateSource = systemSettings.UPDATE_SOURCE || 'auto'
-    if (updateSource === 'unpacked') {
-      await downloadCustomUpdate(mainWindow)
-    } else if (updateSource === 'github') {
-      if (!is.dev) {
-        autoUpdater.downloadUpdate()
-      }
-    } else {
-      const success = await downloadCustomUpdate(mainWindow)
-      if (!success && !is.dev) {
-        autoUpdater.downloadUpdate()
-      }
+    if (!is.dev) {
+      autoUpdater.downloadUpdate()
     }
   })
 
   ipcMain.handle('install-update', () => {
-    const updateSource = systemSettings.UPDATE_SOURCE || 'auto'
-    if (updateSource === 'unpacked') {
-      installCustomUpdate()
-    } else if (updateSource === 'github') {
-      if (!is.dev) autoUpdater.quitAndInstall()
-    } else {
-      try {
-        installCustomUpdate()
-      } catch (e) {
-        if (!is.dev) autoUpdater.quitAndInstall()
-      }
+    if (!is.dev) {
+      autoUpdater.quitAndInstall(true, true)
     }
   })
 

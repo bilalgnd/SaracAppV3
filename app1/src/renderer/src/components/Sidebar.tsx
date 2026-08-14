@@ -116,25 +116,52 @@ export default function Sidebar() {
         )}
 
         <div id="dailyTotalBadge" style={{ 
-          marginTop: '15px', 
+          margin: '14px 12px 0',
+          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(16, 185, 129, 0.03) 100%)',
+          border: '1px solid rgba(34, 197, 94, 0.2)',
+          borderRadius: '12px',
+          padding: '10px 14px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'rgba(46, 204, 113, 0.12)',
-          border: '1px solid rgba(46, 204, 113, 0.35)',
-          borderRadius: '20px',
-          padding: '6px 14px',
-          boxShadow: '0 0 12px rgba(46, 204, 113, 0.15)',
-          margin: '15px 6px 0'
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          transition: 'border-color 0.2s ease'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '10px', color: '#aaa', fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', fontFamily: 'system-ui, -apple-system, sans-serif' }}>GÜNLÜK</span>
-            <span style={{ color: '#2ECC71', fontSize: '16px', fontWeight: 800, fontFamily: 'system-ui, -apple-system, sans-serif', textShadow: '0 0 8px rgba(46, 204, 113, 0.4)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e', boxShadow: '0 0 6px #22c55e' }} />
+              <span style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                GÜNLÜK KAZANÇ
+              </span>
+            </div>
+            <span style={{ color: '#4ade80', fontSize: '18px', fontWeight: 800, letterSpacing: '0.2px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
               {dailyTotal.toLocaleString('tr-TR')} ₺
             </span>
           </div>
           <button 
-            style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+            style={{ 
+              background: 'rgba(255, 255, 255, 0.05)', 
+              border: '1px solid rgba(255, 255, 255, 0.08)', 
+              color: '#9ca3af', 
+              cursor: 'pointer', 
+              width: '30px', 
+              height: '30px', 
+              borderRadius: '8px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
+              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)'
+              e.currentTarget.style.color = '#ef4444'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)'
+              e.currentTarget.style.color = '#9ca3af'
+            }}
             onClick={resetDailyTotal}
             title="Günlük Kazancı Sıfırla"
           >

@@ -151,7 +151,9 @@ export default function OrderModal() {
     return '#455A64'
   }
 
-  const paidExtrasMap: Record<string, number> = menu?.paidExtras || menu?.extras || { 'Cheddar': 70, 'Kaşarlı': 70 }
+  const productCustom = menu?.productCustomizations?.[product?.name] || product?.customization || (product?.ingredients || product?.freeExtras || product?.paidExtras ? product : null)
+
+  const paidExtrasMap: Record<string, number> = productCustom?.paidExtras || menu?.paidExtras || menu?.extras || { 'Cheddar': 70, 'Kaşarlı': 70 }
   const paidExtras = Object.keys(paidExtrasMap)
 
   const getItemExtraPrice = (chipsObj: Record<string, boolean>) => {
@@ -184,16 +186,18 @@ export default function OrderModal() {
     // Add drinks
     Object.entries(drinkCounts).forEach(([drinkName, count]) => {
       if (count > 0) {
-        const drinksCat = menu?.categories?.find((c: any) => c.id === 'drinks' || c.name.toUpperCase().includes('ECEK'))
+        const drinksCat = menu?.categories?.find((c: any) => c.id === 'drinks' || c.name.toUpperCase().includes('İÇECEK') || c.name.toUpperCase().includes('ICECEK') || c.name.toUpperCase().includes('ECEK'))
         const drinksMenu = drinksCat?.items || []
         const drinkItem = drinksMenu.find((d: any) => d.name === drinkName)
         if (drinkItem) {
-          addToCart({
-            name: drinkItem.name,
-            portion: drinkItem.options[0]?.portion || 'Standart',
-            price: drinkItem.options[0]?.price || 0,
-            notes: ''
-          })
+          for (let i = 0; i < count; i++) {
+            addToCart({
+              name: drinkItem.name,
+              portion: drinkItem.options[0]?.portion || 'Standart',
+              price: drinkItem.options[0]?.price || 0,
+              notes: ''
+            })
+          }
         }
       }
     })
@@ -221,12 +225,12 @@ export default function OrderModal() {
     return name + 'lı'
   }
 
-  const rawIngredients: string[] = menu?.ingredients || ['Soğan', 'Domates', 'Patates', 'Ketçap', 'Mayonez', 'Turşu']
+  const rawIngredients: string[] = productCustom?.ingredients || menu?.ingredients || ['Soğan', 'Domates', 'Patates', 'Ketçap', 'Mayonez', 'Turşu']
   const ingredients = [
     ...rawIngredients.map(toWithout),
     ...rawIngredients.map(toWith)
   ]
-  const freeExtras: string[] = menu?.freeExtras || ['Sade Et', 'Soslu', 'Gemi', 'Kayık', 'Acılı', 'Karışık']
+  const freeExtras: string[] = productCustom?.freeExtras || menu?.freeExtras || ['Sade Et', 'Soslu', 'Gemi', 'Kayık', 'Acılı', 'Karışık']
 
   const allChips = [...ingredients, ...freeExtras, ...paidExtras]
 

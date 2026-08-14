@@ -131,7 +131,7 @@ export const webApi = {
   },
   savePastOrder: async (order: any) => {
     try {
-      await axios.post(`${getBaseUrl()}/api/add_past_order`, { order });
+      await axios.post(`${getBaseUrl()}/api/add_past_order`, order);
     } catch (e) {}
   },
   deletePastOrder: async (index: number) => {

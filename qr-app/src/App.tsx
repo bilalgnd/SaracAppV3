@@ -135,8 +135,92 @@ export default function App() {
 
   // Tracking state
   const [serverOrderStatus, setServerOrderStatus] = useState<string>('')
-  const [waiterCalled, setWaiterCalled] = useState(false)
   const [isTrackingVisible, setIsTrackingVisible] = useState(true)
+
+  // Progressive Waiter Call Cooldown (1st: 20s, 2nd: 40s, 3rd: 50s, 4th+: 60s)
+  const getCooldownDuration = (count: number) => {
+    if (count <= 1) return 20;
+    if (count === 2) return 40;
+    if (count === 3) return 50;
+    return 60;
+  };
+
+  const [waiterCallCount, setWaiterCallCount] = useState<number>(() => {
+    return parseInt(localStorage.getItem('qr_waiter_call_count') || '0', 10);
+  });
+
+  const [cooldownRemaining, setCooldownRemaining] = useState<number>(() => {
+    const until = parseInt(localStorage.getItem('qr_waiter_cooldown_until') || '0', 10);
+    const diff = Math.ceil((until - Date.now()) / 1000);
+    return diff > 0 ? diff : 0;
+  });
+
+  const [isCallingWaiter, setIsCallingWaiter] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Active countdown effect
+  useEffect(() => {
+    if (cooldownRemaining <= 0) return;
+
+    const timer = setInterval(() => {
+      const until = parseInt(localStorage.getItem('qr_waiter_cooldown_until') || '0', 10);
+      const remaining = Math.ceil((until - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setCooldownRemaining(0);
+        clearInterval(timer);
+      } else {
+        setCooldownRemaining(remaining);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [cooldownRemaining]);
+
+  const handleCallWaiter = async () => {
+    if (cooldownRemaining > 0 || isCallingWaiter) return;
+
+    setIsCallingWaiter(true);
+    const nextCount = waiterCallCount + 1;
+    const cooldownSec = getCooldownDuration(nextCount);
+    const cooldownUntil = Date.now() + cooldownSec * 1000;
+
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tableParam = urlParams.get('table') || urlParams.get('masa') || '';
+      const shopParam = urlParams.get('shop') || '';
+
+      const res = await fetch('/api/public/call_waiter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: customerName.trim(),
+          table: tableParam,
+          id: trackingOrderId || undefined,
+          shop: shopParam || undefined
+        })
+      });
+
+      if (res.ok) {
+        setWaiterCallCount(nextCount);
+        setCooldownRemaining(cooldownSec);
+        localStorage.setItem('qr_waiter_call_count', String(nextCount));
+        localStorage.setItem('qr_waiter_cooldown_until', String(cooldownUntil));
+
+        const msg = lang === 'tr' 
+          ? '🔔 Garson çağrısı iletildi! En kısa sürede masanıza gelinecektir.' 
+          : '🔔 Waiter has been called! We will be with you shortly.';
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 4000);
+      } else {
+        alert(lang === 'tr' ? 'Garson çağrısı gönderilemedi. Lütfen tekrar deneyin.' : 'Failed to call waiter. Please try again.');
+      }
+    } catch (e) {
+      console.error('Call waiter error:', e);
+      alert(lang === 'tr' ? 'Bağlantı hatası!' : 'Connection error!');
+    } finally {
+      setIsCallingWaiter(false);
+    }
+  };
 
   // Portion & Ingredient Modal state
   const [selectedProduct, setSelectedProduct] = useState<MenuItem | null>(null)
@@ -324,19 +408,6 @@ export default function App() {
     const isServed = s.includes('served') || s.includes('yola')
     const isDone = s.includes('tamam') || s.includes('iptal')
     
-    const callWaiter = async () => {
-      if (waiterCalled) return;
-      try {
-        await fetch('https://bilalgnd.shop/api/public/call_waiter', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: trackingOrderId })
-        });
-        setWaiterCalled(true);
-        setTimeout(() => setWaiterCalled(false), 60000); // 60s cooldown
-      } catch (e) {}
-    }
-    
     const step1Complete = true 
     const step2Complete = isPrep || isServed || isDone
     const step3Complete = isServed || isDone
@@ -408,18 +479,30 @@ export default function App() {
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {!isDone && (
             <button 
-              className="btn" 
-              style={{ backgroundColor: waiterCalled ? '#4b5563' : '#eab308', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} 
-              onClick={callWaiter}
-              disabled={waiterCalled}
+              className={`btn ${cooldownRemaining > 0 ? 'cooldown' : ''}`} 
+              style={{ 
+                backgroundColor: cooldownRemaining > 0 ? '#374151' : '#eab308', 
+                color: cooldownRemaining > 0 ? '#9ca3af' : '#000',
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '8px',
+                cursor: cooldownRemaining > 0 ? 'not-allowed' : 'pointer'
+              }} 
+              onClick={handleCallWaiter}
+              disabled={cooldownRemaining > 0 || isCallingWaiter}
             >
               <Bell size={18} />
-              {waiterCalled ? 'Garson Çağrıldı' : 'Garson Çağır'}
+              {isCallingWaiter 
+                ? (lang === 'tr' ? 'Çağrılıyor...' : 'Calling...')
+                : cooldownRemaining > 0 
+                  ? (lang === 'tr' ? `Garson Çağrıldı (${cooldownRemaining}s)` : `Waiter Called (${cooldownRemaining}s)`)
+                  : (lang === 'tr' ? 'Garson Çağır' : 'Call Waiter')}
             </button>
           )}
           {isDone && (
             <button className="btn" onClick={finishTracking}>
-              Yeni Sipariş Ver
+              {lang === 'tr' ? 'Yeni Sipariş Ver' : 'Place New Order'}
             </button>
           )}
         </div>
@@ -474,6 +557,12 @@ export default function App() {
 
   return (
     <>
+      {toastMessage && (
+        <div className="toast-notice">
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       <div className="app-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -508,7 +597,24 @@ export default function App() {
             </button>
           </div>
         </div>
-        <p style={{ marginTop: '8px' }}>👋 {lang === 'tr' ? 'Merhaba' : 'Hello'}, {customerName}</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', flexWrap: 'wrap', gap: '8px' }}>
+          <p style={{ margin: 0, fontSize: '15px' }}>👋 {lang === 'tr' ? 'Merhaba' : 'Hello'}, <span style={{ fontWeight: 600, color: '#fff' }}>{customerName}</span></p>
+          <button 
+            type="button"
+            className={`btn-call-waiter ${cooldownRemaining > 0 ? 'cooldown' : ''}`}
+            onClick={handleCallWaiter}
+            disabled={cooldownRemaining > 0 || isCallingWaiter}
+          >
+            <Bell size={15} />
+            <span>
+              {isCallingWaiter 
+                ? (lang === 'tr' ? 'Çağrılıyor...' : 'Calling...')
+                : cooldownRemaining > 0 
+                  ? (lang === 'tr' ? `Garson Çağrıldı (${cooldownRemaining}s)` : `Waiter Called (${cooldownRemaining}s)`)
+                  : (lang === 'tr' ? 'Garson Çağır' : 'Call Waiter')}
+            </span>
+          </button>
+        </div>
       </div>
 
       <div className="category-tabs">
@@ -528,7 +634,18 @@ export default function App() {
           const minPrice = item.options.length > 0 ? Math.min(...item.options.map(o => o.price)) : 0
           
           return (
-            <div className="menu-item" key={idx}>
+            <div 
+              className="menu-item" 
+              key={idx}
+              onClick={() => {
+                if (trackingOrderId) {
+                  alert(lang === 'tr' ? 'Mevcut siparişiniz sonuçlanmadan yeni sipariş ekleyemezsiniz.' : 'You cannot add a new order until your current order is completed.');
+                  return;
+                }
+                openProductModal(item);
+              }}
+              style={trackingOrderId ? { opacity: 0.5, cursor: 'not-allowed' } : { cursor: 'pointer' }}
+            >
               <div>
                 <div className="item-name">{translateText(item.name, lang)}</div>
                 {item.options.length > 1 && (
@@ -539,7 +656,8 @@ export default function App() {
                 <span className="item-price">{minPrice} ₺</span>
                 <button 
                   className="add-btn" 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (trackingOrderId) {
                       alert(lang === 'tr' ? 'Mevcut siparişiniz sonuçlanmadan yeni sipariş ekleyemezsiniz.' : 'You cannot add a new order until your current order is completed.');
                       return;

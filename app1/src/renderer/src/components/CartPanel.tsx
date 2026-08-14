@@ -34,7 +34,8 @@ export default function CartPanel() {
       time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
       items: cart,
       total_amount: cartTotal,
-      status: 'waiting'
+      status: 'waiting',
+      createdBy: 'Kasa'
     }
     const newOrders = [newOrder, ...orders]
     window.api.saveOrders(newOrders)
@@ -63,7 +64,18 @@ export default function CartPanel() {
 
   const handleCloseBill = () => {
     if (!isEditing) return
-    const orderToClose = orders[editingOrderIndex]
+    const targetOrder = orders[editingOrderIndex]
+    const orderToClose: Order = {
+      ...targetOrder,
+      customer_name: customerName || targetOrder.customer_name,
+      order_note: orderNote || targetOrder.order_note,
+      items: cart.length > 0 ? cart : targetOrder.items,
+      total_amount: cart.length > 0 ? cartTotal : targetOrder.total_amount,
+      status: 'Tamamlandı',
+      completedAt: new Date().toISOString(),
+      createdBy: targetOrder.createdBy || 'Kasa',
+      color: targetOrder.color
+    }
     const newOrders = orders.filter((_, i) => i !== editingOrderIndex)
     window.api.saveOrders(newOrders)
     setOrders(newOrders)
@@ -73,8 +85,6 @@ export default function CartPanel() {
     localStorage.setItem('dailyTotal', (currentTotal + orderToClose.total_amount).toString())
     window.dispatchEvent(new Event('daily-total-updated'))
 
-    orderToClose.status = 'Tamamlandı'
-    orderToClose.completedAt = new Date().toISOString()
     if (window.api && window.api.savePastOrder) {
       window.api.savePastOrder(orderToClose)
     }

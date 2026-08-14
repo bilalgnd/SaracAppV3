@@ -217,40 +217,73 @@ router.get('/api/public/order_status', (req: any, res: any) => {
 })
 
 router.post('/api/public/call_waiter', (req: any, res: any) => {
-  const { id } = req.body
-  if (!id) return res.status(400).json({ error: 'ID required' })
+  const { id, customerName, table } = req.body;
 
-  let shop = getShop()
-  const { shops, ShopState } = require('../models') // Adjust import path
+  let shop = getShop();
+  const { shops, ShopState } = require('../models');
   
-  if (req.body.shop) {
-    if (!shops.has(req.body.shop)) shops.set(req.body.shop, new ShopState(req.body.shop))
-    shop = shops.get(req.body.shop)
+  const shopIdParam = req.body.shop || req.query.shop;
+  if (shopIdParam) {
+    if (!shops.has(shopIdParam)) shops.set(shopIdParam, new ShopState(shopIdParam));
+    shop = shops.get(shopIdParam);
   } else {
-    if (!shops.has('sarac')) shops.set('sarac', new ShopState('sarac'))
-    shop = shops.get('sarac')
+    if (!shops.has('sarac')) shops.set('sarac', new ShopState('sarac'));
+    shop = shops.get('sarac');
   }
 
-  const active = shop.activeOrders.find((o: any) => o.id === id)
-  if (!active) return res.status(404).json({ error: 'Active order not found' })
+  let callerTitle = customerName ? String(customerName).trim() : (table ? `Masa ${table}` : 'Müşteri (QR)');
+  if (id) {
+    const active = shop.activeOrders.find((o: any) => o.id === id);
+    if (active) {
+      callerTitle = active.customer_name;
+    }
+  }
 
+  const callData = {
+    id: id || Date.now().toString(),
+    customerName: callerTitle,
+    table: table || '',
+    time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' })
+  };
+
+  // Broadcast to all UI clients (App1, App2, tv-sarac)
+  notifyUI('waiter_call', callData, shop);
+
+  // Send FCM notification to waiter phones if any registered
   if (fcmTokens.length > 0) {
     const message = {
       notification: {
-        title: 'Garson Çağrısı!',
-        body: `${active.customer_name} masasından garson çağrılıyor!`
+        title: '🔔 Garson Çağrısı!',
+        body: `${callerTitle} garson çağırıyor!`
+      },
+      data: {
+        type: 'waiter_call',
+        customerName: callerTitle,
+        table: String(table || '')
       },
       android: { priority: 'high' as const },
       tokens: fcmTokens
     };
     try {
       getMessaging().sendEachForMulticast(message)
+        .then((response: any) => console.log('FCM Waiter call sent:', response.successCount))
+        .catch((error: any) => console.log('Error sending FCM waiter call:', error));
     } catch (e) {
-      console.log('FCM error:', e)
+      console.log('FCM error:', e);
     }
   }
 
-  res.json({ success: true })
-})
+  const { ActivityLogModel } = require('../models');
+  try {
+    ActivityLogModel.create({
+      username: 'QR_CUSTOMER',
+      shopId: shop.shopId || 'sarac',
+      action: 'waiter_call',
+      details: `Garson Çağrısı: ${callerTitle}`
+    });
+  } catch(e) {}
+
+  res.json({ success: true, message: 'Garson çağrısı iletildi', callData });
+});
 
 export default router;

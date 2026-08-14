@@ -39,9 +39,17 @@ temp_extract/
 temp_backup/
 silinecekler_ve_arsiv/
 Archive/
+archive/
+**/archive/
+scratch/
+**/scratch/
 xapp1/
 .tmp.drivedownload/
 .tmp.driveupload/
+.eslintcache
+**/.eslintcache
+.kotlin/
+**/.kotlin/
 
 # IDE & OS Files
 .idea/

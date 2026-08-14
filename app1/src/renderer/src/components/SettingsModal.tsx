@@ -24,6 +24,10 @@ export default function SettingsModal() {
   const [storeStatusResult, setStoreStatusResult] = useState<{ success: boolean; message: string } | null>(null)
   // tvLink unused
 
+  // Product Customization States
+  const [customizationMode, setCustomizationMode] = useState<'global' | 'product'>('global')
+  const [selectedCustomProduct, setSelectedCustomProduct] = useState<string>('')
+
   // Custom Prompt States
   const [promptData, setPromptData] = useState<{ type: 'add' | 'edit' | 'color' | 'textColor' | 'globalTextColor' | 'addCategory' | 'renameCategory', category?: string, idx?: number, catIdx?: number, oldName?: string, title: string } | null>(null)
   const [inputVal1, setInputVal1] = useState('') // Used for Product Name or Color
@@ -750,6 +754,29 @@ export default function SettingsModal() {
                           <td>
                             <div style={{ display: 'flex', gap: 5 }}>
                               <button className="settings-btn primary" style={{ padding: '5px 10px', fontSize: 11, color: 'black' }} onClick={() => openEditProductPrompt(catIdx, i, prod)}>Düzenle</button>
+                              <button
+                                className="settings-btn"
+                                style={{
+                                  padding: '5px 10px',
+                                  fontSize: 11,
+                                  background: menuData?.productCustomizations?.[prod.name] ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+                                  borderColor: menuData?.productCustomizations?.[prod.name] ? '#3b82f6' : '#444',
+                                  color: menuData?.productCustomizations?.[prod.name] ? '#60a5fa' : '#ddd',
+                                  fontWeight: menuData?.productCustomizations?.[prod.name] ? 600 : 400
+                                }}
+                                onClick={() => {
+                                  setCustomizationMode('product')
+                                  setSelectedCustomProduct(prod.name)
+                                  setTimeout(() => {
+                                    const el = document.getElementById('customization-section')
+                                    if (el) {
+                                      el.scrollIntoView({ behavior: 'smooth' })
+                                    }
+                                  }, 50)
+                                }}
+                              >
+                                {menuData?.productCustomizations?.[prod.name] ? '★ İçerik' : 'İçerik'}
+                              </button>
                               <button className="settings-btn danger" style={{ padding: '5px 10px', fontSize: 11 }} onClick={() => handleDeleteProduct(catIdx, i)}>Sil</button>
                               <button className="settings-btn" style={{ padding: '5px 10px', fontSize: 11 }} onClick={() => openColorPrompt(catIdx, i, prod.color)}>Arka Plan</button>
                               <button className="settings-btn" style={{ padding: '5px 10px', fontSize: 11 }} onClick={() => openTextColorPrompt(catIdx, i, prod.textColor)}>Yazı Rengi</button>
@@ -771,52 +798,114 @@ export default function SettingsModal() {
               </div>
 
               {/* İçerik ve Adisyon Özelleştirme Yönetimi */}
-              <div className="settings-card" style={{ marginTop: 25, border: '1px solid #3b82f644', background: 'rgba(59, 130, 246, 0.03)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+              <div id="customization-section" className="settings-card" style={{ marginTop: 25, border: '1px solid #3b82f644', background: 'rgba(59, 130, 246, 0.03)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, flexWrap: 'wrap', gap: 10 }}>
                   <div className="settings-card-title" style={{ margin: 0, color: '#60a5fa', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span>🍔 İçerik ve Adisyon Özelleştirme Yönetimi</span>
                   </div>
-                  <span style={{ fontSize: 11, color: '#94a3b8' }}>Sipariş alınırken çıkan butonları buradan yönetebilirsiniz</span>
+                  <span style={{ fontSize: 11, color: '#94a3b8' }}>Sipariş alınırken çıkan butonları genel veya ürüne özel olarak yönetebilirsiniz</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-                  {/* 1. Temel Malzemeler (Soğanlı/Soğansız vb.) */}
-                  <div style={{ background: '#1e1e24', padding: 14, borderRadius: 12, border: '1px solid #2e2e38' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#f43f5e', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Malzemeler (Çıkar/Ekle)</span>
-                      <span style={{ fontSize: 10, color: '#888' }}>-suz / -lu</span>
-                    </div>
-                    <p style={{ fontSize: 11, color: '#888', margin: '0 0 10px 0' }}>Sipariş ekranında Soğansız/Soğanlı gibi çift yönlü buton üretir.</p>
-                    
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, minHeight: 40 }}>
-                      {(menuData?.ingredients || ['Soğan', 'Domates', 'Patates', 'Ketçap', 'Mayonez', 'Turşu']).map((ing: string, idx: number) => (
-                        <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#272732', padding: '4px 10px', borderRadius: 20, border: '1px solid #3f3f50', fontSize: 12 }}>
-                          <span>{ing}</span>
-                          <button
-                            onClick={() => {
+                {/* Mod Seçimi (Genel vs Ürüne Özel) */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16, background: 'rgba(0,0,0,0.3)', padding: 4, borderRadius: 10, width: 'fit-content' }}>
+                  <button
+                    onClick={() => setCustomizationMode('global')}
+                    style={{
+                      padding: '7px 16px',
+                      borderRadius: 8,
+                      border: 'none',
+                      background: customizationMode === 'global' ? '#3b82f6' : 'transparent',
+                      color: customizationMode === 'global' ? '#fff' : '#94a3b8',
+                      fontWeight: 600,
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    🌐 Genel İçerikler (Varsayılan)
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCustomizationMode('product')
+                      if (!selectedCustomProduct) {
+                        const first = menuData?.categories?.[0]?.items?.[0]?.name
+                        if (first) setSelectedCustomProduct(first)
+                      }
+                    }}
+                    style={{
+                      padding: '7px 16px',
+                      borderRadius: 8,
+                      border: 'none',
+                      background: customizationMode === 'product' ? '#3b82f6' : 'transparent',
+                      color: customizationMode === 'product' ? '#fff' : '#94a3b8',
+                      fontWeight: 600,
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    🎯 Ürüne Özel İçerik Tanımla
+                  </button>
+                </div>
+
+                {/* 1. GENEL İÇERİKLER */}
+                {customizationMode === 'global' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+                    {/* 1.1 Temel Malzemeler (Soğanlı/Soğansız vb.) */}
+                    <div style={{ background: '#1e1e24', padding: 14, borderRadius: 12, border: '1px solid #2e2e38' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#f43f5e', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Malzemeler (Çıkar/Ekle)</span>
+                        <span style={{ fontSize: 10, color: '#888' }}>-suz / -lu</span>
+                      </div>
+                      <p style={{ fontSize: 11, color: '#888', margin: '0 0 10px 0' }}>Sipariş ekranında Soğansız/Soğanlı gibi çift yönlü buton üretir.</p>
+                      
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, minHeight: 40 }}>
+                        {(menuData?.ingredients || ['Soğan', 'Domates', 'Patates', 'Ketçap', 'Mayonez', 'Turşu']).map((ing: string, idx: number) => (
+                          <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#272732', padding: '4px 10px', borderRadius: 20, border: '1px solid #3f3f50', fontSize: 12 }}>
+                            <span>{ing}</span>
+                            <button
+                              onClick={() => {
+                                const current = menuData?.ingredients || ['Soğan', 'Domates', 'Patates', 'Ketçap', 'Mayonez', 'Turşu'];
+                                const next = current.filter((_: any, i: number) => i !== idx);
+                                const newM = { ...menuData, ingredients: next };
+                                setMenuData(newM);
+                                useStore.getState().setMenu(newM);
+                                window.api?.saveMenu?.(newM);
+                              }}
+                              style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: 14, lineHeight: 1 }}
+                            >✕</button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          type="text"
+                          id="new-ingredient-input"
+                          placeholder="Örn: Biber, Yeşillik"
+                          className="settings-input"
+                          style={{ flex: 1, padding: '6px 10px', fontSize: 12 }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const val = (e.target as HTMLInputElement).value.trim();
+                              if (!val) return;
                               const current = menuData?.ingredients || ['Soğan', 'Domates', 'Patates', 'Ketçap', 'Mayonez', 'Turşu'];
-                              const next = current.filter((_: any, i: number) => i !== idx);
+                              if (current.includes(val)) return;
+                              const next = [...current, val];
                               const newM = { ...menuData, ingredients: next };
                               setMenuData(newM);
                               useStore.getState().setMenu(newM);
                               window.api?.saveMenu?.(newM);
-                            }}
-                            style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: 14, lineHeight: 1 }}
-                          >✕</button>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <input
-                        type="text"
-                        id="new-ingredient-input"
-                        placeholder="Örn: Biber, Yeşillik"
-                        className="settings-input"
-                        style={{ flex: 1, padding: '6px 10px', fontSize: 12 }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const val = (e.target as HTMLInputElement).value.trim();
+                              (e.target as HTMLInputElement).value = '';
+                            }
+                          }}
+                        />
+                        <button
+                          className="settings-btn primary"
+                          style={{ padding: '6px 12px', fontSize: 12 }}
+                          onClick={() => {
+                            const inp = document.getElementById('new-ingredient-input') as HTMLInputElement;
+                            const val = inp?.value.trim();
                             if (!val) return;
                             const current = menuData?.ingredients || ['Soğan', 'Domates', 'Patates', 'Ketçap', 'Mayonez', 'Turşu'];
                             if (current.includes(val)) return;
@@ -825,67 +914,67 @@ export default function SettingsModal() {
                             setMenuData(newM);
                             useStore.getState().setMenu(newM);
                             window.api?.saveMenu?.(newM);
-                            (e.target as HTMLInputElement).value = '';
-                          }
-                        }}
-                      />
-                      <button
-                        className="settings-btn primary"
-                        style={{ padding: '6px 12px', fontSize: 12 }}
-                        onClick={() => {
-                          const inp = document.getElementById('new-ingredient-input') as HTMLInputElement;
-                          const val = inp?.value.trim();
-                          if (!val) return;
-                          const current = menuData?.ingredients || ['Soğan', 'Domates', 'Patates', 'Ketçap', 'Mayonez', 'Turşu'];
-                          if (current.includes(val)) return;
-                          const next = [...current, val];
-                          const newM = { ...menuData, ingredients: next };
-                          setMenuData(newM);
-                          useStore.getState().setMenu(newM);
-                          window.api?.saveMenu?.(newM);
-                          inp.value = '';
-                        }}
-                      >+ Ekle</button>
+                            inp.value = '';
+                          }}
+                        >+ Ekle</button>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* 2. Ücretsiz Seçenekler & Pişirme Özellikleri */}
-                  <div style={{ background: '#1e1e24', padding: 14, borderRadius: 12, border: '1px solid #2e2e38' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#06b6d4', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Ücretsiz Ekstralar / Tercihler</span>
-                      <span style={{ fontSize: 10, color: '#888' }}>Ücretsiz</span>
-                    </div>
-                    <p style={{ fontSize: 11, color: '#888', margin: '0 0 10px 0' }}>Sade Et, Soslu, Gemi, Kayık, Acılı, Karışık vb. tercihler.</p>
+                    {/* 1.2 Ücretsiz Seçenekler & Pişirme Özellikleri */}
+                    <div style={{ background: '#1e1e24', padding: 14, borderRadius: 12, border: '1px solid #2e2e38' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#06b6d4', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Ücretsiz Ekstralar / Tercihler</span>
+                        <span style={{ fontSize: 10, color: '#888' }}>Ücretsiz</span>
+                      </div>
+                      <p style={{ fontSize: 11, color: '#888', margin: '0 0 10px 0' }}>Sade Et, Soslu, Gemi, Kayık, Acılı, Karışık vb. tercihler.</p>
 
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, minHeight: 40 }}>
-                      {(menuData?.freeExtras || ['Sade Et', 'Soslu', 'Gemi', 'Kayık', 'Acılı', 'Karışık']).map((ext: string, idx: number) => (
-                        <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#272732', padding: '4px 10px', borderRadius: 20, border: '1px solid #3f3f50', fontSize: 12 }}>
-                          <span>{ext}</span>
-                          <button
-                            onClick={() => {
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, minHeight: 40 }}>
+                        {(menuData?.freeExtras || ['Sade Et', 'Soslu', 'Gemi', 'Kayık', 'Acılı', 'Karışık']).map((ext: string, idx: number) => (
+                          <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#272732', padding: '4px 10px', borderRadius: 20, border: '1px solid #3f3f50', fontSize: 12 }}>
+                            <span>{ext}</span>
+                            <button
+                              onClick={() => {
+                                const current = menuData?.freeExtras || ['Sade Et', 'Soslu', 'Gemi', 'Kayık', 'Acılı', 'Karışık'];
+                                const next = current.filter((_: any, i: number) => i !== idx);
+                                const newM = { ...menuData, freeExtras: next };
+                                setMenuData(newM);
+                                useStore.getState().setMenu(newM);
+                                window.api?.saveMenu?.(newM);
+                              }}
+                              style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: 14, lineHeight: 1 }}
+                            >✕</button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          type="text"
+                          id="new-free-extra-input"
+                          placeholder="Örn: Az Pişmiş, Duble Sos"
+                          className="settings-input"
+                          style={{ flex: 1, padding: '6px 10px', fontSize: 12 }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const val = (e.target as HTMLInputElement).value.trim();
+                              if (!val) return;
                               const current = menuData?.freeExtras || ['Sade Et', 'Soslu', 'Gemi', 'Kayık', 'Acılı', 'Karışık'];
-                              const next = current.filter((_: any, i: number) => i !== idx);
+                              if (current.includes(val)) return;
+                              const next = [...current, val];
                               const newM = { ...menuData, freeExtras: next };
                               setMenuData(newM);
                               useStore.getState().setMenu(newM);
                               window.api?.saveMenu?.(newM);
-                            }}
-                            style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: 14, lineHeight: 1 }}
-                          >✕</button>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <input
-                        type="text"
-                        id="new-free-extra-input"
-                        placeholder="Örn: Az Pişmiş, Duble Sos"
-                        className="settings-input"
-                        style={{ flex: 1, padding: '6px 10px', fontSize: 12 }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const val = (e.target as HTMLInputElement).value.trim();
+                              (e.target as HTMLInputElement).value = '';
+                            }
+                          }}
+                        />
+                        <button
+                          className="settings-btn primary"
+                          style={{ padding: '6px 12px', fontSize: 12 }}
+                          onClick={() => {
+                            const inp = document.getElementById('new-free-extra-input') as HTMLInputElement;
+                            const val = inp?.value.trim();
                             if (!val) return;
                             const current = menuData?.freeExtras || ['Sade Et', 'Soslu', 'Gemi', 'Kayık', 'Acılı', 'Karışık'];
                             if (current.includes(val)) return;
@@ -894,111 +983,404 @@ export default function SettingsModal() {
                             setMenuData(newM);
                             useStore.getState().setMenu(newM);
                             window.api?.saveMenu?.(newM);
-                            (e.target as HTMLInputElement).value = '';
-                          }
-                        }}
-                      />
-                      <button
-                        className="settings-btn primary"
-                        style={{ padding: '6px 12px', fontSize: 12 }}
-                        onClick={() => {
-                          const inp = document.getElementById('new-free-extra-input') as HTMLInputElement;
-                          const val = inp?.value.trim();
-                          if (!val) return;
-                          const current = menuData?.freeExtras || ['Sade Et', 'Soslu', 'Gemi', 'Kayık', 'Acılı', 'Karışık'];
-                          if (current.includes(val)) return;
-                          const next = [...current, val];
-                          const newM = { ...menuData, freeExtras: next };
-                          setMenuData(newM);
-                          useStore.getState().setMenu(newM);
-                          window.api?.saveMenu?.(newM);
-                          inp.value = '';
-                        }}
-                      >+ Ekle</button>
+                            inp.value = '';
+                          }}
+                        >+ Ekle</button>
+                      </div>
+                    </div>
+
+                    {/* 1.3 Ücretli Ekstralar & Fiyatları */}
+                    <div style={{ background: '#1e1e24', padding: 14, borderRadius: 12, border: '1px solid #2e2e38' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#eab308', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Ücretli Ekstralar</span>
+                        <span style={{ fontSize: 10, color: '#888' }}>+Fiyat</span>
+                      </div>
+                      <p style={{ fontSize: 11, color: '#888', margin: '0 0 10px 0' }}>Seçildiğinde adisyon tutarına eklenen ücretli malzemeler.</p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12, minHeight: 40 }}>
+                        {Object.entries(menuData?.paidExtras || menuData?.extras || { 'Cheddar': 70, 'Kaşarlı': 70 }).map(([name, price]: [string, any], idx: number) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#272732', padding: '6px 10px', borderRadius: 8, border: '1px solid #3f3f50' }}>
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>{name}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <input
+                                type="number"
+                                defaultValue={price}
+                                style={{ width: 60, padding: '2px 6px', fontSize: 12, background: '#18181b', border: '1px solid #444', color: '#eab308', borderRadius: 4, textAlign: 'right' }}
+                                onBlur={(e) => {
+                                  const newP = Number(e.target.value) || 0;
+                                  const current = { ...(menuData?.paidExtras || menuData?.extras || { 'Cheddar': 70, 'Kaşarlı': 70 }) };
+                                  current[name] = newP;
+                                  const newM = { ...menuData, paidExtras: current, extras: current };
+                                  setMenuData(newM);
+                                  useStore.getState().setMenu(newM);
+                                  window.api?.saveMenu?.(newM);
+                                }}
+                              />
+                              <span style={{ fontSize: 11, color: '#888' }}>₺</span>
+                              <button
+                                onClick={() => {
+                                  const current = { ...(menuData?.paidExtras || menuData?.extras || { 'Cheddar': 70, 'Kaşarlı': 70 }) };
+                                  delete current[name];
+                                  const newM = { ...menuData, paidExtras: current, extras: current };
+                                  setMenuData(newM);
+                                  useStore.getState().setMenu(newM);
+                                  window.api?.saveMenu?.(newM);
+                                }}
+                                style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: 14, marginLeft: 4 }}
+                              >✕</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          type="text"
+                          id="new-paid-extra-name"
+                          placeholder="İsim (Örn: Çift Kaşar)"
+                          className="settings-input"
+                          style={{ flex: 1.4, padding: '6px 10px', fontSize: 12 }}
+                        />
+                        <input
+                          type="number"
+                          id="new-paid-extra-price"
+                          placeholder="₺"
+                          className="settings-input"
+                          style={{ width: 60, padding: '6px 8px', fontSize: 12, textAlign: 'center' }}
+                        />
+                        <button
+                          className="settings-btn primary"
+                          style={{ padding: '6px 12px', fontSize: 12 }}
+                          onClick={() => {
+                            const nameInp = document.getElementById('new-paid-extra-name') as HTMLInputElement;
+                            const priceInp = document.getElementById('new-paid-extra-price') as HTMLInputElement;
+                            const name = nameInp?.value.trim();
+                            const price = Number(priceInp?.value) || 0;
+                            if (!name) return;
+                            const current = { ...(menuData?.paidExtras || menuData?.extras || { 'Cheddar': 70, 'Kaşarlı': 70 }) };
+                            current[name] = price;
+                            const newM = { ...menuData, paidExtras: current, extras: current };
+                            setMenuData(newM);
+                            useStore.getState().setMenu(newM);
+                            window.api?.saveMenu?.(newM);
+                            nameInp.value = '';
+                            priceInp.value = '';
+                          }}
+                        >+ Ekle</button>
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  {/* 3. Ücretli Ekstralar & Fiyatları */}
-                  <div style={{ background: '#1e1e24', padding: 14, borderRadius: 12, border: '1px solid #2e2e38' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#eab308', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Ücretli Ekstralar</span>
-                      <span style={{ fontSize: 10, color: '#888' }}>+Fiyat</span>
-                    </div>
-                    <p style={{ fontSize: 11, color: '#888', margin: '0 0 10px 0' }}>Seçildiğinde adisyon tutarına eklenen ücretli malzemeler.</p>
+                {/* 2. ÜRÜNE ÖZEL İÇERİKLER */}
+                {customizationMode === 'product' && (() => {
+                  const allProducts: { name: string; categoryName: string }[] = []
+                  menuData?.categories?.forEach((cat: any) => {
+                    cat.items?.forEach((item: any) => {
+                      allProducts.push({ name: item.name, categoryName: cat.name })
+                    })
+                  })
+                  const currentProdName = selectedCustomProduct || (allProducts[0]?.name || '')
+                  const hasCustom = !!menuData?.productCustomizations?.[currentProdName]
+                  const prodCustom = menuData?.productCustomizations?.[currentProdName] || {
+                    ingredients: menuData?.ingredients || ['Soğan', 'Domates', 'Patates', 'Ketçap', 'Mayonez', 'Turşu'],
+                    freeExtras: menuData?.freeExtras || ['Sade Et', 'Soslu', 'Gemi', 'Kayık', 'Acılı', 'Karışık'],
+                    paidExtras: menuData?.paidExtras || menuData?.extras || { 'Cheddar': 70, 'Kaşarlı': 70 }
+                  }
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12, minHeight: 40 }}>
-                      {Object.entries(menuData?.paidExtras || menuData?.extras || { 'Cheddar': 70, 'Kaşarlı': 70 }).map(([name, price]: [string, any], idx: number) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#272732', padding: '6px 10px', borderRadius: 8, border: '1px solid #3f3f50' }}>
-                          <span style={{ fontSize: 12, fontWeight: 600 }}>{name}</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  const customizedProductNames = Object.keys(menuData?.productCustomizations || {})
+
+                  const saveProdChanges = (updated: any) => {
+                    const newCustomMap = { ...(menuData?.productCustomizations || {}) }
+                    if (updated === null) {
+                      delete newCustomMap[currentProdName]
+                    } else {
+                      newCustomMap[currentProdName] = updated
+                    }
+                    const newM = { ...menuData, productCustomizations: newCustomMap }
+                    setMenuData(newM)
+                    useStore.getState().setMenu(newM)
+                    window.api?.saveMenu?.(newM)
+                  }
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      {/* Ürün Seçim Çubuğu */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', padding: '12px 16px', borderRadius: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 13, fontWeight: 'bold', color: '#fff' }}>Ürün Seçin:</span>
+                          <select
+                            value={currentProdName}
+                            onChange={(e) => setSelectedCustomProduct(e.target.value)}
+                            style={{
+                              background: '#18181b',
+                              color: '#fff',
+                              border: '1px solid #3f3f46',
+                              borderRadius: 8,
+                              padding: '6px 12px',
+                              fontSize: 13,
+                              fontWeight: 600,
+                              outline: 'none',
+                              cursor: 'pointer',
+                              minWidth: 220
+                            }}
+                          >
+                            {menuData?.categories?.map((cat: any, cIdx: number) => (
+                              <optgroup key={cIdx} label={cat.name} style={{ background: '#27272a', color: '#a1a1aa' }}>
+                                {cat.items?.map((it: any, iIdx: number) => {
+                                  const isCustom = !!menuData?.productCustomizations?.[it.name]
+                                  return (
+                                    <option key={iIdx} value={it.name} style={{ background: '#18181b', color: isCustom ? '#4ade80' : '#fff' }}>
+                                      {isCustom ? '★ ' : ''}{it.name} {isCustom ? '(Özel İçerikli)' : ''}
+                                    </option>
+                                  )
+                                })}
+                              </optgroup>
+                            ))}
+                          </select>
+
+                          {hasCustom && (
+                            <span style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)', border: '1px solid rgba(34, 197, 94, 0.3)', color: '#4ade80', fontSize: 11, fontWeight: 'bold', padding: '3px 8px', borderRadius: 6 }}>
+                              ✓ Özelleştirildi
+                            </span>
+                          )}
+                        </div>
+
+                        {hasCustom && (
+                          <button
+                            onClick={() => saveProdChanges(null)}
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.15)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              color: '#f87171',
+                              padding: '6px 12px',
+                              borderRadius: 8,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            🔄 Genel İçeriklere Sıfırla
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Özel İçerikli Ürünler Hızlı Erişim */}
+                      {customizedProductNames.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 11, color: '#aaa' }}>
+                          <span style={{ fontWeight: 'bold' }}>Özel İçerikli Ürünler:</span>
+                          {customizedProductNames.map((name, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setSelectedCustomProduct(name)}
+                              style={{
+                                background: currentProdName === name ? 'rgba(74, 222, 128, 0.2)' : 'rgba(255,255,255,0.06)',
+                                border: currentProdName === name ? '1px solid #4ade80' : '1px solid rgba(255,255,255,0.1)',
+                                color: currentProdName === name ? '#4ade80' : '#ccc',
+                                borderRadius: 12,
+                                padding: '2px 8px',
+                                fontSize: 11,
+                                fontWeight: '600',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ★ {name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 3 Özel Kart */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+                        {/* 2.1 Ürüne Özel Malzemeler */}
+                        <div style={{ background: '#1e1e24', padding: 14, borderRadius: 12, border: hasCustom ? '1px solid #3b82f666' : '1px solid #2e2e38' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#f43f5e', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{currentProdName} Malzemeleri</span>
+                            <span style={{ fontSize: 10, color: '#888' }}>-suz / -lu</span>
+                          </div>
+                          <p style={{ fontSize: 11, color: '#888', margin: '0 0 10px 0' }}>Sadece bu ürün seçildiğinde çıkan temel malzemeler.</p>
+                          
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, minHeight: 40 }}>
+                            {(prodCustom.ingredients || []).map((ing: string, idx: number) => (
+                              <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#272732', padding: '4px 10px', borderRadius: 20, border: '1px solid #3f3f50', fontSize: 12 }}>
+                                <span>{ing}</span>
+                                <button
+                                  onClick={() => {
+                                    const next = (prodCustom.ingredients || []).filter((_: any, i: number) => i !== idx);
+                                    saveProdChanges({ ...prodCustom, ingredients: next });
+                                  }}
+                                  style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: 14, lineHeight: 1 }}
+                                >✕</button>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: 6 }}>
                             <input
-                              type="number"
-                              defaultValue={price}
-                              style={{ width: 60, padding: '2px 6px', fontSize: 12, background: '#18181b', border: '1px solid #444', color: '#eab308', borderRadius: 4, textAlign: 'right' }}
-                              onBlur={(e) => {
-                                const newP = Number(e.target.value) || 0;
-                                const current = { ...(menuData?.paidExtras || menuData?.extras || { 'Cheddar': 70, 'Kaşarlı': 70 }) };
-                                current[name] = newP;
-                                const newM = { ...menuData, paidExtras: current, extras: current };
-                                setMenuData(newM);
-                                useStore.getState().setMenu(newM);
-                                window.api?.saveMenu?.(newM);
+                              type="text"
+                              id="new-prod-ingredient-input"
+                              placeholder="Örn: Biber, Mantar"
+                              className="settings-input"
+                              style={{ flex: 1, padding: '6px 10px', fontSize: 12 }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const val = (e.target as HTMLInputElement).value.trim();
+                                  if (!val) return;
+                                  const current = prodCustom.ingredients || [];
+                                  if (current.includes(val)) return;
+                                  saveProdChanges({ ...prodCustom, ingredients: [...current, val] });
+                                  (e.target as HTMLInputElement).value = '';
+                                }
                               }}
                             />
-                            <span style={{ fontSize: 11, color: '#888' }}>₺</span>
                             <button
+                              className="settings-btn primary"
+                              style={{ padding: '6px 12px', fontSize: 12 }}
                               onClick={() => {
-                                const current = { ...(menuData?.paidExtras || menuData?.extras || { 'Cheddar': 70, 'Kaşarlı': 70 }) };
-                                delete current[name];
-                                const newM = { ...menuData, paidExtras: current, extras: current };
-                                setMenuData(newM);
-                                useStore.getState().setMenu(newM);
-                                window.api?.saveMenu?.(newM);
+                                const inp = document.getElementById('new-prod-ingredient-input') as HTMLInputElement;
+                                const val = inp?.value.trim();
+                                if (!val) return;
+                                const current = prodCustom.ingredients || [];
+                                if (current.includes(val)) return;
+                                saveProdChanges({ ...prodCustom, ingredients: [...current, val] });
+                                inp.value = '';
                               }}
-                              style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: 14, marginLeft: 4 }}
-                            >✕</button>
+                            >+ Ekle</button>
                           </div>
                         </div>
-                      ))}
-                    </div>
 
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <input
-                        type="text"
-                        id="new-paid-extra-name"
-                        placeholder="İsim (Örn: Çift Kaşar)"
-                        className="settings-input"
-                        style={{ flex: 1.4, padding: '6px 10px', fontSize: 12 }}
-                      />
-                      <input
-                        type="number"
-                        id="new-paid-extra-price"
-                        placeholder="₺"
-                        className="settings-input"
-                        style={{ width: 60, padding: '6px 8px', fontSize: 12, textAlign: 'center' }}
-                      />
-                      <button
-                        className="settings-btn primary"
-                        style={{ padding: '6px 12px', fontSize: 12 }}
-                        onClick={() => {
-                          const nameInp = document.getElementById('new-paid-extra-name') as HTMLInputElement;
-                          const priceInp = document.getElementById('new-paid-extra-price') as HTMLInputElement;
-                          const name = nameInp?.value.trim();
-                          const price = Number(priceInp?.value) || 0;
-                          if (!name) return;
-                          const current = { ...(menuData?.paidExtras || menuData?.extras || { 'Cheddar': 70, 'Kaşarlı': 70 }) };
-                          current[name] = price;
-                          const newM = { ...menuData, paidExtras: current, extras: current };
-                          setMenuData(newM);
-                          useStore.getState().setMenu(newM);
-                          window.api?.saveMenu?.(newM);
-                          nameInp.value = '';
-                          priceInp.value = '';
-                        }}
-                      >+ Ekle</button>
+                        {/* 2.2 Ürüne Özel Ücretsiz Tercihler */}
+                        <div style={{ background: '#1e1e24', padding: 14, borderRadius: 12, border: hasCustom ? '1px solid #3b82f666' : '1px solid #2e2e38' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#06b6d4', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{currentProdName} Tercihleri</span>
+                            <span style={{ fontSize: 10, color: '#888' }}>Ücretsiz</span>
+                          </div>
+                          <p style={{ fontSize: 11, color: '#888', margin: '0 0 10px 0' }}>Sadece bu ürüne özel ücretsiz tercihler.</p>
+
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, minHeight: 40 }}>
+                            {(prodCustom.freeExtras || []).map((ext: string, idx: number) => (
+                              <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#272732', padding: '4px 10px', borderRadius: 20, border: '1px solid #3f3f50', fontSize: 12 }}>
+                                <span>{ext}</span>
+                                <button
+                                  onClick={() => {
+                                    const next = (prodCustom.freeExtras || []).filter((_: any, i: number) => i !== idx);
+                                    saveProdChanges({ ...prodCustom, freeExtras: next });
+                                  }}
+                                  style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: 14, lineHeight: 1 }}
+                                >✕</button>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <input
+                              type="text"
+                              id="new-prod-free-extra-input"
+                              placeholder="Örn: Az Pişmiş, Duble Lavaş"
+                              className="settings-input"
+                              style={{ flex: 1, padding: '6px 10px', fontSize: 12 }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const val = (e.target as HTMLInputElement).value.trim();
+                                  if (!val) return;
+                                  const current = prodCustom.freeExtras || [];
+                                  if (current.includes(val)) return;
+                                  saveProdChanges({ ...prodCustom, freeExtras: [...current, val] });
+                                  (e.target as HTMLInputElement).value = '';
+                                }
+                              }}
+                            />
+                            <button
+                              className="settings-btn primary"
+                              style={{ padding: '6px 12px', fontSize: 12 }}
+                              onClick={() => {
+                                const inp = document.getElementById('new-prod-free-extra-input') as HTMLInputElement;
+                                const val = inp?.value.trim();
+                                if (!val) return;
+                                const current = prodCustom.freeExtras || [];
+                                if (current.includes(val)) return;
+                                saveProdChanges({ ...prodCustom, freeExtras: [...current, val] });
+                                inp.value = '';
+                              }}
+                            >+ Ekle</button>
+                          </div>
+                        </div>
+
+                        {/* 2.3 Ürüne Özel Ücretli Ekstralar */}
+                        <div style={{ background: '#1e1e24', padding: 14, borderRadius: 12, border: hasCustom ? '1px solid #3b82f666' : '1px solid #2e2e38' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#eab308', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{currentProdName} Ücretli Ekstralar</span>
+                            <span style={{ fontSize: 10, color: '#888' }}>+Fiyat</span>
+                          </div>
+                          <p style={{ fontSize: 11, color: '#888', margin: '0 0 10px 0' }}>Sadece bu ürüne özel ücretli ekstralar ve fiyatları.</p>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12, minHeight: 40 }}>
+                            {Object.entries(prodCustom.paidExtras || {}).map(([name, price]: [string, any], idx: number) => (
+                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#272732', padding: '6px 10px', borderRadius: 8, border: '1px solid #3f3f50' }}>
+                                <span style={{ fontSize: 12, fontWeight: 600 }}>{name}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <input
+                                    type="number"
+                                    defaultValue={price}
+                                    style={{ width: 60, padding: '2px 6px', fontSize: 12, background: '#18181b', border: '1px solid #444', color: '#eab308', borderRadius: 4, textAlign: 'right' }}
+                                    onBlur={(e) => {
+                                      const newP = Number(e.target.value) || 0;
+                                      const current = { ...(prodCustom.paidExtras || {}) };
+                                      current[name] = newP;
+                                      saveProdChanges({ ...prodCustom, paidExtras: current });
+                                    }}
+                                  />
+                                  <span style={{ fontSize: 11, color: '#888' }}>₺</span>
+                                  <button
+                                    onClick={() => {
+                                      const current = { ...(prodCustom.paidExtras || {}) };
+                                      delete current[name];
+                                      saveProdChanges({ ...prodCustom, paidExtras: current });
+                                    }}
+                                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: 14, marginLeft: 4 }}
+                                  >✕</button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <input
+                              type="text"
+                              id="new-prod-paid-extra-name"
+                              placeholder="İsim (Örn: Ekstra Kaşar)"
+                              className="settings-input"
+                              style={{ flex: 1.4, padding: '6px 10px', fontSize: 12 }}
+                            />
+                            <input
+                              type="number"
+                              id="new-prod-paid-extra-price"
+                              placeholder="₺"
+                              className="settings-input"
+                              style={{ width: 60, padding: '6px 8px', fontSize: 12, textAlign: 'center' }}
+                            />
+                            <button
+                              className="settings-btn primary"
+                              style={{ padding: '6px 12px', fontSize: 12 }}
+                              onClick={() => {
+                                const nameInp = document.getElementById('new-prod-paid-extra-name') as HTMLInputElement;
+                                const priceInp = document.getElementById('new-prod-paid-extra-price') as HTMLInputElement;
+                                const name = nameInp?.value.trim();
+                                const price = Number(priceInp?.value) || 0;
+                                if (!name) return;
+                                const current = { ...(prodCustom.paidExtras || {}) };
+                                current[name] = price;
+                                saveProdChanges({ ...prodCustom, paidExtras: current });
+                                nameInp.value = '';
+                                priceInp.value = '';
+                              }}
+                            >+ Ekle</button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  )
+                })()}
               </div>
 
               <div className="settings-card" style={{ marginTop: 20 }}>
@@ -1090,7 +1472,7 @@ export default function SettingsModal() {
                   {/* Table Header */}
                   <div style={{ display: 'flex', alignItems: 'center', padding: '0 16px', color: '#888', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     <div style={{ width: '85px' }}>Sipariş ID</div>
-                    <div style={{ width: '70px' }}>ID</div>
+                    <div style={{ width: '100px' }}>Garson</div>
                     <div style={{ flex: 1, paddingRight: '12px' }}>Sipariş Detayı</div>
                     <div style={{ width: '85px' }}>Masa / İsim</div>
                     <div style={{ width: '75px' }}>Tutar</div>
@@ -1114,8 +1496,41 @@ export default function SettingsModal() {
                         <div key={i} className="past-order-row" style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', transition: 'background 0.2s', fontSize: '13px' }}>
                           <div style={{ width: '85px', color: '#888', fontWeight: '500', fontSize: '12px' }}>{orderId}</div>
                           
-                          <div style={{ width: '70px', display: 'flex', alignItems: 'center' }}>
-                            <span style={{ color: o.color || '#fff', fontWeight: 'bold', fontSize: '12px' }}>{garson}</span>
+                          <div style={{ width: '100px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                            {garson && garson !== 'Kasa' ? (
+                              <span style={{
+                                backgroundColor: o.color || '#10b981',
+                                color: '#fff',
+                                fontWeight: 'bold',
+                                fontSize: '11px',
+                                padding: '3px 8px',
+                                borderRadius: '12px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxWidth: '95px'
+                              }} title={garson}>
+                                👤 {garson}
+                              </span>
+                            ) : (
+                              <span style={{
+                                backgroundColor: 'rgba(255,255,255,0.06)',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                color: '#aaa',
+                                fontWeight: '500',
+                                fontSize: '11px',
+                                padding: '2px 8px',
+                                borderRadius: '10px',
+                                display: 'inline-flex',
+                                alignItems: 'center'
+                              }}>
+                                Kasa
+                              </span>
+                            )}
                           </div>
                           
                           <div style={{ flex: 1, paddingRight: '12px' }}>
@@ -1572,91 +1987,7 @@ export default function SettingsModal() {
             <div>
               <div className="settings-section-title">Uygulama Güncellemeleri</div>
               <div className="settings-card" style={{ padding: 25, display: 'flex', flexDirection: 'column', gap: 25 }}>
-                {/* Güncelleme Kaynağı Seçimi */}
-                <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: 20, borderRadius: 12 }}>
-                  <div style={{ fontWeight: 'bold', fontSize: 15, color: '#fff', marginBottom: 6 }}>
-                    🎯 Güncelleme Kaynağı (Update Source)
-                  </div>
-                  <div style={{ fontSize: 12, color: '#aaa', marginBottom: 15 }}>
-                    Güncellemelerin nereden kontrol edilip indirileceğini seçin:
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                    <button
-                      onClick={() => {
-                        const newSource = 'github';
-                        handleSettingChange('UPDATE_SOURCE', newSource);
-                        window.api.saveSettings({ ...settings, UPDATE_SOURCE: newSource });
-                      }}
-                      style={{
-                        padding: '12px 10px',
-                        borderRadius: 8,
-                        border: (settings.UPDATE_SOURCE || 'auto') === 'github' ? '2px solid #4CAF50' : '1px solid #444',
-                        background: (settings.UPDATE_SOURCE || 'auto') === 'github' ? 'rgba(76, 175, 80, 0.15)' : '#222',
-                        color: (settings.UPDATE_SOURCE || 'auto') === 'github' ? '#81c784' : '#ccc',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 4
-                      }}
-                    >
-                      <span style={{ fontSize: 16 }}>🌐 GitHub Release</span>
-                      <span style={{ fontSize: 11, fontWeight: 'normal', opacity: 0.8 }}>İnternet / Resmi Sürüm</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        const newSource = 'unpacked';
-                        handleSettingChange('UPDATE_SOURCE', newSource);
-                        window.api.saveSettings({ ...settings, UPDATE_SOURCE: newSource });
-                      }}
-                      style={{
-                        padding: '12px 10px',
-                        borderRadius: 8,
-                        border: (settings.UPDATE_SOURCE || 'auto') === 'unpacked' ? '2px solid #4CAF50' : '1px solid #444',
-                        background: (settings.UPDATE_SOURCE || 'auto') === 'unpacked' ? 'rgba(76, 175, 80, 0.15)' : '#222',
-                        color: (settings.UPDATE_SOURCE || 'auto') === 'unpacked' ? '#81c784' : '#ccc',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 4
-                      }}
-                    >
-                      <span style={{ fontSize: 16 }}>📁 Yerel / Drive</span>
-                      <span style={{ fontSize: 11, fontWeight: 'normal', opacity: 0.8 }}>Unpacked Klasörü</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        const newSource = 'auto';
-                        handleSettingChange('UPDATE_SOURCE', newSource);
-                        window.api.saveSettings({ ...settings, UPDATE_SOURCE: newSource });
-                      }}
-                      style={{
-                        padding: '12px 10px',
-                        borderRadius: 8,
-                        border: (settings.UPDATE_SOURCE || 'auto') === 'auto' ? '2px solid #4CAF50' : '1px solid #444',
-                        background: (settings.UPDATE_SOURCE || 'auto') === 'auto' ? 'rgba(76, 175, 80, 0.15)' : '#222',
-                        color: (settings.UPDATE_SOURCE || 'auto') === 'auto' ? '#81c784' : '#ccc',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 4
-                      }}
-                    >
-                      <span style={{ fontSize: 16 }}>🔀 Otomatik</span>
-                      <span style={{ fontSize: 11, fontWeight: 'normal', opacity: 0.8 }}>Önce Yerel, Yoksa GitHub</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 1. Kasa Uygulaması (EXE) Güncelleme */}
+                {/* 1. Kasa Uygulaması (Windows) Güncelleme */}
                 <div style={{ textAlign: 'center' }}>
                   <h3 style={{ borderBottom: '1px solid #333', paddingBottom: 10, marginBottom: 20 }}>Kasa (Windows) Otomatik Güncellemesi</h3>
 
@@ -1667,15 +1998,15 @@ export default function SettingsModal() {
                   
                   {updaterState.status === 'available' && (
                     <div>
-                      <h2 style={{ color: '#FF9800', fontSize: 24, marginBottom: 15 }}>Yeni Bir Fark Güncellemesi Bulundu!</h2>
-                      <p style={{ color: '#ddd', marginBottom: 20 }}>Sürüm: {updaterState.info?.version || 'win-unpacked Güncellemesi'}</p>
-                      <button className="settings-btn primary" onClick={downloadUpdate} style={{ fontSize: 16, padding: '10px 25px' }}>Şimdi İndir (Kasa Fark Dosyaları)</button>
+                      <h2 style={{ color: '#FF9800', fontSize: 24, marginBottom: 15 }}>Yeni Bir Güncelleme Bulundu!</h2>
+                      <p style={{ color: '#ddd', marginBottom: 20 }}>Sürüm: {updaterState.info?.version || 'Yeni Sürüm'}</p>
+                      <button className="settings-btn primary" onClick={downloadUpdate} style={{ fontSize: 16, padding: '10px 25px' }}>Şimdi İndir ve Güncelle</button>
                     </div>
                   )}
                   
                   {updaterState.status === 'downloading' && (
                     <div>
-                      <h2 style={{ color: '#2196F3', fontSize: 24, marginBottom: 15 }}>Fark Dosyaları Hazırlanıyor...</h2>
+                      <h2 style={{ color: '#2196F3', fontSize: 24, marginBottom: 15 }}>Güncelleme İndiriliyor...</h2>
                       <div style={{ width: '100%', background: '#333', height: 20, borderRadius: 10, overflow: 'hidden', marginBottom: 10 }}>
                         <div style={{ width: `${updaterState.progress?.percent || 0}%`, background: '#4CAF50', height: '100%' }}></div>
                       </div>
@@ -1686,8 +2017,8 @@ export default function SettingsModal() {
                   {updaterState.status === 'downloaded' && (
                     <div>
                       <h2 style={{ color: '#4CAF50', fontSize: 24, marginBottom: 15 }}>Güncelleme Dosyaları Hazır!</h2>
-                      <p style={{ color: '#ddd', marginBottom: 20 }}>Uygulama 2 saniye içinde yenilenecektir.</p>
-                      <button className="settings-btn success" onClick={installUpdate} style={{ fontSize: 16, padding: '10px 25px' }}>Kasa'yı Yeniden Başlat ve Kur</button>
+                      <p style={{ color: '#ddd', marginBottom: 20 }}>Uygulama yeniden başlatılarak güncellenecektir.</p>
+                      <button className="settings-btn success" onClick={installUpdate} style={{ fontSize: 16, padding: '10px 25px' }}>Yeniden Başlat ve Kur</button>
                     </div>
                   )}
                   

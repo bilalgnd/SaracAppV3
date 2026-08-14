@@ -207,7 +207,8 @@ ordersRouter.get('/api/past_orders', requireAuth, (_req, res) => {
 })
 
 ordersRouter.post('/api/add_past_order', requireAuth, (req: any, res: any) => {
-  getShop().pastOrders.unshift(req.body)
+  const orderData = req.body.order || req.body
+  getShop().pastOrders.unshift(orderData)
   if (getShop().pastOrders.length > 500) {
     getShop().pastOrders.pop()
   }
