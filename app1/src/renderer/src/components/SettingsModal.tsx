@@ -250,7 +250,7 @@ export default function SettingsModal() {
     
     // 2. Fetch latest release from GitHub for .apk downloads
     try {
-      const res = await fetch('https://api.github.com/repos/bilalgnd/saracapp/releases/latest', { cache: 'no-store' })
+      const res = await fetch('https://api.github.com/repos/bilalgnd/SaracAppV3/releases/latest', { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
         setLatestRelease(data)

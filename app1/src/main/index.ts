@@ -889,6 +889,7 @@ app.whenReady().then(() => {
   ipcMain.on('send-update-to-phones', () => {})
 
   // --- Auto Updater ---
+  autoUpdater.logger = console
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
 

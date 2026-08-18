@@ -119,7 +119,7 @@
         async function downloadLatestApk(e) {
             e.preventDefault();
             try {
-                const response = await fetch('https://api.github.com/repos/bilalgnd/saracapp/releases/latest');
+                const response = await fetch('https://api.github.com/repos/bilalgnd/SaracAppV3/releases/latest');
                 const data = await response.json();
                 const apkAsset = data.assets.find(asset => asset.name.endsWith('.apk'));
                 if (apkAsset) {
