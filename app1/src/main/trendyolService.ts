@@ -88,14 +88,14 @@ export function getTrendyolApiUrl(supplierId: string): string {
     let url = customUrl.trim();
     // If user mistakenly entered the E-Commerce (OMS) URL instead of Trendyol Yemek (TGO) API:
     if (url.includes('api.trendyol.com/integration')) {
-      return `https://api.tgoapis.com/integrator/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking&size=50`;
+      return `https://api.tgoapis.com/integrator/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking,Invoiced,Shipped,Delivered,Cancelled&size=50`;
     }
     if (url.includes('{supplierId}')) {
       url = url.replace('{supplierId}', supplierId);
     }
     return url;
   }
-  return `https://api.tgoapis.com/integrator/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking&size=50`;
+  return `https://api.tgoapis.com/integrator/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking,Invoiced,Shipped,Delivered,Cancelled&size=50`;
 }
 
 function transformTrendyolOrder(rawData: any): any {
@@ -157,16 +157,26 @@ function transformTrendyolOrder(rawData: any): any {
     ? `${rawData.customer.firstName || ''} ${rawData.customer.lastName || ''} (TGO)`.trim()
     : 'Trendyol Siparişi (TGO)';
 
+  const orderNumber = rawData.orderNumber ? String(rawData.orderNumber) : (rawData.id ? String(rawData.id) : Date.now().toString());
+  const packageId = String(rawData.id || rawData.packageId || rawData.orderNumber || '');
+  const rawPkgStatus = rawData.packageStatus || 'Created';
+
   return {
-    id: rawData.orderNumber ? rawData.orderNumber.toString() : Date.now().toString(),
-    packageId: String(rawData.id || rawData.packageId || rawData.orderNumber || ''),
+    id: orderNumber,
+    packageId: packageId,
+    orderNumber: orderNumber,
+    order_id: orderNumber,
     customer_name: customerName,
     time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
     items: items,
     total_amount: rawData.totalPrice || 0,
-    status: 'waiting' as const,
+    status: rawPkgStatus,
+    packageStatus: rawPkgStatus,
+    tgo_status: rawPkgStatus,
+    trendyol_status: rawPkgStatus,
     order_note: finalNote,
-    color: '#FF9800' // Trendyol turuncu
+    color: '#FF9800',
+    platform: 'trendyol'
   };
 }
 
@@ -242,21 +252,23 @@ async function pollTrendyol() {
     let addedCount = 0;
     for (const rawOrder of orders) {
       const orderId = String(rawOrder.orderNumber || rawOrder.id || '');
-      
-      // Skip if already processed
-      if (!orderId || processedOrderIds.has(orderId)) continue;
+      const packageId = String(rawOrder.packageId || rawOrder.id || '');
 
       if (!_addOrderFn) {
         log('error', '[Trendyol] addOrder fonksiyonu ayarlanmamış!');
         break;
       }
 
-      // Transform to app1 format and add
+      // Transform to app1 format and add or update in-place
       const app1Order = transformTrendyolOrder(rawOrder);
+      const isNew = !orderId || (!processedOrderIds.has(orderId) && !processedOrderIds.has(packageId));
       const success = await _addOrderFn(app1Order);
       
-      if (success) {
-        processedOrderIds.add(orderId);
+      if (success && isNew) {
+        if (orderId) processedOrderIds.add(orderId);
+        if (packageId) processedOrderIds.add(packageId);
+        if (rawOrder.id) processedOrderIds.add(String(rawOrder.id));
+        if (rawOrder.orderNumber) processedOrderIds.add(String(rawOrder.orderNumber));
         addedCount++;
         statusState.totalOrdersReceived++;
         statusState.todayOrdersCount++;

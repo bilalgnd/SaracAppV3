@@ -103,16 +103,32 @@ const processTgoRawData = (rawData: any, currentOrders: any[], saveFn: any, setF
     const tgoItems: any[] = [];
     if (rawData && rawData.lines) {
         rawData.lines.forEach((l: any) => {
-            const qty = l.items ? l.items.length : 1;
+            const qty = l.items ? l.items.length : (l.quantity || 1);
+            
+            // Build notes from modifiers, extra/removed ingredients
+            let notes = '';
+            if (l.modifierProducts && l.modifierProducts.length > 0) {
+              notes = l.modifierProducts.map((m: any) => m.name).join(', ');
+            }
+            if (l.extraIngredients && l.extraIngredients.length > 0) {
+              const extras = l.extraIngredients.map((e: any) => `+${e.name}`).join(', ');
+              notes = notes ? `${notes}, ${extras}` : extras;
+            }
+            if (l.removedIngredients && l.removedIngredients.length > 0) {
+              const removed = l.removedIngredients.map((r: any) => `❌${r.name}`).join(', ');
+              notes = notes ? `${notes} | ${removed}` : removed;
+            }
+            // Item-level note
+            if (l.note || l.notes) {
+              const itemNote = l.note || l.notes;
+              notes = notes ? `${notes} | ${itemNote}` : itemNote;
+            }
+
             for (let j = 0; j < qty; j++) {
-                let notes = '';
-                if (l.modifierProducts && l.modifierProducts.length > 0) {
-                   notes = l.modifierProducts.map((m: any) => m.name).join(', ');
-                }
                 tgoItems.push({
-                    name: l.name,
+                    name: l.name || l.productName || 'Ürün',
                     portion: '',
-                    price: l.price,
+                    price: l.unitSellingPrice || l.price || 0,
                     notes: notes
                 });
             }
@@ -135,24 +151,61 @@ const processTgoRawData = (rawData: any, currentOrders: any[], saveFn: any, setF
       finalNote = finalNote ? `${finalNote}\n[Adres: ${addressStr}]` : `[Adres: ${addressStr}]`;
     }
 
-    const tgoCustomerName = (rawData && rawData.customer) ? `${rawData.customer.firstName} ${rawData.customer.lastName} (TGO)` : 'Bilinmeyen (TGO)';
+    const tgoCustomerName = (rawData && rawData.customer)
+      ? `${rawData.customer.firstName || ''} ${rawData.customer.lastName || ''} (TGO)`.trim()
+      : 'Trendyol Siparişi (TGO)';
+
+    const orderNumberStr = rawData && rawData.orderNumber ? String(rawData.orderNumber) : '';
+    const packageIdStr = rawData && (rawData.id || rawData.packageId) ? String(rawData.id || rawData.packageId) : '';
+    const finalId = orderNumberStr || packageIdStr || Date.now().toString();
+
     const newApp1Order: any = {
-        id: (rawData && rawData.orderNumber) ? rawData.orderNumber.toString() : Date.now().toString(),
-        packageId: (rawData && (rawData.id || rawData.packageId || rawData.orderNumber)) ? String(rawData.id || rawData.packageId || rawData.orderNumber) : '',
+        id: finalId,
+        packageId: packageIdStr,
+        orderNumber: orderNumberStr,
+        order_id: finalId,
         customer_name: tgoCustomerName,
         time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
         items: tgoItems,
-        total_amount: rawData ? rawData.totalPrice : 0,
+        total_amount: rawData ? (rawData.totalPrice || 0) : 0,
         status: 'waiting',
-        order_note: finalNote
+        order_note: finalNote,
+        color: '#FF9800',
+        platform: 'trendyol'
     };
     
-    const exists = currentOrders.find(o => String(o.id) === String(newApp1Order.id));
-    if (!exists) {
-       const newOrders = [newApp1Order, ...currentOrders];
-       saveFn(newOrders);
-       setFn(newOrders);
+    const existingIndex = currentOrders.findIndex(o => {
+      const oId = String(o.id || '');
+      const oPkgId = String(o.packageId || '');
+      const oOrderNum = String(o.orderNumber || o.order_id || '');
+      const oCust = String(o.customer_name || '');
+
+      if (orderNumberStr && (oId === orderNumberStr || oOrderNum === orderNumberStr || oPkgId === orderNumberStr || oCust.includes(orderNumberStr))) return true;
+      if (packageIdStr && (oId === packageIdStr || oPkgId === packageIdStr || oOrderNum === packageIdStr || oCust.includes(packageIdStr))) return true;
+      if (finalId && (oId === finalId || oOrderNum === finalId || oPkgId === finalId)) return true;
+      return false;
+    });
+
+    if (existingIndex >= 0) {
+      const existing = currentOrders[existingIndex];
+      const hasBetterDetails = finalNote && (!existing.order_note || existing.order_note.length < finalNote.length);
+      if (hasBetterDetails || (existing.customer_name && existing.customer_name.includes('#'))) {
+        const updatedOrders = [...currentOrders];
+        updatedOrders[existingIndex] = {
+          ...existing,
+          ...newApp1Order,
+          masa_no: existing.masa_no || newApp1Order.masa_no,
+          time: existing.time || newApp1Order.time
+        };
+        saveFn(updatedOrders);
+        setFn(updatedOrders);
+      }
+      return;
     }
+
+    const newOrders = [newApp1Order, ...currentOrders];
+    saveFn(newOrders);
+    setFn(newOrders);
   } catch (err) {
     console.error(err);
     alert('JSON parse hatası: ' + err);

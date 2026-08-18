@@ -17,8 +17,8 @@ android {
         applicationId = "com.bilalgnd.saracapp"
         minSdk = 26
         targetSdk = 35
-        versionCode = 610000
-        versionName = "6.1.0"
+        versionCode = 613000
+        versionName = "6.1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -41,6 +41,28 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    androidResources {
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~:!desktop.ini:!*.ini"
+    }
+    packaging {
+        resources {
+            excludes += "**/desktop.ini"
+            excludes += "desktop.ini"
+        }
+    }
+}
+
+tasks.matching { it.name.contains("merge", ignoreCase = true) || it.name.contains("package", ignoreCase = true) || it.name.contains("process", ignoreCase = true) || it.name.contains("compile", ignoreCase = true) }.configureEach {
+    doFirst {
+        fileTree(layout.buildDirectory).matching {
+            include("**/desktop.ini")
+            include("desktop.ini")
+        }.forEach { it.delete() }
+        fileTree(project.file("src")).matching {
+            include("**/desktop.ini")
+            include("desktop.ini")
+        }.forEach { it.delete() }
     }
 }
 

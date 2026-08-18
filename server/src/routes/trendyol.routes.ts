@@ -659,37 +659,104 @@ router.post('/api/tgo/send_to_app1', requireAdminAuth, async (req: any, res: any
 
     // Insert into activeOrders if not already there so tv-sarac displays it immediately
     if (rawData) {
-        const pId = String(rawData.packageId || rawData.id || rawData.orderNumber);
-        const exists = saracShop.activeOrders.some((o: any) => 
-            String(o.packageId || o.id || o.orderNumber || o.order_id) === pId ||
-            (o.customer_name && o.customer_name.includes(pId))
-        );
-        if (!exists) {
-            const formattedItems = (rawData.lines || []).map((l: any) => ({
+        const packageId = String(rawData.packageId || rawData.id || '');
+        const orderNumber = String(rawData.orderNumber || rawData.id || '');
+        const pId = packageId || orderNumber;
+
+        const existingIdx = saracShop.activeOrders.findIndex((o: any) => {
+            const oId = String(o.id || '');
+            const oPkgId = String(o.packageId || '');
+            const oOrderNum = String(o.orderNumber || o.order_id || '');
+            const oCust = String(o.customer_name || '');
+
+            if (orderNumber && (oId === orderNumber || oOrderNum === orderNumber || oPkgId === orderNumber || oCust.includes(orderNumber))) return true;
+            if (packageId && (oId === packageId || oPkgId === packageId || oOrderNum === packageId || oCust.includes(packageId))) return true;
+            if (pId && (oId === pId || oOrderNum === pId || oPkgId === pId)) return true;
+            return false;
+        });
+
+        // Format items with modifierProducts, extraIngredients, removedIngredients, and notes
+        const formattedItems = (rawData.lines || []).flatMap((l: any) => {
+            const qty = l.items ? l.items.length : (l.quantity || 1);
+            let notes = '';
+            if (l.modifierProducts && l.modifierProducts.length > 0) {
+              notes = l.modifierProducts.map((m: any) => m.name).join(', ');
+            }
+            if (l.extraIngredients && l.extraIngredients.length > 0) {
+              const extras = l.extraIngredients.map((e: any) => `+${e.name}`).join(', ');
+              notes = notes ? `${notes}, ${extras}` : extras;
+            }
+            if (l.removedIngredients && l.removedIngredients.length > 0) {
+              const removed = l.removedIngredients.map((r: any) => `❌${r.name}`).join(', ');
+              notes = notes ? `${notes} | ${removed}` : removed;
+            }
+            if (l.note || l.notes) {
+              const itemNote = l.note || l.notes;
+              notes = notes ? `${notes} | ${itemNote}` : itemNote;
+            }
+
+            const resItems: any[] = [];
+            for (let j = 0; j < qty; j++) {
+              resItems.push({
                 name: l.name || l.productName || 'Ürün',
                 portion: l.selectedOptions ? l.selectedOptions.join(', ') : '',
-                quantity: l.quantity || (l.items ? l.items.length : 1),
-                price: l.price || 0,
-                notes: ''
-            }));
-            const custName = rawData.customer ? `${rawData.customer.firstName || ''} ${rawData.customer.lastName || ''}`.trim() : 'Trendyol Siparişi';
-            const newOrder = {
-                customer_name: `${custName} (TGO #${rawData.orderNumber || pId})`,
-                masa_no: saracShop.getNextQueueNo().toString(),
-                order_note: rawData.customerNote || '',
-                order_id: pId,
-                packageId: pId,
-                id: pId,
-                orderNumber: rawData.orderNumber || pId,
-                time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' }),
-                items: formattedItems,
-                total_amount: rawData.totalPrice || 0,
-                status: 'waiting',
-                packageStatus: rawData.packageStatus || 'Created',
-                tgo_status: rawData.packageStatus || 'Created',
-                color: '#FF9800',
-                platform: 'trendyol'
-            };
+                price: l.unitSellingPrice || l.price || 0,
+                notes: notes
+              });
+            }
+            return resItems;
+        });
+
+        // Format address and note
+        let finalNote = rawData.customerNote || '';
+        if (rawData.address) {
+            const a = rawData.address;
+            const addrParts: string[] = [];
+            if (a.neighborhood) addrParts.push(a.neighborhood);
+            if (a.address1) addrParts.push(a.address1.trim());
+            if (a.address2) addrParts.push(a.address2.trim());
+            if (a.apartmentNumber) addrParts.push(`Apt: ${a.apartmentNumber}`);
+            if (a.doorNumber) addrParts.push(`No: ${a.doorNumber.trim()}`);
+            if (a.floor) addrParts.push(`Kat: ${a.floor}`);
+            if (a.addressDescription) addrParts.push(`Tarif: ${a.addressDescription}`);
+            if (a.phone) addrParts.push(`Tel: ${a.phone}`);
+
+            const addressStr = addrParts.filter(Boolean).join(', ');
+            finalNote = finalNote ? `${finalNote}\n[Adres: ${addressStr}]` : `[Adres: ${addressStr}]`;
+        }
+
+        const custName = rawData.customer ? `${rawData.customer.firstName || ''} ${rawData.customer.lastName || ''}`.trim() : 'Trendyol Siparişi';
+        const newOrder = {
+            customer_name: `${custName} (TGO)`,
+            masa_no: saracShop.getNextQueueNo().toString(),
+            order_note: finalNote,
+            order_id: orderNumber || pId,
+            packageId: packageId || pId,
+            id: orderNumber || pId,
+            orderNumber: orderNumber || pId,
+            time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' }),
+            items: formattedItems,
+            total_amount: rawData.totalPrice || 0,
+            status: 'waiting',
+            packageStatus: rawData.packageStatus || 'Created',
+            tgo_status: rawData.packageStatus || 'Created',
+            color: '#FF9800',
+            platform: 'trendyol'
+        };
+
+        if (existingIdx >= 0) {
+            const existing = saracShop.activeOrders[existingIdx];
+            const hasBetterDetails = finalNote && (!existing.order_note || existing.order_note.length < finalNote.length);
+            if (hasBetterDetails || (existing.customer_name && existing.customer_name.includes('#'))) {
+                saracShop.activeOrders[existingIdx] = {
+                    ...existing,
+                    ...newOrder,
+                    masa_no: existing.masa_no || newOrder.masa_no,
+                    time: existing.time || newOrder.time
+                };
+                saracShop.saveOrders();
+            }
+        } else {
             saracShop.activeOrders.unshift(newOrder);
             saracShop.saveOrders();
         }

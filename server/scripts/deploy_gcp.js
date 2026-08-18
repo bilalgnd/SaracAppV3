@@ -26,6 +26,10 @@ async function deployGcp() {
   console.log('📦 Uploading server package.json & tsconfig.json...');
   await ssh.putFile(path.join(serverDir, 'package.json'), `${remoteServerDir}/package.json`);
   await ssh.putFile(path.join(serverDir, 'tsconfig.json'), `${remoteServerDir}/tsconfig.json`);
+  if (fs.existsSync(path.join(serverDir, 'firebase-adminsdk.json'))) {
+    console.log('📦 Uploading firebase-adminsdk.json...');
+    await ssh.putFile(path.join(serverDir, 'firebase-adminsdk.json'), `${remoteServerDir}/firebase-adminsdk.json`);
+  }
 
   console.log('📦 Running npm install on GCP...');
   const npmRes = await ssh.execCommand('npm install --production=false', { cwd: remoteServerDir });

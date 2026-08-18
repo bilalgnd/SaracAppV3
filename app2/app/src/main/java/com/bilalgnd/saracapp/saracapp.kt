@@ -812,6 +812,7 @@ fun AnaEkran() {
     val taslakKalemler = remember { mutableStateListOf<SiparisKalemi>() }
     var duzenlenenAdisyonIsmi by remember { mutableStateOf<String?>(null) }
     var guncellemeUrl by remember { mutableStateOf<String?>(null) }
+    var garsonCagrisiMesaji by remember { mutableStateOf<String?>(null) }
 
     var kasaAyarPenceresiAcik by remember { mutableStateOf(false) }
     var sistemLoglariPenceresiAcik by remember { mutableStateOf(false) }
@@ -905,8 +906,34 @@ fun AnaEkran() {
                             try {
                                 if (text.trim().startsWith("{")) {
                                     val jsonObj = JSONObject(text)
-                                    if (jsonObj.has("type") && jsonObj.getString("type") == "apk_guncelleme") {
-                                        guncellemeUrl = jsonObj.getString("url")
+                                    val type = jsonObj.optString("type", "")
+                                    val action = jsonObj.optString("action", "")
+
+                                    if (type == "apk_guncelleme") {
+                                        guncellemeUrl = jsonObj.optString("url")
+                                    } else if (action == "waiter_call" || type == "waiter_call") {
+                                        val dataObj = jsonObj.optJSONObject("data")
+                                        val callerName = dataObj?.optString("customerName", "")?.ifEmpty { null }
+                                            ?: jsonObj.optString("customerName", "Masa")
+                                        val tableNum = dataObj?.optString("table", "") ?: jsonObj.optString("table", "")
+                                        val displayTitle = if (tableNum.isNotBlank()) "Masa $tableNum" else callerName
+
+                                        CoroutineScope(Dispatchers.Main).launch {
+                                            garsonCagrisiMesaji = "🔔 $displayTitle Garson Çağırıyor!"
+                                            MyFirebaseMessagingService.sendNotification(
+                                                context,
+                                                "🔔 Garson Çağrısı!",
+                                                "$displayTitle garson çağırıyor!"
+                                            )
+                                        }
+                                    } else if (action == "orders_update" || type == "orders_update") {
+                                        val dataArr = jsonObj.optJSONArray("data")
+                                        if (dataArr != null) {
+                                            val gelenListe: List<Adisyon> = Gson().fromJson(dataArr.toString(), object : TypeToken<List<Adisyon>>() {}.type)
+                                            CoroutineScope(Dispatchers.Main).launch {
+                                                aktifSiparisler.clear(); aktifSiparisler.addAll(gelenListe); hafiza.aktifMasalariKaydet(gelenListe)
+                                            }
+                                        }
                                     }
                                 } else {
                                     val gelenListe: List<Adisyon> = Gson().fromJson(text, object : TypeToken<List<Adisyon>>() {}.type)
@@ -1785,7 +1812,7 @@ fun AnaEkran() {
                                     }
                                 }
                                 Spacer(Modifier.height(24.dp))
-                                Text("v5.3.3 | Credits: bilalgnd", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+                                Text("v6.1.3 | Credits: bilalgnd", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
                             }
                             else if (selectedTab == 1 && gelismisAyarlarAcik) { // Gelişmiş Ayarlar (Admin)
                                 Spacer(Modifier.height(16.dp))
@@ -1986,6 +2013,49 @@ fun AnaEkran() {
                     taslakKalemler.addAll(eklenecekKalemler); siparisIcinAcilanUrun = null
                 }
             )
+        }
+
+        if (garsonCagrisiMesaji != null) {
+            LaunchedEffect(garsonCagrisiMesaji) {
+                delay(8000)
+                garsonCagrisiMesaji = null
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEAB308)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                        .clickable { garsonCagrisiMesaji = null },
+                    elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Text("🔔", fontSize = 24.sp)
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                garsonCagrisiMesaji ?: "",
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 16.sp
+                            )
+                        }
+                        IconButton(onClick = { garsonCagrisiMesaji = null }) {
+                            Icon(Icons.Default.Close, contentDescription = "Kapat", tint = Color.Black)
+                        }
+                    }
+                }
+            }
         }
     }
 }

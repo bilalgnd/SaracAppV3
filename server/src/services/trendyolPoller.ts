@@ -65,8 +65,8 @@ export async function checkTrendyolOrders() {
       return;
     }
 
-    // Trendyol Yemek API - Created ve Preparing durumundaki aktif siparişler
-    const url = `${getTgoBaseUrl()}/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Preparing`;
+    // Trendyol Yemek API - Tüm aktif durumdaki siparişleri ve durum güncellemelerini sorgula
+    const url = `${getTgoBaseUrl()}/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking,Invoiced,Shipped,Delivered,Cancelled&size=50`;
     const res = await axios.get(url, {
       headers: getTgoHeaders(),
       timeout: 10000
@@ -98,71 +98,158 @@ export async function checkTrendyolOrders() {
     const tgoProcessedOrdersArr: string[] = processedDoc?.value || [];
     const tgoProcessedOrdersSet = new Set(tgoProcessedOrdersArr);
 
-    let newOrdersCount = 0;
+    let updatedCount = 0;
 
     for (const rawData of packages) {
-      const pId = String(rawData.packageId || rawData.id || rawData.orderNumber || '');
+      const packageId = String(rawData.packageId || rawData.id || '');
+      const orderNumber = String(rawData.orderNumber || rawData.id || '');
+      const pId = packageId || orderNumber;
       if (!pId) continue;
 
-      // Zaten işlendiyse atla
-      if (tgoProcessedOrdersSet.has(pId)) continue;
+      const rawPkgStatus = rawData.packageStatus || 'Created';
 
       // App1 / TV aktif siparişlerinde var mı kontrol et
-      const alreadyInActive = saracShop.activeOrders.some((o: any) => 
-        String(o.packageId || o.id || o.orderNumber || o.order_id) === pId ||
-        (o.customer_name && o.customer_name.includes(pId))
-      );
+      const existingIdx = saracShop.activeOrders.findIndex((o: any) => {
+        const oId = String(o.id || '');
+        const oPkgId = String(o.packageId || '');
+        const oOrderNum = String(o.orderNumber || o.order_id || '');
+        const oCust = String(o.customer_name || '');
 
-      if (alreadyInActive) {
-        tgoProcessedOrdersSet.add(pId);
+        if (orderNumber && (oId === orderNumber || oOrderNum === orderNumber || oPkgId === orderNumber || oCust.includes(orderNumber))) return true;
+        if (packageId && (oId === packageId || oPkgId === packageId || oOrderNum === packageId || oCust.includes(packageId))) return true;
+        if (pId && (oId === pId || oOrderNum === pId || oPkgId === pId)) return true;
+        return false;
+      });
+
+      // Eğer sipariş zaten aktif listede varsa -> Durumu güncellendi mi kontrol et
+      if (existingIdx >= 0) {
+        const existing = saracShop.activeOrders[existingIdx];
+        const oldStatus = existing.packageStatus || existing.tgo_status || existing.status;
+        const statusChanged = rawPkgStatus && rawPkgStatus !== oldStatus;
+        
+        let finalNote = rawData.customerNote || '';
+        if (rawData.address) {
+          const a = rawData.address;
+          const addrParts: string[] = [];
+          if (a.neighborhood) addrParts.push(a.neighborhood);
+          if (a.address1) addrParts.push(a.address1.trim());
+          if (a.address2) addrParts.push(a.address2.trim());
+          if (a.apartmentNumber) addrParts.push(`Apt: ${a.apartmentNumber}`);
+          if (a.doorNumber) addrParts.push(`No: ${a.doorNumber.trim()}`);
+          if (a.floor) addrParts.push(`Kat: ${a.floor}`);
+          if (a.addressDescription) addrParts.push(`Tarif: ${a.addressDescription}`);
+          if (a.phone) addrParts.push(`Tel: ${a.phone}`);
+          const addressStr = addrParts.filter(Boolean).join(', ');
+          finalNote = finalNote ? `${finalNote}\n[Adres: ${addressStr}]` : `[Adres: ${addressStr}]`;
+        }
+
+        const hasBetterDetails = finalNote && (!existing.order_note || existing.order_note.length < finalNote.length);
+
+        if (statusChanged || hasBetterDetails || (existing.customer_name && existing.customer_name.includes('#'))) {
+          const custName = rawData.customer ? `${rawData.customer.firstName || ''} ${rawData.customer.lastName || ''}`.trim() : (existing.customer_name || 'Trendyol Siparişi');
+          saracShop.activeOrders[existingIdx] = {
+            ...existing,
+            customer_name: `${custName.replace(/\(TGO.*?\)/gi, '').trim()} (TGO)`,
+            order_note: hasBetterDetails ? finalNote : existing.order_note,
+            packageStatus: rawPkgStatus,
+            tgo_status: rawPkgStatus,
+            trendyol_status: rawPkgStatus,
+            status: rawPkgStatus
+          };
+          updatedCount++;
+        }
+        if (pId) tgoProcessedOrdersSet.add(pId);
+        if (orderNumber) tgoProcessedOrdersSet.add(orderNumber);
+        if (packageId) tgoProcessedOrdersSet.add(packageId);
         continue;
       }
 
-      // Yeni siparişi formatla
-      const formattedItems = (rawData.lines || []).map((l: any) => {
+      // Daha önce tamamen işlenip kapatılmış veya teslim edilmişse ve listede yoksa atla
+      if (tgoProcessedOrdersSet.has(pId) || (orderNumber && tgoProcessedOrdersSet.has(orderNumber)) || (packageId && tgoProcessedOrdersSet.has(packageId))) {
+        continue;
+      }
+
+      // Format items with modifierProducts, extraIngredients, removedIngredients, and notes
+      const formattedItems = (rawData.lines || []).flatMap((l: any) => {
+        const qty = l.items ? l.items.length : (l.quantity || 1);
         let notes = '';
         if (l.modifierProducts && l.modifierProducts.length > 0) {
           notes = l.modifierProducts.map((m: any) => m.name).join(', ');
         }
-        return {
-          name: l.name || l.productName || 'Ürün',
-          portion: l.selectedOptions ? l.selectedOptions.join(', ') : '',
-          quantity: l.quantity || (l.items ? l.items.length : 1),
-          price: l.price || 0,
-          notes: notes
-        };
+        if (l.extraIngredients && l.extraIngredients.length > 0) {
+          const extras = l.extraIngredients.map((e: any) => `+${e.name}`).join(', ');
+          notes = notes ? `${notes}, ${extras}` : extras;
+        }
+        if (l.removedIngredients && l.removedIngredients.length > 0) {
+          const removed = l.removedIngredients.map((r: any) => `❌${r.name}`).join(', ');
+          notes = notes ? `${notes} | ${removed}` : removed;
+        }
+        if (l.note || l.notes) {
+          const itemNote = l.note || l.notes;
+          notes = notes ? `${notes} | ${itemNote}` : itemNote;
+        }
+
+        const resItems: any[] = [];
+        for (let j = 0; j < qty; j++) {
+          resItems.push({
+            name: l.name || l.productName || 'Ürün',
+            portion: l.selectedOptions ? l.selectedOptions.join(', ') : '',
+            price: l.unitSellingPrice || l.price || 0,
+            notes: notes
+          });
+        }
+        return resItems;
       });
 
+      // Format address and note
+      let finalNote = rawData.customerNote || '';
+      if (rawData.address) {
+        const a = rawData.address;
+        const addrParts: string[] = [];
+        if (a.neighborhood) addrParts.push(a.neighborhood);
+        if (a.address1) addrParts.push(a.address1.trim());
+        if (a.address2) addrParts.push(a.address2.trim());
+        if (a.apartmentNumber) addrParts.push(`Apt: ${a.apartmentNumber}`);
+        if (a.doorNumber) addrParts.push(`No: ${a.doorNumber.trim()}`);
+        if (a.floor) addrParts.push(`Kat: ${a.floor}`);
+        if (a.addressDescription) addrParts.push(`Tarif: ${a.addressDescription}`);
+        if (a.phone) addrParts.push(`Tel: ${a.phone}`);
+
+        const addressStr = addrParts.filter(Boolean).join(', ');
+        finalNote = finalNote ? `${finalNote}\n[Adres: ${addressStr}]` : `[Adres: ${addressStr}]`;
+      }
+
       const custName = rawData.customer ? `${rawData.customer.firstName || ''} ${rawData.customer.lastName || ''}`.trim() : 'Trendyol Siparişi';
-      const orderNumber = rawData.orderNumber || pId;
 
       const newOrder = {
-        customer_name: `${custName} (TGO #${orderNumber})`,
+        customer_name: `${custName} (TGO)`,
         masa_no: saracShop.getNextQueueNo().toString(),
-        order_note: rawData.customerNote || '',
-        order_id: pId,
-        packageId: pId,
-        id: pId,
-        orderNumber: orderNumber,
+        order_note: finalNote,
+        order_id: orderNumber || pId,
+        packageId: packageId || pId,
+        id: orderNumber || pId,
+        orderNumber: orderNumber || pId,
         time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' }),
         items: formattedItems,
         total_amount: rawData.totalPrice || 0,
-        status: 'waiting',
-        packageStatus: rawData.packageStatus || 'Created',
-        tgo_status: rawData.packageStatus || 'Created',
+        status: rawPkgStatus,
+        packageStatus: rawPkgStatus,
+        tgo_status: rawPkgStatus,
         color: '#FF9800',
         platform: 'trendyol'
       };
 
       saracShop.activeOrders.unshift(newOrder);
-      tgoProcessedOrdersSet.add(pId);
-      newOrdersCount++;
+      if (pId) tgoProcessedOrdersSet.add(pId);
+      if (orderNumber) tgoProcessedOrdersSet.add(orderNumber);
+      if (packageId) tgoProcessedOrdersSet.add(packageId);
+      updatedCount++;
 
       // Canlı yayın & Bildirim
       notifyUI('tgo_add_order', rawData, saracShop);
     }
 
-    if (newOrdersCount > 0) {
+    if (updatedCount > 0) {
       saracShop.saveOrders();
       await DataModel.findOneAndUpdate(
         { key: 'tgoProcessedOrders' },
@@ -172,10 +259,10 @@ export async function checkTrendyolOrders() {
 
       broadcastUpdateToPhones(saracShop);
       notifyUI('orders_update', saracShop.activeOrders, saracShop);
-      addSystemLog('TrendyolPoller', 'success', `${newOrdersCount} adet yeni Trendyol siparişi alındı ve sisteme aktarıldı.`);
+      addSystemLog('TrendyolPoller', 'info', `Trendyol siparişleri ve durumları güncellendi (${updatedCount} adet).`);
       
       try {
-        sendFcmNotification(saracShop, 'Yeni Trendyol Siparişi!', `${newOrdersCount} yeni Trendyol siparişi geldi.`);
+        sendFcmNotification(saracShop, 'Trendyol Sipariş Güncellemesi', `${updatedCount} adet Trendyol sipariş/durum güncellemesi işlendi.`);
       } catch (e) {}
     }
 

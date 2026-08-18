@@ -650,6 +650,48 @@ app.whenReady().then(() => {
   ipcMain.handle('trigger-trendyol-poll', async () => await triggerTrendyolPoll())
   ipcMain.handle('get-trendyol-store-status', async () => await getTrendyolStoreStatus())
   ipcMain.handle('update-trendyol-store-status', async (_, status) => await updateTrendyolStoreStatus(status))
+  ipcMain.handle('update-tgo-order-status', async (_, { packageId, statusType }) => {
+    try {
+      const pId = String(packageId || '');
+      let mappedStatus = 'waiting';
+      if (statusType === 'picked') mappedStatus = 'Preparing';
+      else if (statusType === 'invoiced') mappedStatus = 'Invoiced';
+      else if (statusType === 'shipped' || statusType === 'manual-shipped') mappedStatus = 'Shipped';
+      else if (statusType === 'delivered' || statusType === 'manual-delivered') mappedStatus = 'Delivered';
+
+      // Update local activeOrders
+      let localUpdated = false;
+      for (const o of activeOrders) {
+        if (String(o.packageId || o.id || o.orderNumber || o.order_id) === pId || (o.customer_name && o.customer_name.includes(pId))) {
+          o.packageStatus = mappedStatus;
+          o.tgo_status = mappedStatus;
+          o.status = mappedStatus;
+          localUpdated = true;
+        }
+      }
+      if (localUpdated) {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('server-event', { action: 'orders_update', data: activeOrders });
+        }
+        if (CLOUD_URL) {
+          const syncHeaders: any = {};
+          if (systemSettings.API_TOKEN) syncHeaders['Authorization'] = `Bearer ${systemSettings.API_TOKEN}`;
+          axios.post(`${CLOUD_URL}/api/sync_orders`, activeOrders, { headers: syncHeaders, timeout: 5000 }).catch(() => {});
+        }
+      }
+
+      // Send to cloud backend
+      const headers: any = {};
+      if (systemSettings.API_TOKEN) {
+        headers['Authorization'] = `Bearer ${systemSettings.API_TOKEN}`;
+      }
+      const res = await axios.post(`${CLOUD_URL}/api/tgo/order/status`, { packageId: pId, statusType }, { headers, timeout: 8000 });
+      return res.data || { success: true };
+    } catch (err: any) {
+      console.error('[App1] update-tgo-order-status error:', err.message);
+      return { success: true, localOnly: true, error: err.response?.data?.error || err.message };
+    }
+  })
   ipcMain.handle('restart-tv-tunnel', getTvUrlWithShop)
   
   ipcMain.handle('get-settings', async () => {
@@ -983,6 +1025,42 @@ app.on('will-quit', () => {
 
 export async function addAndSyncOrder(newOrder: any) {
   try {
+    const newId = String(newOrder.id || '');
+    const newPkgId = String(newOrder.packageId || '');
+    const newOrderNum = String(newOrder.orderNumber || newOrder.order_id || '');
+
+    const existingIdx = activeOrders.findIndex((o: any) => {
+      const oId = String(o.id || '');
+      const oPkgId = String(o.packageId || '');
+      const oOrderNum = String(o.orderNumber || o.order_id || '');
+      const oCust = String(o.customer_name || '');
+
+      if (newId && (oId === newId || oPkgId === newId || oOrderNum === newId || oCust.includes(newId))) return true;
+      if (newPkgId && (oId === newPkgId || oPkgId === newPkgId || oOrderNum === newPkgId || oCust.includes(newPkgId))) return true;
+      if (newOrderNum && (oId === newOrderNum || oPkgId === newOrderNum || oOrderNum === newOrderNum || oCust.includes(newOrderNum))) return true;
+      return false;
+    });
+
+    if (existingIdx >= 0) {
+      const existing = activeOrders[existingIdx];
+      const hasBetterDetails = newOrder.order_note && (!existing.order_note || existing.order_note.length < newOrder.order_note.length);
+      if (hasBetterDetails || (existing.customer_name && existing.customer_name.includes('#'))) {
+        activeOrders[existingIdx] = {
+          ...existing,
+          ...newOrder,
+          masa_no: existing.masa_no || newOrder.masa_no,
+          time: existing.time || newOrder.time
+        };
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('server-event', { action: 'orders_update', data: activeOrders });
+        }
+        await axios.post(`${CLOUD_URL}/api/sync_orders`, activeOrders, {
+          headers: { 'Authorization': `Bearer ${systemSettings.API_TOKEN}` }
+        });
+      }
+      return true;
+    }
+
     activeOrders = [newOrder, ...activeOrders];
     // Ana ekrana da haber ver
     if (mainWindow && !mainWindow.isDestroyed()) {

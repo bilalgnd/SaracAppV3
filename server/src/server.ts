@@ -35,11 +35,23 @@ import spotifyRouter from './routes/spotify.routes';
 
 // ── Firebase Admin ───────────────────────────────────────────────────────────
 try {
-  const serviceAccount = require('../firebase-adminsdk.json');
-  initializeApp({ credential: cert(serviceAccount) });
-  console.log('[firebase] Admin initialized.');
+  const possiblePaths = [
+    path.join(__dirname, '../firebase-adminsdk.json'),
+    path.join(__dirname, '../../firebase-adminsdk.json'),
+    path.join(__dirname, './firebase-adminsdk.json'),
+    path.join(process.cwd(), 'firebase-adminsdk.json'),
+    path.join(process.cwd(), 'server', 'firebase-adminsdk.json')
+  ];
+  const foundPath = possiblePaths.find(p => fs.existsSync(p));
+  if (foundPath) {
+    const serviceAccount = require(foundPath);
+    initializeApp({ credential: cert(serviceAccount) });
+    console.log('[firebase] Admin initialized successfully from:', foundPath);
+  } else {
+    console.log('[firebase] Init failed: firebase-adminsdk.json not found in paths.');
+  }
 } catch (e: any) {
-  console.log('[firebase] Init failed (firebase-adminsdk.json missing?):', e.message);
+  console.log('[firebase] Init failed:', e.message);
 }
 
 // ── System Logs ──────────────────────────────────────────────────────────────
@@ -151,6 +163,11 @@ app.get('/', (_req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(html);
   } catch (e) { res.sendFile(join(webDir, 'templates/portfolio.html')); }
+});
+
+app.get('/preview-3d', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.sendFile(join(webDir, 'templates/portfolio_3d_preview.html'));
 });
 
 app.get(['/tv', '/tv-:shopId', '/tv/:shopId', /^\/tv(-[^\/]+)?\/?$/], (_req, res) => {

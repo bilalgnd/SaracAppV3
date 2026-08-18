@@ -159,13 +159,16 @@
             display: flex;
             align-items: flex-start;
             gap: 12px;
+            width: 100%;
+            box-sizing: border-box;
         }
         .masonry-col {
             display: flex;
             flex-direction: column;
             gap: 12px;
             flex: 1;
-            min-width: 250px;
+            min-width: 240px;
+            box-sizing: border-box;
         }
 
         .order-card {
@@ -177,6 +180,9 @@
             backdrop-filter: blur(14px);
             animation: fadeIn 0.4s ease-out;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-sizing: border-box;
+            overflow: hidden;
+            width: 100%;
         }
 
         .order-card:hover {
@@ -198,26 +204,36 @@
         .order-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             padding-bottom: 10px;
             margin-bottom: 12px;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
         .order-title {
-            font-size: 19px;
+            font-size: 18px;
             font-weight: 800;
             color: #ffffff;
             font-family: system-ui, -apple-system, sans-serif;
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 6px;
+            min-width: 0;
+            flex: 1 1 auto;
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
 
         .order-time {
             display: flex;
             align-items: center;
             gap: 6px;
+            flex-shrink: 0;
+            margin-left: auto;
+            white-space: nowrap;
         }
 
         .price-badge {
@@ -230,6 +246,8 @@
             font-size: 15px;
             font-family: system-ui, -apple-system, sans-serif;
             text-shadow: 0 0 8px rgba(46, 204, 113, 0.4);
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .time-badge {
@@ -241,6 +259,8 @@
             font-weight: 700;
             font-size: 13px;
             font-family: system-ui, -apple-system, sans-serif;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .order-note-box {
@@ -830,6 +850,9 @@
                         } else if (data.action === 'tv_card_scale_changed') {
                             const scale = data.scale || (data.data && data.data.scale);
                             if (scale) applyTvCardScale(scale, false);
+                        } else if (data.action === 'waiter_call') {
+                            const callData = data.data || data;
+                            showWaiterCallBanner(callData.customerName || 'Masa');
                         } else if (['order_received', 'update_status', 'request_update', 'tgo_add_order', 'order_status_change'].includes(data.action)) {
                             fetchActiveOrders();
                         }
@@ -1115,13 +1138,17 @@ function formatOrderNote(note) {
                 }
 
                 let stLower = (order.packageStatus || order.tgo_status || order.trendyol_status || order.status || '').toLowerCase();
-                let isPrepared = stLower.includes('prepared') || stLower.includes('hazır') || stLower === 'prepared' || stLower.includes('pick') || stLower === 'picking' || stLower === 'invoiced';
-                let isShippedOrDelivered = stLower.includes('deliver') || stLower.includes('ship') || stLower.includes('teslim') || stLower.includes('tamamlan') || stLower === 'delivered' || stLower === 'shipped';
+                let isCancelled = stLower.includes('cancel') || stLower.includes('iptal') || stLower.includes('reject');
+                let isDelivered = stLower.includes('deliver') || stLower.includes('teslim') || stLower.includes('tamamlan');
+                let isShipped = stLower.includes('ship') || stLower.includes('yola') || stLower.includes('gönder');
+                let isPrepared = stLower.includes('prepared') || stLower.includes('hazırlandı') || stLower.includes('hazır') || stLower.includes('invoice') || stLower.includes('fatura');
+                let isPreparing = stLower.includes('prepar') || stLower.includes('approv') || stLower.includes('pick') || stLower.includes('hazırlan');
+                let isFinished = isPrepared || isShipped || isDelivered;
 
-                let titlePrefix = (isPrepared || isShippedOrDelivered) ? '<span style="color:#4CAF50; font-weight:bold; margin-right:8px;">✔</span>' : '';
+                let titlePrefix = isFinished ? '<span style="color:#4CAF50; font-weight:bold; margin-right:8px;">✔</span>' : '';
 
                 let orderBodyHtml = '';
-                if (!isPrepared && !isShippedOrDelivered) {
+                if (!isFinished) {
                     let displayNote = formatOrderNote(order.order_note || '');
                     orderBodyHtml = `
                         ${displayNote ? `<div class="order-note-box">${displayNote}</div>` : ''}
@@ -1133,6 +1160,7 @@ function formatOrderNote(note) {
 
                 let titleName = order.customer_name || '';
                 titleName = titleName
+                    .replace(/\(TGO\s*#\d+\)/gi, '(TGO)')
                     .replace(/\bCaddesi\b|\bCadde\b/gi, 'Cad.')
                     .replace(/\bSokağı\b|\bSokak\b/gi, 'Skk.')
                     .replace(/\bNo\b/gi, 'N:')
@@ -1150,19 +1178,24 @@ function formatOrderNote(note) {
 
                 let trendyolBadgeHtml = '';
                 if (isTrendyol) {
-                    if (isPrepared) {
-                        trendyolBadgeHtml = ' <span style="background-color:#4CAF50; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">HAZIRLANDI</span>';
-                    } else if (isShippedOrDelivered) {
-                        trendyolBadgeHtml = ' <span style="background-color:#2196F3; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">GÖNDERİLDİ</span>';
-                    } else if (stLower.includes('cancel') || stLower.includes('iptal')) {
+                    if (isCancelled) {
                         trendyolBadgeHtml = ' <span style="background-color:#F44336; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">İPTAL</span>';
+                    } else if (isDelivered) {
+                        trendyolBadgeHtml = ' <span style="background-color:#009688; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">TESLİM EDİLDİ</span>';
+                    } else if (isShipped) {
+                        trendyolBadgeHtml = ' <span style="background-color:#2196F3; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">YOLA ÇIKTI</span>';
+                    } else if (isPrepared) {
+                        trendyolBadgeHtml = ' <span style="background-color:#4CAF50; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">HAZIRLANDI</span>';
+                    } else if (isPreparing) {
+                        trendyolBadgeHtml = ' <span style="background-color:#FF9800; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">HAZIRLANIYOR</span>';
                     } else {
-                        trendyolBadgeHtml = ' <span style="background-color:#FF9800; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">YENİ</span>';
+                        // Yeni / Kabul edilen sipariş
+                        trendyolBadgeHtml = ' <span style="background-color:#FF9800; color:#fff; font-size:11px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:6px; letter-spacing:0.5px; vertical-align:middle;">KABUL EDİLDİ</span>';
                     }
                 }
 
                 card.innerHTML = `
-                    <div class="order-header" ${isPrepared || isShippedOrDelivered ? 'style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;"' : ''}>
+                    <div class="order-header" ${isFinished ? 'style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;"' : ''}>
                         <div class="order-title">${titlePrefix}${titleName} ${order.is_updated ? '<span style="font-size: 0.6em; color: #FF9800;">(Eklendi)</span>' : ''}${trendyolBadgeHtml}</div>
                         <div class="order-time">
                             ${order.total_amount ? `<span class="price-badge">${order.total_amount}₺</span>` : ''}
@@ -1569,6 +1602,74 @@ function formatOrderNote(note) {
         checkTvSettings();
         fetchDailyTotal();
         measureNetworkQuality();
+
+        // Waiter Call Visual & Audio Alert on TV
+        let waiterCallTimeout = null;
+        function showWaiterCallBanner(callerName) {
+            let banner = document.getElementById('tvWaiterCallBanner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'tvWaiterCallBanner';
+                banner.style.cssText = `
+                    position: fixed;
+                    top: 80px;
+                    left: 50%;
+                    transform: translateX(-50%) translateY(-30px);
+                    background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+                    color: #000;
+                    padding: 16px 36px;
+                    border-radius: 20px;
+                    font-size: 26px;
+                    font-weight: 900;
+                    letter-spacing: 0.5px;
+                    box-shadow: 0 10px 40px rgba(234, 179, 8, 0.6), 0 0 20px rgba(255, 255, 255, 0.4);
+                    z-index: 99999;
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    opacity: 0;
+                    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                    pointer-events: none;
+                `;
+                banner.innerHTML = `
+                    <span style="font-size: 32px;">🔔</span>
+                    <span id="tvWaiterCallText">Garson Çağrısı!</span>
+                `;
+                document.body.appendChild(banner);
+            }
+
+            const textEl = document.getElementById('tvWaiterCallText');
+            if (textEl) textEl.innerText = `🔔 GARSON ÇAĞRISI: ${callerName}`;
+
+            // Animate in
+            requestAnimationFrame(() => {
+                banner.style.opacity = '1';
+                banner.style.transform = 'translateX(-50%) translateY(0)';
+            });
+
+            // Play Web Audio Chime
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, now); // D5
+                osc.frequency.setValueAtTime(880.00, now + 0.15); // A5
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.6);
+            } catch(e) {}
+
+            if (waiterCallTimeout) clearTimeout(waiterCallTimeout);
+            waiterCallTimeout = setTimeout(() => {
+                banner.style.opacity = '0';
+                banner.style.transform = 'translateX(-50%) translateY(-30px)';
+            }, 8000);
+        }
 
         // Restore saved audio source (Spotify or Radio)
         setTimeout(() => {

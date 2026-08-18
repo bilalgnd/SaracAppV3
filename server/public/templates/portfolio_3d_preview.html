@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bilalgnd.shop — 3D Animasyonlu Hero Önizleme</title>
+    <meta name="description" content="Vantage — Masaüstü POS, Android garson uygulaması, TV mutfak ekranı ve platform entegrasyonu ile tam kapsamlı restoran yönetim sistemi.">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* ─── Reset & Tokens ─── */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #050b14;
+            --surface: rgba(255,255,255,0.04);
+            --border: rgba(255,255,255,0.09);
+            --text: #ffffff;
+            --muted: #8892a4;
+            --accent: #ff4757;
+            --accent2: #3ecf8e;
+            --accent3: #7c3aed;
+            --primary-blue: #3b82f6;
+            --cyan-glow: #38bdf8;
+            --glass: rgba(10,14,25,0.7);
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        /* ─── Fixed BG for hero ─── */
+        #hero-bg {
+            position: fixed;
+            inset: 0;
+            background-image: url('/static/bg.jpg');
+            background-size: cover;
+            background-position: center;
+            z-index: 0;
+            transition: opacity 0.6s ease;
+        }
+
+        /* ─── Lang Toggle (Single Pill) ─── */
+        #lang-toggle {
+            position: fixed;
+            top: 16px; right: 18px;
+            z-index: 1000;
+        }
+        #lang-toggle button {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.14);
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.4);
+            transition: all 0.25s ease;
+            letter-spacing: 0.05em;
+            user-select: none;
+        }
+        #lang-toggle button:hover {
+            background: rgba(255,255,255,0.11);
+        }
+        #lang-toggle button span {
+            transition: color 0.25s ease;
+        }
+        #lang-toggle button span.active {
+            color: #c4b5fd;
+            font-weight: 800;
+        }
+        #lang-toggle .lang-divider {
+            opacity: 0.3;
+            font-weight: 400;
+            font-size: 10px;
+            margin: 0 1px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* ─── HERO SECTION ─── */
+        #hero {
+            position: relative;
+            z-index: 1;
+            height: 100vh;
+            min-height: 600px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .ambient-glow {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.55;
+            z-index: 0;
+            pointer-events: none;
+            animation: pulse 8s infinite alternate ease-in-out;
+        }
+        .glow-1 { top: -100px; left: -100px; width: 400px; height: 400px; background: rgba(59,130,246,0.22); }
+        .glow-2 { bottom: -100px; right: 10%; width: 500px; height: 500px; background: rgba(56,189,248,0.2); animation-delay: -4s; }
+        @keyframes pulse {
+            0% { transform: scale(1) translate(0,0); opacity: 0.35; }
+            100% { transform: scale(1.2) translate(20px,-20px); opacity: 0.55; }
+        }
+
+        .hero-card {
+            position: relative;
+            z-index: 2;
+            width: 90%;
+            max-width: 1200px;
+            height: 85vh;
+            min-height: 580px;
+            display: flex;
+            border-radius: 28px;
+            overflow: hidden;
+            background: rgba(8, 14, 28, 0.75);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: 0 40px 80px -20px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1);
+            animation: slideUpFade 1s cubic-bezier(0.16,1,0.3,1) forwards;
+            opacity: 0;
+            transform: translateY(40px);
+        }
+        @keyframes slideUpFade { to { opacity:1; transform:translateY(0); } }
+
+        .left-panel {
+            flex: 1;
+            padding: 50px 50px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            z-index: 5;
+        }
+
+        header { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+        .logo { position: relative; width: 80px; height: 80px; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+        .logo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 24px rgba(0,0,0,0.5)); }
+        .logo-group { display: flex; align-items: center; gap: 16px; }
+        .logo-group h1 { margin: 0; font-size: 42px; font-weight: 800; letter-spacing: -1.5px; color: #fff;
+            animation: slideUpFade 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s forwards; opacity:0; transform:translateY(20px); }
+        nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            animation: slideUpFade 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s forwards; opacity:0; transform:translateY(20px); }
+        nav a {
+            color: rgba(255,255,255,0.9); text-decoration: none; font-size: 13px; font-weight: 600;
+            padding: 8px 14px; border-radius: 12px; transition: all 0.25s ease; backdrop-filter: blur(10px);
+        }
+        nav a:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+        nav a.nav-admin { background: rgba(244,63,94,0.15)!important; border: 1px solid rgba(244,63,94,0.35)!important; color: #ffe4e6!important; }
+        nav a.nav-admin:hover { background: rgba(244,63,94,0.3)!important; color: #fff!important; box-shadow: 0 4px 15px rgba(244,63,94,0.3)!important; }
+        nav a.nav-pos { background: rgba(16,185,129,0.15)!important; border: 1px solid rgba(16,185,129,0.35)!important; color: #d1fae5!important; }
+        nav a.nav-pos:hover { background: rgba(16,185,129,0.3)!important; color: #fff!important; }
+        nav a.nav-tv { background: rgba(168,85,247,0.15)!important; border: 1px solid rgba(168,85,247,0.35)!important; color: #f3e8ff!important; }
+        nav a.nav-tv:hover { background: rgba(168,85,247,0.3)!important; color: #fff!important; }
+        nav a.nav-qr { background: rgba(245,158,11,0.15)!important; border: 1px solid rgba(245,158,11,0.35)!important; color: #fef3c7!important; }
+        nav a.nav-qr:hover { background: rgba(245,158,11,0.3)!important; color: #fff!important; }
+        nav a.nav-apis { background: rgba(56,189,248,0.15)!important; border: 1px solid rgba(56,189,248,0.35)!important; color: #e0f2fe!important; }
+        nav a.nav-apis:hover { background: rgba(56,189,248,0.3)!important; color: #fff!important; }
+
+        .hero-left-body {
+            margin: 24px 0;
+            animation: slideUpFade 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s forwards;
+            opacity: 0; transform: translateY(20px);
+        }
+        .hero-badge-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 30px;
+            background: rgba(59,130,246,0.15);
+            border: 1px solid rgba(59,130,246,0.35);
+            color: #93c5fd;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+            box-shadow: 0 0 20px rgba(59,130,246,0.2);
+        }
+        .hero-badge-tag .pulse-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #38bdf8;
+            box-shadow: 0 0 10px #38bdf8;
+            animation: pulseDot 1.6s infinite ease-in-out;
+        }
+        @keyframes pulseDot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.75); } }
+
+        .hero-headline {
+            font-size: clamp(2.2rem, 3.2vw, 3.4rem);
+            font-weight: 900;
+            line-height: 1.12;
+            letter-spacing: -0.03em;
+            color: #ffffff;
+            margin-bottom: 16px;
+        }
+        .hero-headline span.grad-txt {
+            background: linear-gradient(135deg, #60a5fa 0%, #38bdf8 50%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero-desc {
+            font-size: 15px;
+            color: var(--muted);
+            line-height: 1.65;
+            max-width: 460px;
+        }
+
+        .hero-content {
+            animation: slideUpFade 0.8s cubic-bezier(0.16,1,0.3,1) 0.5s forwards;
+            opacity: 0; transform: translateY(20px);
+        }
+        .social-icon {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center;
+            color: white; text-decoration: none; transition: all 0.3s ease; border: 1px solid var(--border);
+        }
+        .social-icon:hover { background: rgba(255,255,255,0.12); transform: translateY(-3px); border-color: rgba(255,255,255,0.25); }
+        .cta-group { display: flex; align-items: center; gap: 16px; }
+        .mobile-nav { display: none; }
+
+        /* ═════════════════════════════════════════════════════════════ */
+        /* ─── 3D INTERACTIVE HERO RIGHT PANEL ─────────────────────── */
+        /* ═════════════════════════════════════════════════════════════ */
+        .right-panel {
+            flex: 1.15;
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(circle at 60% 40%, rgba(30, 58, 138, 0.4) 0%, rgba(7, 13, 30, 0.95) 75%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            perspective: 1400px;
+            border-left: 1px solid rgba(255,255,255,0.06);
+        }
+
+        /* Mode fallbacks for toggle */
+        .panel-image {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            background-image: url('/static/profile.jpg');
+            background-size: cover; background-position: center;
+            opacity: 0; transition: opacity 0.5s ease; pointer-events: none; z-index: 1;
+        }
+        .panel-video {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            object-fit: cover; object-position: center;
+            opacity: 0; transition: opacity 0.5s ease; pointer-events: none; z-index: 1;
+        }
+        .right-panel.show-image .panel-image { opacity: 1; pointer-events: auto; }
+        .right-panel.show-video .panel-video#panelVideo { opacity: 1; pointer-events: auto; }
+        .right-panel.show-video2 .panel-video#panelVideo2 { opacity: 1; pointer-events: auto; }
+        .right-panel.show-image .hero-3d-stage,
+        .right-panel.show-video .hero-3d-stage,
+        .right-panel.show-video2 .hero-3d-stage { opacity: 0; pointer-events: none; }
+
+        /* ─── 3D Stage Container ─── */
+        .hero-3d-stage {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform-style: preserve-3d;
+            transition: opacity 0.6s ease;
+            z-index: 2;
+            cursor: grab;
+        }
+        .hero-3d-stage:active { cursor: grabbing; }
+
+        /* Studio Lighting & Ambient Fog */
+        .studio-lighting {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+        .light-glow-center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 480px; height: 480px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.28) 0%, rgba(37, 99, 235, 0.18) 45%, transparent 70%);
+            filter: blur(50px);
+            animation: breatheLight 7s infinite alternate ease-in-out;
+        }
+        @keyframes breatheLight {
+            0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+            100% { transform: translate(-50%, -50%) scale(1.18); opacity: 0.95; }
+        }
+
+        .isometric-grid-floor {
+            position: absolute;
+            bottom: -80px;
+            left: -20%;
+            width: 140%;
+            height: 280px;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+            background-size: 32px 32px;
+            transform: perspective(600px) rotateX(68deg);
+            mask-image: radial-gradient(ellipse at 50% 50%, black 20%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 20%, transparent 70%);
+            pointer-events: none;
+        }
+
+        /* ─── Parallax 3D World ─── */
+        .world-3d {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform-style: preserve-3d;
+            will-change: transform;
+        }
+
+        /* ─── Central 3D Isometric Card ─── */
+        .iso-card-container {
+            position: absolute;
+            width: 320px;
+            height: 380px;
+            transform-style: preserve-3d;
+            animation: mainFloat 6s ease-in-out infinite alternate;
+        }
+        @keyframes mainFloat {
+            0% { transform: translateZ(40px) translateY(-8px) rotateX(14deg) rotateY(-18deg) rotateZ(3deg); }
+            100% { transform: translateZ(40px) translateY(12px) rotateX(10deg) rotateY(-12deg) rotateZ(1deg); }
+        }
+
+        .iso-card-glass {
+            position: absolute;
+            inset: 0;
+            border-radius: 26px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(20, 35, 65, 0.75) 50%, rgba(10, 20, 42, 0.9) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            box-shadow: 
+                0 30px 60px -10px rgba(0, 0, 0, 0.7),
+                0 0 35px rgba(56, 189, 248, 0.25),
+                inset 0 1px 2px rgba(255, 255, 255, 0.45);
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow: hidden;
+        }
+        .iso-card-glass::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 100px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 26px 26px 0 0;
+        }
+
+        .card-top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .brand-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .brand-badge .sys-icon {
+            width: 24px; height: 24px; border-radius: 7px;
+            background: linear-gradient(135deg, #3b82f6, #06b6d4);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 800; color: #fff;
+            box-shadow: 0 2px 8px rgba(59,130,246,0.5);
+        }
+        .brand-badge .sys-title {
+            font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.02em;
+        }
+        .live-pill-tag {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #6ee7b7;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 12px;
+            letter-spacing: 0.05em;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .live-pill-tag::before {
+            content: ''; width: 5px; height: 5px; border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 6px #10b981;
+        }
+
+        .card-stat-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 10px;
+        }
+        .c-stat-box {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 10px 12px;
+        }
+        .c-stat-box .c-lbl {
+            font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .c-stat-box .c-val {
+            font-size: 18px; font-weight: 800; color: #fff; margin-top: 2px;
+            display: block;
+        }
+
+        .card-order-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        .mini-order-item {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 12px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+        .mini-order-item:hover {
+            background: rgba(255,255,255,0.09);
+            border-color: rgba(56,189,248,0.3);
+            transform: translateX(3px);
+        }
+        .m-ord-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .m-ord-icon {
+            width: 28px; height: 28px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; flex-shrink: 0;
+        }
+        .m-ord-icon.pos { background: rgba(255,71,87,0.15); color: #ff6b81; }
+        .m-ord-icon.ty { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        .m-ord-details { min-width: 0; }
+        .m-ord-title { font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .m-ord-sub { font-size: 10px; color: var(--muted); }
+        .m-ord-price { font-size: 12px; font-weight: 800; color: #38bdf8; flex-shrink: 0; }
+
+        /* ─── Central Floating 3D Star (Gemini-Inspired Vantage Core) ─── */
+        .center-star-anchor {
+            position: absolute;
+            top: -28px;
+            right: -24px;
+            width: 90px;
+            height: 90px;
+            transform-style: preserve-3d;
+            transform: translateZ(60px);
+            animation: starLevitate 4.5s infinite ease-in-out alternate;
+            filter: drop-shadow(0 15px 30px rgba(37,99,235,0.6));
+        }
+        @keyframes starLevitate {
+            0% { transform: translateZ(65px) translateY(-6px) rotate(0deg) scale(1); }
+            100% { transform: translateZ(75px) translateY(8px) rotate(8deg) scale(1.06); }
+        }
+        .star-mesh {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .star-svg {
+            width: 100%; height: 100%;
+            filter: drop-shadow(0 0 16px rgba(56,189,248,0.8));
+            animation: starShimmer 3.2s infinite ease-in-out;
+        }
+        @keyframes starShimmer {
+            0%, 100% { filter: drop-shadow(0 0 14px rgba(56,189,248,0.7)); }
+            50% { filter: drop-shadow(0 0 26px rgba(96,165,250,1)) drop-shadow(0 0 40px rgba(59,130,246,0.8)); }
+        }
+
+        /* ─── 3D Clay & Glass Floating Spheres ─── */
+        .clay-orb {
+            position: absolute;
+            border-radius: 50%;
+            transform-style: preserve-3d;
+            pointer-events: none;
+        }
+        /* Orb 1: Top Left Big Cobalt Glass Orb */
+        .orb-1 {
+            top: 14%; left: 8%;
+            width: 68px; height: 68px;
+            background: radial-gradient(circle at 35% 30%, #93c5fd 0%, #3b82f6 30%, #1e40af 70%, #0f172a 100%);
+            box-shadow: 
+                0 20px 40px rgba(0,0,0,0.6),
+                inset 2px 2px 6px rgba(255,255,255,0.7),
+                inset -3px -3px 8px rgba(0,0,0,0.5),
+                0 0 25px rgba(59,130,246,0.4);
+            transform: translateZ(90px);
+            animation: orbFloat1 7s infinite ease-in-out alternate;
+        }
+        @keyframes orbFloat1 {
+            0% { transform: translateZ(90px) translateY(0px) rotate(0deg); }
+            100% { transform: translateZ(110px) translateY(-22px) rotate(15deg); }
+        }
+        .orb-specular {
+            position: absolute;
+            top: 15%; left: 20%;
+            width: 35%; height: 25%;
+            border-radius: 50%;
+            background: radial-gradient(ellipse at center, rgba(255,255,255,0.9) 0%, transparent 80%);
+            transform: rotate(-30deg);
+        }
+
+        /* Orb 2: Bottom Right Cyan Orb with Saturn Ring */
+        .orb-2 {
+            bottom: 12%; right: 10%;
+            width: 52px; height: 52px;
+            background: radial-gradient(circle at 30% 25%, #a5f3fc 0%, #06b6d4 40%, #0e7490 80%, #083344 100%);
+            box-shadow: 
+                0 15px 35px rgba(0,0,0,0.5),
+                inset 2px 2px 5px rgba(255,255,255,0.8),
+                0 0 20px rgba(6,182,212,0.45);
+            transform: translateZ(80px);
+            animation: orbFloat2 8s infinite ease-in-out alternate-reverse;
+        }
+        @keyframes orbFloat2 {
+            0% { transform: translateZ(80px) translateY(0px) rotate(0deg); }
+            100% { transform: translateZ(100px) translateY(18px) rotate(-20deg); }
+        }
+        .orb-ring {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 90px; height: 30px;
+            border-radius: 50%;
+            border: 3px solid rgba(165, 243, 252, 0.7);
+            border-bottom-color: transparent;
+            transform: translate(-50%, -50%) rotateX(72deg) rotateY(15deg);
+            box-shadow: 0 0 12px rgba(6,182,212,0.6);
+            animation: ringSpin 10s infinite linear;
+        }
+        @keyframes ringSpin {
+            100% { transform: translate(-50%, -50%) rotateX(72deg) rotateY(15deg) rotateZ(360deg); }
+        }
+
+        /* Orb 3: Small Floating Frosted Pearl */
+        .orb-3 {
+            top: 65%; left: 12%;
+            width: 26px; height: 26px;
+            background: radial-gradient(circle at 30% 30%, #ffffff 0%, #c4b5fd 50%, #7c3aed 100%);
+            box-shadow: 0 8px 18px rgba(0,0,0,0.4), 0 0 14px rgba(167,139,250,0.5);
+            transform: translateZ(70px);
+            animation: orbFloat3 5.5s infinite ease-in-out alternate;
+        }
+        @keyframes orbFloat3 {
+            0% { transform: translateZ(70px) translateY(0) translateX(0); }
+            100% { transform: translateZ(85px) translateY(-14px) translateX(8px); }
+        }
+
+        /* Orb 4: Mini Bead */
+        .orb-4 {
+            top: 22%; right: 28%;
+            width: 16px; height: 16px;
+            background: radial-gradient(circle at 30% 30%, #ffffff 0%, #38bdf8 60%, #0284c7 100%);
+            box-shadow: 0 0 10px rgba(56,189,248,0.7);
+            transform: translateZ(50px);
+            animation: orbFloat3 6s infinite ease-in-out alternate-reverse;
+        }
+
+        /* ─── 3D Floating Live Restoran Pills (Pill Badges) ─── */
+        .floating-pill-3d {
+            position: absolute;
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 8px 16px;
+            border-radius: 24px;
+            background: rgba(10, 20, 42, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 
+                0 16px 32px rgba(0,0,0,0.5),
+                0 0 18px rgba(56, 189, 248, 0.2),
+                inset 0 1px 1px rgba(255,255,255,0.4);
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.9);
+            white-space: nowrap;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, box-shadow 0.3s;
+            z-index: 10;
+            transform-style: preserve-3d;
+        }
+        .floating-pill-3d:hover {
+            transform: translateZ(140px) scale(1.08) !important;
+            border-color: rgba(56, 189, 248, 0.6);
+            box-shadow: 0 22px 45px rgba(0,0,0,0.6), 0 0 28px rgba(56,189,248,0.45);
+        }
+        .floating-pill-3d .pill-icon { font-size: 14px; }
+        .floating-pill-3d strong { color: #fff; font-weight: 800; }
+        .floating-pill-3d .pill-indicator {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #38bdf8;
+            box-shadow: 0 0 8px #38bdf8;
+        }
+
+        /* Positions and individual float rhythms for pills */
+        .pill-top-right {
+            top: 10%; right: 6%;
+            transform: translateZ(105px);
+            animation: pillFloatA 6s infinite ease-in-out alternate;
+        }
+        @keyframes pillFloatA {
+            0% { transform: translateZ(105px) translateY(0px); }
+            100% { transform: translateZ(120px) translateY(-12px); }
+        }
+
+        .pill-top-left {
+            top: 8%; left: 6%;
+            transform: translateZ(95px);
+            animation: pillFloatB 7s infinite ease-in-out alternate;
+        }
+        @keyframes pillFloatB {
+            0% { transform: translateZ(95px) translateY(-6px); }
+            100% { transform: translateZ(110px) translateY(10px); }
+        }
+
+        .pill-bottom-right {
+            bottom: 8%; right: 8%;
+            transform: translateZ(115px);
+            animation: pillFloatC 5.5s infinite ease-in-out alternate;
+        }
+        @keyframes pillFloatC {
+            0% { transform: translateZ(115px) translateY(4px); }
+            100% { transform: translateZ(130px) translateY(-14px); }
+        }
+
+        .pill-bottom-left {
+            bottom: 12%; left: 4%;
+            transform: translateZ(100px);
+            animation: pillFloatD 6.5s infinite ease-in-out alternate;
+        }
+        @keyframes pillFloatD {
+            0% { transform: translateZ(100px) translateY(-8px); }
+            100% { transform: translateZ(115px) translateY(8px); }
+        }
+
+        /* ─── Sparkle Particles ─── */
+        .sparkle-3d {
+            position: absolute;
+            color: #93c5fd;
+            pointer-events: none;
+            transform-style: preserve-3d;
+            animation: sparklePulse 3s infinite ease-in-out alternate;
+        }
+        @keyframes sparklePulse {
+            0% { opacity: 0.3; transform: scale(0.7) rotate(0deg); }
+            100% { opacity: 1; transform: scale(1.2) rotate(45deg); filter: drop-shadow(0 0 10px #38bdf8); }
+        }
+        .sp-1 { top: 20%; right: 18%; font-size: 16px; animation-delay: 0.2s; }
+        .sp-2 { bottom: 25%; left: 18%; font-size: 20px; animation-delay: 1.1s; }
+        .sp-3 { top: 75%; right: 26%; font-size: 14px; animation-delay: 1.8s; }
+        .sp-4 { top: 12%; left: 38%; font-size: 12px; animation-delay: 0.7s; }
+
+        /* ─── Preview Switcher Bar (Yerel Test Çubuğu) ─── */
+        .preview-switcher-bar {
+            position: absolute;
+            bottom: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 8px;
+            border-radius: 30px;
+            background: rgba(5, 11, 20, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(16px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+        }
+        .preview-switcher-bar span.switch-title {
+            font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; padding: 0 6px;
+            letter-spacing: 0.05em;
+        }
+        .switch-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.7);
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .switch-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+        .switch-btn.active {
+            background: linear-gradient(135deg, #2563eb, #0284c7);
+            border-color: rgba(56,189,248,0.6);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(37,99,235,0.4);
+        }
+
+        /* ─── Scroll Hint ─── */
+        .scroll-hint {
+            position: absolute;
+            bottom: 32px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 0;
+            animation: fadeInDown 1s ease 1.8s forwards; opacity: 0;
+            cursor: pointer; z-index: 10;
+            user-select: none;
+        }
+        .scroll-hint:hover .scroll-pill-wrap { opacity: 1; }
+        .scroll-hint:hover .scroll-line-track { opacity: 0.6; }
+        .scroll-pill-wrap {
+            position: relative;
+            padding: 1px;
+            border-radius: 30px;
+            overflow: hidden;
+            display: inline-flex;
+            margin-bottom: 10px;
+        }
+        .scroll-pill-wrap::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: conic-gradient(from 0deg, transparent 0 280deg, rgba(56,189,248,0.9) 330deg, rgba(255,255,255,0.95) 360deg);
+            animation: rotate-border 2.5s linear infinite;
+        }
+        @keyframes rotate-border { 100% { transform: rotate(360deg); } }
+        .scroll-pill {
+            position: relative;
+            z-index: 1;
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 18px;
+            border-radius: 30px;
+            background: rgba(8, 12, 22, 0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            transition: all 0.3s ease;
+        }
+        .scroll-pill span {
+            font-size: 10px; font-weight: 700; letter-spacing: 0.22em;
+            text-transform: uppercase; color: rgba(255,255,255,0.7);
+            transition: color 0.3s;
+        }
+        .scroll-hint:hover .scroll-pill span { color: #ffffff; }
+        .scroll-arrow {
+            display: flex; align-items: center; justify-content: center;
+            color: var(--cyan-glow);
+            animation: arrow-bounce 1.5s infinite ease-in-out;
+        }
+        @keyframes arrow-bounce { 0%, 100% { transform: translateY(-1px); } 50% { transform: translateY(2px); } }
+        .scroll-line-track {
+            width: 1px; height: 56px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 1px;
+            position: relative;
+            overflow: hidden;
+            opacity: 0.45;
+            transition: opacity 0.3s;
+        }
+        .scroll-line-fill {
+            position: absolute;
+            top: -100%; left: 0;
+            width: 100%; height: 50%;
+            background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.7), transparent);
+            animation: scroll-line-travel 1.6s cubic-bezier(0.4,0,0.6,1) infinite;
+        }
+        @keyframes scroll-line-travel { 0% { top: -60%; } 100% { top: 160%; } }
+        @keyframes fadeInDown { to { opacity:1; } }
+
+        /* ─── SCROLL SECTIONS ─── */
+        .sections-wrapper {
+            position: relative;
+            z-index: 2;
+            background: linear-gradient(to bottom, transparent 0%, var(--bg) 120px);
+            overflow: hidden;
+        }
+        #scroll-bg-layer {
+            position: absolute;
+            inset: 0;
+            background-image: url('/static/bg_scroll.png');
+            background-size: cover;
+            background-position: center 0%;
+            opacity: 0.09;
+            z-index: 0;
+            pointer-events: none;
+            will-change: background-position;
+        }
+        section {
+            position: relative;
+            z-index: 1;
+            padding: 100px 5%;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        .section-label {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+            color: var(--cyan-glow); margin-bottom: 14px; display: block;
+        }
+        .section-title {
+            font-size: clamp(2rem, 4vw, 3.2rem);
+            font-weight: 800; line-height: 1.15;
+            margin-bottom: 18px;
+        }
+        .section-sub {
+            font-size: 17px; color: var(--muted); max-width: 600px; line-height: 1.7;
+            margin-bottom: 60px;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        /* ─── FEATURES ─── */
+        #features { padding-top: 0; }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px 28px;
+            backdrop-filter: blur(20px);
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(255,255,255,0.18);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        .feature-icon {
+            width: 52px; height: 52px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; margin-bottom: 20px;
+        }
+        .feature-title { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+        .feature-desc { font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+        /* ─── SCREENSHOTS ─── */
+        #screenshots { padding-top: 80px; }
+        .tabs {
+            display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 40px;
+        }
+        .tab-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.6);
+            padding: 10px 22px;
+            border-radius: 30px;
+            font-size: 13px; font-weight: 700;
+            cursor: pointer; transition: all 0.25s ease;
+            font-family: 'Outfit', sans-serif;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            letter-spacing: 0.02em;
+        }
+        .tab-btn:hover { background: rgba(255,255,255,0.1); color: #fff; transform: translateY(-2px); }
+        .tab-btn.active {
+            background: rgba(56,189,248,0.18) !important;
+            border-color: rgba(56,189,248,0.45) !important;
+            color: #e0f2fe !important;
+            box-shadow: 0 4px 18px rgba(56,189,248,0.22);
+        }
+        .screenshots-track {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 16px;
+        }
+        .screenshot-item {
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.3);
+            aspect-ratio: 16/9;
+            cursor: zoom-in;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .screenshot-item img {
+            width: 100%; height: 100%;
+            object-fit: cover; object-position: top left;
+            display: block;
+            transition: transform 0.5s ease;
+        }
+        .screenshot-item:hover { transform: scale(1.02); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .screenshot-item:hover img { transform: scale(1.04); }
+
+        /* Lightbox */
+        #lightbox {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.92);
+            display: none; align-items: center; justify-content: center;
+            z-index: 9999; backdrop-filter: blur(8px);
+        }
+        #lightbox.open { display: flex; }
+        #lightbox img { max-width: 92vw; max-height: 88vh; border-radius: 12px; box-shadow: 0 40px 80px rgba(0,0,0,0.8); }
+        #lightbox-close {
+            position: absolute; top: 20px; right: 24px;
+            background: none; border: none; color: #fff; font-size: 32px;
+            cursor: pointer; opacity: 0.7; transition: opacity 0.2s;
+        }
+        #lightbox-close:hover { opacity: 1; }
+
+        /* ─── PLATFORMS ─── */
+        #platforms { padding-bottom: 120px; }
+        .platforms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+        }
+        .platform-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 40px 32px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            transition: transform 0.3s ease, border-color 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .platform-card:hover { transform: translateY(-8px); border-color: rgba(255,255,255,0.16); }
+        .platform-icon { font-size: 44px; margin-bottom: 20px; display: block; }
+        .platform-name { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+        .platform-desc { font-size: 14px; color: var(--muted); line-height: 1.65; }
+        .platform-tag {
+            display: inline-block; margin-top: 16px;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+            padding: 5px 14px; border-radius: 20px; border: 1px solid;
+        }
+        .pos .platform-tag { color: var(--accent); border-color: rgba(255,71,87,0.3); background: rgba(255,71,87,0.08); }
+        .mobile .platform-tag { color: var(--accent2); border-color: rgba(62,207,142,0.3); background: rgba(62,207,142,0.08); }
+        .web .platform-tag { color: #a78bfa; border-color: rgba(124,58,237,0.3); background: rgba(124,58,237,0.08); }
+        .tv .platform-tag { color: #38bdf8; border-color: rgba(56,189,248,0.3); background: rgba(56,189,248,0.08); }
+
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 30px 5%;
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        footer a { color: var(--muted); text-decoration: none; }
+        footer a:hover { color: #fff; }
+
+        /* ─── MOBILE ─── */
+        @media (max-width: 900px) {
+            body { display: block; }
+            #hero {
+                height: auto; min-height: 100svh;
+                padding: 12px;
+                align-items: flex-start;
+                justify-content: center;
+            }
+            .hero-card {
+                flex-direction: column-reverse;
+                height: auto; min-height: auto;
+                border-radius: 24px; width: 100%;
+            }
+            .right-panel {
+                min-height: 380px;
+                border-left: none;
+                border-bottom: 1px solid rgba(255,255,255,0.08);
+            }
+            .iso-card-container {
+                width: 280px;
+                height: 320px;
+            }
+            .left-panel {
+                padding: 24px 20px 32px;
+                margin-top: 0;
+            }
+            .hero-headline { font-size: 2.2rem; }
+            nav { display: none; }
+            .cta-group { display: none; }
+            .mobile-nav {
+                display: flex!important;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 20px;
+            }
+            .mobile-nav a {
+                color: rgba(255,255,255,0.9);
+                text-decoration: none;
+                font-size: 13px; font-weight: 600;
+                padding: 9px 16px; border-radius: 14px;
+                background: rgba(255,255,255,0.06);
+                border: 1px solid rgba(255,255,255,0.12);
+                backdrop-filter: blur(10px);
+            }
+            .scroll-hint { display: none; }
+            .preview-switcher-bar { bottom: 8px; scale: 0.88; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Fixed hero background -->
+<div id="hero-bg"></div>
+
+<!-- Ambient glows -->
+<div class="ambient-glow glow-1"></div>
+<div class="ambient-glow glow-2"></div>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section id="hero">
+    <div class="hero-card" id="heroCard">
+        
+        <!-- LEFT PANEL -->
+        <div class="left-panel">
+            <header>
+                <div class="logo-group">
+                    <div class="logo">
+                        <img src="/static/bg_logo.png" alt="logo" onerror="this.style.display='none'">
+                    </div>
+                    <h1>bilalgnd.</h1>
+                </div>
+                <nav>
+                    <a href="/admintools" class="nav-admin">Admin</a>
+                    <a href="/pos" class="nav-pos">POS</a>
+                    <a href="/tv-sarac" class="nav-tv">TV</a>
+                    <a href="/qr" class="nav-qr">QR</a>
+                    <a href="/apiorders" class="nav-apis">APIs</a>
+                </nav>
+                <div id="lang-toggle" onclick="toggleLang()">
+                    <button id="btn-lang" type="button" title="Dil değiştir / Change language">
+                        <span id="lang-tr" class="active">TR</span>
+                        <span class="lang-divider">/</span>
+                        <span id="lang-en">EN</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="hero-left-body">
+                <div class="hero-badge-tag">
+                    <div class="pulse-dot"></div>
+                    <span data-tr="Vantage Ekosistemi v3.0" data-en="Vantage Ecosystem v3.0">Vantage Ekosistemi v3.0</span>
+                </div>
+                <h2 class="hero-headline">
+                    <span data-tr="Restoran yönetiminin" data-en="The new standard of">Restoran yönetiminin</span><br>
+                    <span class="grad-txt" data-tr="yeni nesil standardı." data-en="restaurant operations.">yeni nesil standardı.</span>
+                </h2>
+                <p class="hero-desc" data-tr="Kasa, Garson, Mutfak TV, QR Menü ve Paket Servis platformlarını tek bir kesintisiz 3D ekosistemde birleştirin." data-en="Unify POS, Waiter App, Kitchen Display, QR Menu, and Delivery Platforms into a seamless next-gen ecosystem.">Kasa, Garson, Mutfak TV, QR Menü ve Paket Servis platformlarını tek bir kesintisiz 3D ekosistemde birleştirin.</p>
+            </div>
+
+            <div class="hero-content">
+                <div class="cta-group">
+                    <a href="https://instagram.com/bilalgnd" target="_blank" class="social-icon" title="Instagram">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                    </a>
+                    <a href="/pos" class="social-icon" title="POS Başlat">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    </a>
+                </div>
+                <div class="mobile-nav">
+                    <a href="/admintools" class="nav-admin">Admin</a>
+                    <a href="/pos" class="nav-pos">POS</a>
+                    <a href="/tv-sarac" class="nav-tv">TV</a>
+                    <a href="/qr" class="nav-qr">QR</a>
+                    <a href="/apiorders" class="nav-apis">APIs</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════ RIGHT PANEL (3D ANIMASYON ALANI) ═══════════════ -->
+        <div class="right-panel" id="rightPanel">
+            
+            <!-- 3D Stage -->
+            <div class="hero-3d-stage" id="stage3d">
+                <div class="studio-lighting">
+                    <div class="light-glow-center"></div>
+                    <div class="isometric-grid-floor"></div>
+                </div>
+
+                <div class="world-3d" id="world3d">
+                    
+                    <!-- 3D Sparkle Particles -->
+                    <div class="sparkle-3d sp-1" data-depth="0.4">✦</div>
+                    <div class="sparkle-3d sp-2" data-depth="0.6">✦</div>
+                    <div class="sparkle-3d sp-3" data-depth="0.3">✦</div>
+                    <div class="sparkle-3d sp-4" data-depth="0.5">✦</div>
+
+                    <!-- 3D Floating Clay & Glass Spheres -->
+                    <div class="clay-orb orb-1" data-depth="0.8">
+                        <div class="orb-specular"></div>
+                    </div>
+
+                    <div class="clay-orb orb-2" data-depth="0.7">
+                        <div class="orb-specular"></div>
+                        <div class="orb-ring"></div>
+                    </div>
+
+                    <div class="clay-orb orb-3" data-depth="0.5">
+                        <div class="orb-specular"></div>
+                    </div>
+
+                    <div class="clay-orb orb-4" data-depth="0.4"></div>
+
+                    <!-- Central 3D Isometric Card -->
+                    <div class="iso-card-container" id="isoCard" data-depth="0.55">
+                        <div class="iso-card-glass">
+                            <div class="card-top-bar">
+                                <div class="brand-badge">
+                                    <div class="sys-icon">V</div>
+                                    <span class="sys-title">VANTAGE POS PRO</span>
+                                </div>
+                                <div class="live-pill-tag">CANLI SYNC</div>
+                            </div>
+
+                            <div class="card-stat-grid">
+                                <div class="c-stat-box">
+                                    <span class="c-lbl" data-tr="GÜNLÜK CİRO" data-en="DAILY TOTAL">GÜNLÜK CİRO</span>
+                                    <span class="c-val" id="dynRevenue">₺54,820</span>
+                                </div>
+                                <div class="c-stat-box">
+                                    <span class="c-lbl" data-tr="SİPARİŞ" data-en="ORDERS">SİPARİŞ</span>
+                                    <span class="c-val" id="dynOrders">168</span>
+                                </div>
+                            </div>
+
+                            <div class="card-order-list">
+                                <div class="mini-order-item">
+                                    <div class="m-ord-left">
+                                        <div class="m-ord-icon pos">🖥️</div>
+                                        <div class="m-ord-details">
+                                            <div class="m-ord-title">Masa 4 · Özel Burger Menü</div>
+                                            <div class="m-ord-sub">Kasa Siparişi · Hazırlanıyor</div>
+                                        </div>
+                                    </div>
+                                    <div class="m-ord-price">₺420</div>
+                                </div>
+
+                                <div class="mini-order-item">
+                                    <div class="m-ord-left">
+                                        <div class="m-ord-icon ty">🛵</div>
+                                        <div class="m-ord-details">
+                                            <div class="m-ord-title">Trendyol #1084 · Karışık Pizza</div>
+                                            <div class="m-ord-sub">Kurye Yolda · Teslimat</div>
+                                        </div>
+                                    </div>
+                                    <div class="m-ord-price">₺680</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3D Star Badge on Card -->
+                        <div class="center-star-anchor" data-depth="1.2">
+                            <div class="star-mesh">
+                                <svg viewBox="0 0 100 100" class="star-svg">
+                                    <defs>
+                                        <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#bae6fd" />
+                                            <stop offset="30%" stop-color="#38bdf8" />
+                                            <stop offset="70%" stop-color="#2563eb" />
+                                            <stop offset="100%" stop-color="#1d4ed8" />
+                                        </linearGradient>
+                                    </defs>
+                                    <path d="M 50,4 C 50,30 70,50 96,50 C 70,50 50,70 50,96 C 50,70 30,50 4,50 C 30,50 50,30 50,4 Z" fill="url(#starGrad)" />
+                                    <path d="M 50,10 C 50,32 68,50 90,50 C 72,48 52,32 50,10 Z" fill="rgba(255,255,255,0.75)" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3D Floating Live Restoran Pills -->
+                    <div class="floating-pill-3d pill-top-right" data-depth="1.0" onclick="celebratePill(this)">
+                        <span class="pill-icon">⚡</span>
+                        <span>WebSocket <strong>8ms</strong></span>
+                        <div class="pill-indicator"></div>
+                    </div>
+
+                    <div class="floating-pill-3d pill-top-left" data-depth="0.9" onclick="celebratePill(this)">
+                        <span class="pill-icon">📱</span>
+                        <span>Masa 7 <strong>· Garson Onayı</strong></span>
+                    </div>
+
+                    <div class="floating-pill-3d pill-bottom-right" data-depth="1.15" onclick="celebratePill(this)">
+                        <span class="pill-icon">🛵</span>
+                        <span>Trendyol <strong>#1092 Hazır</strong></span>
+                    </div>
+
+                    <div class="floating-pill-3d pill-bottom-left" data-depth="1.05" onclick="celebratePill(this)">
+                        <span class="pill-icon">🎵</span>
+                        <span>TV Mutfak <strong>· Spotify Çalıyor</strong></span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Fallback image & videos for instant testing comparison -->
+            <div class="panel-image"></div>
+            <video class="panel-video" id="panelVideo" src="/static/profile_video.mp4" poster="/static/profile.jpg" preload="auto" autoplay muted loop playsinline></video>
+            <video class="panel-video" id="panelVideo2" src="/static/profile_video2.mp4" poster="/static/profile.jpg" preload="auto" autoplay muted loop playsinline></video>
+
+            <!-- Yerel Canlı Önizleme Değiştirici -->
+            <div class="preview-switcher-bar">
+                <span class="switch-title">Mod:</span>
+                <button class="switch-btn active" id="btn-mode-3d" onclick="switchPreviewMode('3d')">✨ 3D Animasyon</button>
+                <button class="switch-btn" id="btn-mode-video" onclick="switchPreviewMode('video')">🎬 Video</button>
+                <button class="switch-btn" id="btn-mode-image" onclick="switchPreviewMode('image')">🖼️ Fotoğraf</button>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="scroll-hint" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">
+        <div class="scroll-pill-wrap">
+            <div class="scroll-pill">
+                <svg class="scroll-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                <span data-tr="Keşfet" data-en="Explore">Keşfet</span>
+            </div>
+        </div>
+        <div class="scroll-line-track">
+            <div class="scroll-line-fill"></div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════ SECTIONS WRAPPER ═══════════════ -->
+<div class="sections-wrapper">
+<div id="scroll-bg-layer"></div>
+
+    <!-- ─── FEATURES ─── -->
+    <section id="features">
+        <div class="reveal">
+            <span class="section-label" style="display:none" data-tr="Özellikler" data-en="Features">Özellikler</span>
+            <h2 class="section-title" data-tr="Restoranı yönetmek<br>hiç bu kadar kolay olmamıştı." data-en="Managing your restaurant<br>has never been this easy.">Restoranı yönetmek<br>hiç bu kadar kolay olmamıştı.</h2>
+            <p class="section-sub" data-tr="Vantage, kasadan mutfağa, garsondan platforma kadar restoran operasyonunun tüm katmanlarını tek bir sistemde birleştirir." data-en="Vantage unifies every layer of restaurant operations — from cashier to kitchen, waiter to delivery platform — into one seamless system.">Vantage, kasadan mutfağa, garsondan platforma kadar restoran operasyonunun tüm katmanlarını tek bir sistemde birleştirir.</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card reveal" style="transition-delay:0.05s">
+                <div class="feature-icon" style="background:rgba(255,71,87,0.12);">🖥️</div>
+                <div class="feature-title" data-tr="Masaüstü POS" data-en="Desktop POS">Masaüstü POS</div>
+                <div class="feature-desc" data-tr="Kategoriler, ürünler, masalar ve fiyatlar üzerinde tam kontrol. Tek tıkla sipariş al, yazıcıya gönder, kasayı kapat." data-en="Full control over categories, products, tables and prices. One-click ordering, print receipts and close the till.">Kategoriler, ürünler, masalar ve fiyatlar üzerinde tam kontrol. Tek tıkla sipariş al, yazıcıya gönder, kasayı kapat.</div>
+            </div>
+            <div class="feature-card reveal" style="transition-delay:0.1s">
+                <div class="feature-icon" style="background:rgba(62,207,142,0.12);">📱</div>
+                <div class="feature-title" data-tr="Garson Uygulaması" data-en="Waiter App">Garson Uygulaması</div>
+                <div class="feature-desc" data-tr="Android eşlikçi uygulama ile garsonlar masalardan sipariş alır, anlık olarak kasaya iletir." data-en="Android companion app lets waiters take orders tableside and sync instantly to the POS.">Android eşlikçi uygulama ile garsonlar masalardan sipariş alır, anlık olarak kasaya iletir.</div>
+            </div>
+            <div class="feature-card reveal" style="transition-delay:0.15s">
+                <div class="feature-icon" style="background:rgba(56,189,248,0.12);">📺</div>
+                <div class="feature-title" data-tr="TV Mutfak Ekranı" data-en="Kitchen Display">TV Mutfak Ekranı</div>
+                <div class="feature-desc" data-tr="Mutfaktaki TV'de aktif siparişler gerçek zamanlı görünür. Spotify entegrasyonu ile müzik kontrolü, Radyo modu." data-en="Active orders appear on the kitchen TV in real time. Spotify integration for music control and radio mode.">Mutfaktaki TV'de aktif siparişler gerçek zamanlı görünür. Spotify entegrasyonu ile müzik kontrolü.</div>
+            </div>
+            <div class="feature-card reveal" style="transition-delay:0.2s">
+                <div class="feature-icon" style="background:rgba(245,158,11,0.12);">📲</div>
+                <div class="feature-title" data-tr="QR Müşteri Menüsü" data-en="QR Customer Menu">QR Müşteri Menüsü</div>
+                <div class="feature-desc" data-tr="Müşteriler QR kod ile masadan sipariş verir. Sipariş doğrudan kasaya düşer, garson gerekmez." data-en="Customers order from their table via QR code. Orders go straight to the POS — no waiter required.">Müşteriler QR kod ile masadan sipariş verir. Sipariş doğrudan kasaya düşer.</div>
+            </div>
+            <div class="feature-card reveal" style="transition-delay:0.25s">
+                <div class="feature-icon" style="background:rgba(168,85,247,0.12);">🛵</div>
+                <div class="feature-title" data-tr="Platform Entegrasyonu" data-en="Platform Integration">Platform Entegrasyonu</div>
+                <div class="feature-desc" data-tr="Trendyol ve YemekSepeti siparişleri tek ekranda. Anlık durum güncellemesi, onay ve red — teslimattan müşteriye kadar takip." data-en="Trendyol and YemekSepeti orders on one screen. Real-time status updates, accept/reject and full delivery tracking.">Trendyol ve YemekSepeti siparişleri tek ekranda. Anlık durum güncellemesi ve teslimat takibi.</div>
+            </div>
+            <div class="feature-card reveal" style="transition-delay:0.3s">
+                <div class="feature-icon" style="background:rgba(62,207,142,0.1);">📊</div>
+                <div class="feature-title" data-tr="Satış Analitikleri" data-en="Sales Analytics">Satış Analitikleri</div>
+                <div class="feature-desc" data-tr="Günlük ciro, sipariş trendi, kategori dağılımı ve en çok satan ürünler. Grafik ve istatistiklerle anlık raporlama." data-en="Daily revenue, order trends, category breakdown and top-selling items. Real-time reporting with charts and stats.">Günlük ciro, sipariş trendi, kategori dağılımı ve en çok satan ürünler. Anlık raporlama.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── SCREENSHOTS ─── -->
+    <section id="screenshots">
+        <div class="reveal">
+            <span class="section-label" style="display:none" data-tr="Ekran Görüntüleri" data-en="Screenshots">Ekran Görüntüleri</span>
+            <h2 class="section-title" data-tr="Her ekran,<br>bir iş akışı." data-en="Every screen,<br>a workflow.">Her ekran,<br>bir iş akışı.</h2>
+        </div>
+
+        <div class="tabs reveal">
+            <button class="tab-btn active" data-tab="pos" onclick="showTab('pos')" data-tr="POS · Kasa" data-en="POS · Cashier">POS · Kasa</button>
+            <button class="tab-btn" data-tab="api" onclick="showTab('api')" data-tr="API · Dashboard" data-en="API · Dashboard">API · Dashboard</button>
+            <button class="tab-btn" data-tab="tv" onclick="showTab('tv')" data-tr="TV · Mutfak" data-en="TV · Kitchen">TV · Kitchen</button>
+            <button class="tab-btn" data-tab="qr" onclick="showTab('qr')" data-tr="QR · Müşteri" data-en="QR · Customer">QR · Müşteri</button>
+        </div>
+
+        <div id="tab-pos" class="screenshots-track reveal">
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/pos1.png')"><img src="/static/sq/pos1.png" alt="POS 1"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/pos2.png')"><img src="/static/sq/pos2.png" alt="POS 2"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/pos3.png')"><img src="/static/sq/pos3.png" alt="POS 3"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/pos4.png')"><img src="/static/sq/pos4.png" alt="POS 4"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/pos5.png')"><img src="/static/sq/pos5.png" alt="POS 5"></div>
+        </div>
+        <div id="tab-api" class="screenshots-track reveal" style="display:none">
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/api1.png')"><img src="/static/sq/api1.png" alt="API 1"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/api2.png')"><img src="/static/sq/api2.png" alt="API 2"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/api3.png')"><img src="/static/sq/api3.png" alt="API 3"></div>
+        </div>
+        <div id="tab-tv" class="screenshots-track reveal" style="display:none">
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/tv.png')"><img src="/static/sq/tv.png" alt="TV"></div>
+        </div>
+        <div id="tab-qr" class="screenshots-track reveal" style="display:none">
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/qr1.png')"><img src="/static/sq/qr1.png" alt="QR 1"></div>
+            <div class="screenshot-item" onclick="openLightbox('/static/sq/qr2.png')"><img src="/static/sq/qr2.png" alt="QR 2"></div>
+        </div>
+    </section>
+
+    <!-- ─── PLATFORMS ─── -->
+    <section id="platforms">
+        <div class="reveal">
+            <span class="section-label" style="display:none" data-tr="Platformlar" data-en="Platforms">Platformlar</span>
+            <h2 class="section-title" data-tr="Dört platform,<br>tek ekosistem." data-en="Four platforms,<br>one ecosystem.">Dört platform,<br>tek ekosistem.</h2>
+            <p class="section-sub" data-tr="Tüm bileşenler WebSocket ve REST API üzerinden birbirine bağlıdır. Birinde yapılan değişiklik anında diğerlerine yansır." data-en="All components are connected via WebSocket and REST API. A change in one is instantly reflected across all others.">Tüm bileşenler WebSocket ve REST API üzerinden birbirine bağlıdır.</p>
+        </div>
+
+        <div class="platforms-grid">
+            <div class="platform-card pos reveal">
+                <span class="platform-icon">🖥️</span>
+                <div class="platform-name">App1 — Masaüstü</div>
+                <div class="platform-desc">Electron tabanlı Windows uygulaması. Kasa, menü yönetimi, yazıcı entegrasyonu ve tam offline destek.</div>
+                <span class="platform-tag">Windows · Electron</span>
+            </div>
+            <div class="platform-card mobile reveal" style="transition-delay:0.1s">
+                <span class="platform-icon">📱</span>
+                <div class="platform-name">App2 — Android</div>
+                <div class="platform-desc">React Native garson uygulaması. Masadan sipariş al, kasaya ilet, anlık bildirim al.</div>
+                <span class="platform-tag">Android · React Native</span>
+            </div>
+            <div class="platform-card web reveal" style="transition-delay:0.2s">
+                <span class="platform-icon">🌐</span>
+                <div class="platform-name">Web Panel</div>
+                <div class="platform-desc">Trendyol/YemekSepeti dashboard, API siparişleri, kullanıcı yönetimi ve sistem kontrolü.</div>
+                <span class="platform-tag">Web · Node.js</span>
+            </div>
+            <div class="platform-card tv reveal" style="transition-delay:0.3s">
+                <span class="platform-icon">📺</span>
+                <div class="platform-name">TV Ekranı</div>
+                <div class="platform-desc">Mutfak duvarındaki TV için optimize edilmiş sipariş takip ekranı. Spotify ve radyo entegrasyonu.</div>
+                <span class="platform-tag">Browser · WebSocket</span>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<footer>
+    <p>© 2025 <a href="https://instagram.com/bilalgnd" target="_blank">bilalgnd</a> · Vantage</p>
+</footer>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+    <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightbox-img" src="" alt="Screenshot">
+</div>
+
+<script>
+    /* ─── 3D Parallax & Tilt Physics Engine ─── */
+    const heroCard = document.getElementById('heroCard');
+    const rightPanel = document.getElementById('rightPanel');
+    const world3d = document.getElementById('world3d');
+    const parallaxElements = document.querySelectorAll('[data-depth]');
+
+    let targetRotX = 0, targetRotY = 0;
+    let currentRotX = 0, currentRotY = 0;
+    let isHovered = false;
+
+    // Mouse movement inside Hero Area
+    function handlePointerMove(e) {
+        if (!rightPanel) return;
+        const rect = rightPanel.getBoundingClientRect();
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        
+        if (clientX === undefined || clientY === undefined) return;
+
+        // Normalized -1 to +1 coordinates
+        const xNorm = ((clientX - rect.left) / rect.width) * 2 - 1;
+        const yNorm = ((clientY - rect.top) / rect.height) * 2 - 1;
+
+        targetRotX = -yNorm * 18; // Max 18 deg pitch
+        targetRotY = xNorm * 22;  // Max 22 deg yaw
+        isHovered = true;
+    }
+
+    function handlePointerLeave() {
+        targetRotX = 0;
+        targetRotY = 0;
+        isHovered = false;
+    }
+
+    if (heroCard) {
+        heroCard.addEventListener('mousemove', handlePointerMove);
+        heroCard.addEventListener('mouseleave', handlePointerLeave);
+        heroCard.addEventListener('touchmove', handlePointerMove, { passive: true });
+        heroCard.addEventListener('touchend', handlePointerLeave);
+    }
+
+    // Animation Loop with smooth Lerp damping
+    let autoOscillateTime = 0;
+    function render3DScene() {
+        if (!isHovered) {
+            // Organic Lissajous figure-8 idle motion
+            autoOscillateTime += 0.02;
+            const idleRotX = Math.sin(autoOscillateTime * 0.7) * 6;
+            const idleRotY = Math.cos(autoOscillateTime * 0.5) * 8;
+            currentRotX += (idleRotX - currentRotX) * 0.05;
+            currentRotY += (idleRotY - currentRotY) * 0.05;
+        } else {
+            currentRotX += (targetRotX - currentRotX) * 0.08;
+            currentRotY += (targetRotY - currentRotY) * 0.08;
+        }
+
+        if (world3d) {
+            world3d.style.transform = `rotateX(${currentRotX.toFixed(2)}deg) rotateY(${currentRotY.toFixed(2)}deg)`;
+        }
+
+        // Apply depth translation to individual 3D objects
+        parallaxElements.forEach(el => {
+            const depth = parseFloat(el.getAttribute('data-depth')) || 0.5;
+            const transX = (currentRotY * depth * 2.2).toFixed(1);
+            const transY = (-currentRotX * depth * 2.2).toFixed(1);
+            const transZ = (depth * 50).toFixed(1);
+            
+            // Check if element has its own transform animation
+            if (el.classList.contains('floating-pill-3d')) {
+                el.style.transform = `translate3d(${transX}px, ${transY}px, ${transZ}px)`;
+            } else if (el.classList.contains('clay-orb') || el.classList.contains('sparkle-3d')) {
+                el.style.transform = `translate3d(${transX}px, ${transY}px, ${transZ}px)`;
+            }
+        });
+
+        requestAnimationFrame(render3DScene);
+    }
+    render3DScene();
+
+    /* ─── Pill Click Micro-interaction ─── */
+    function celebratePill(btn) {
+        btn.style.transition = 'transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        btn.style.transform = 'scale(1.2) translateZ(160px)';
+        setTimeout(() => {
+            btn.style.transition = 'transform 0.3s cubic-bezier(0.16,1,0.3,1)';
+        }, 200);
+    }
+
+    /* ─── Live Dynamic Numbers Incrementer ─── */
+    setInterval(() => {
+        const revEl = document.getElementById('dynRevenue');
+        const ordEl = document.getElementById('dynOrders');
+        if (revEl && ordEl) {
+            const currentRev = parseInt(revEl.innerText.replace(/[^\d]/g, '')) || 54820;
+            const currentOrd = parseInt(ordEl.innerText) || 168;
+            if (Math.random() > 0.4) {
+                const add = Math.floor(Math.random() * 80) + 20;
+                revEl.innerText = '₺' + (currentRev + add).toLocaleString('tr-TR');
+                ordEl.innerText = currentOrd + 1;
+            }
+        }
+    }, 4000);
+
+    /* ─── Preview Mode Switcher (3D / Video / Image) ─── */
+    function switchPreviewMode(mode) {
+        const panel = document.getElementById('rightPanel');
+        const btns = document.querySelectorAll('.switch-btn');
+        btns.forEach(b => b.classList.remove('active'));
+
+        panel.classList.remove('show-image', 'show-video', 'show-video2');
+
+        const activeBtn = document.getElementById(`btn-mode-${mode}`) || document.getElementById('btn-mode-3d');
+        if (activeBtn) activeBtn.classList.add('active');
+
+        if (mode === 'image') {
+            panel.classList.add('show-image');
+        } else if (mode === 'video') {
+            panel.classList.add('show-video');
+            const v = document.getElementById('panelVideo');
+            if (v) v.play().catch(() => {});
+        } else if (mode === 'video2') {
+            panel.classList.add('show-video2');
+            const v2 = document.getElementById('panelVideo2');
+            if (v2) v2.play().catch(() => {});
+        }
+    }
+
+    /* ─── Lang ─── */
+    let currentLang = localStorage.getItem('sarac_lang') || 'tr';
+    function toggleLang() { setLang(currentLang === 'tr' ? 'en' : 'tr'); }
+    function setLang(lang) {
+        currentLang = lang;
+        localStorage.setItem('sarac_lang', lang);
+        const trSpan = document.getElementById('lang-tr');
+        const enSpan = document.getElementById('lang-en');
+        if (trSpan) trSpan.classList.toggle('active', lang === 'tr');
+        if (enSpan) enSpan.classList.toggle('active', lang === 'en');
+        document.querySelectorAll('[data-tr]').forEach(el => {
+            const text = el.getAttribute('data-' + lang);
+            if (text) el.innerHTML = text;
+        });
+    }
+    setLang(currentLang);
+
+    /* ─── Tabs ─── */
+    function showTab(name) {
+        ['pos','api','tv','qr'].forEach(t => {
+            const el = document.getElementById('tab-' + t);
+            if (el) el.style.display = (t === name) ? 'grid' : 'none';
+        });
+        document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+            btn.classList.toggle('active', ['pos','api','tv','qr'][i] === name);
+        });
+    }
+
+    /* ─── Lightbox ─── */
+    function openLightbox(src) {
+        document.getElementById('lightbox-img').src = src;
+        document.getElementById('lightbox').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    /* ─── Scroll reveal ─── */
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+    }, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    /* ─── Hero BG fade on scroll ─── */
+    const heroBg = document.getElementById('hero-bg');
+    const scrollBgLayer = document.getElementById('scroll-bg-layer');
+    const sectionsWrapper = document.querySelector('.sections-wrapper');
+    window.addEventListener('scroll', () => {
+        const scrolled = window.scrollY;
+        if (heroBg) {
+            const fade = Math.max(0, 1 - scrolled / (window.innerHeight * 0.7));
+            heroBg.style.opacity = fade;
+        }
+        if (sectionsWrapper && scrollBgLayer) {
+            const wrapperTop = sectionsWrapper.offsetTop;
+            const wrapperH = sectionsWrapper.offsetHeight;
+            const progress = Math.max(0, Math.min(1, (scrolled - wrapperTop) / (wrapperH - window.innerHeight)));
+            scrollBgLayer.style.backgroundPositionY = (progress * 100) + '%';
+        }
+    }, { passive: true });
+</script>
+
+</body>
+</html>
