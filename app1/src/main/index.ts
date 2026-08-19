@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, globalShortcut, dialog } from 'electron'
 import { join } from 'path'
-import { startTrendyolService, setTrendyolCallbacks, getTrendyolStatus, testTrendyolConnection, triggerTrendyolPoll, getTrendyolStoreStatus, updateTrendyolStoreStatus } from './trendyolService'
+import { startTrendyolService, setTrendyolCallbacks, getTrendyolStatus, testTrendyolConnection, triggerTrendyolPoll, getTrendyolStoreStatus, updateTrendyolStoreStatus, blockTrendyolOrder } from './trendyolService'
 import { startYemeksepetiService } from './yemeksepetiService'
 import * as fs from 'fs'
 // --- SUPPRESS PDFJS CANVAS WARNINGS ---
@@ -73,8 +73,8 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
-const CLOUD_URL = 'https://bilalgnd.shop'
-const WS_URL = 'wss://bilalgnd.shop/ws'
+const CLOUD_URL = 'http://35.243.219.220:5000'
+const WS_URL = 'ws://35.243.219.220:5000/ws'
 
 let activeOrders: any[] = []
 
@@ -812,7 +812,7 @@ app.whenReady().then(() => {
         code: code,
         token: token,
         shopId: 'sarac',
-        url: 'https://bilalgnd.shop'
+        url: 'http://35.243.219.220:5000'
       })
       return { success: true, code, qrData, shopId: 'sarac' }
     } catch (e: any) {
@@ -832,7 +832,7 @@ app.whenReady().then(() => {
         code: newCode,
         token: token,
         shopId: 'sarac',
-        url: 'https://bilalgnd.shop'
+        url: 'http://35.243.219.220:5000'
       })
       return { success: true, code: newCode, qrData, shopId: 'sarac' }
     } catch (e: any) {
@@ -871,6 +871,14 @@ app.whenReady().then(() => {
 
   ipcMain.on('save-orders', async (_, newOrders) => {
     try {
+      // Silinen TGO (Trendyol) siparişlerini tespit et ve blocklist'e ekle
+      const newIds = new Set((newOrders as any[]).map((o: any) => String(o.id || o.orderNumber || o.order_id || '')));
+      for (const o of activeOrders) {
+        const oid = String(o.id || o.orderNumber || o.order_id || '');
+        if (o.platform === 'trendyol' && oid && !newIds.has(oid)) {
+          blockTrendyolOrder(oid, String(o.packageId || ''));
+        }
+      }
       await syncActiveOrdersWithCloud(newOrders)
     } catch(e: any) {
       console.error('save-orders error:', e.message)

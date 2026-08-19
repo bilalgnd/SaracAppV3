@@ -5,6 +5,23 @@ let trendyolInterval: NodeJS.Timeout | null = null;
 let isPolling = false;
 const processedOrderIds = new Set<string>();
 
+// Silinen TGO sipariş ID'leri — uygulama yeniden başlasa bile tekrar eklenmesin
+const deletedTrendyolIds = new Set<string>();
+
+export function blockTrendyolOrder(orderId: string, packageId?: string) {
+  if (orderId) deletedTrendyolIds.add(String(orderId));
+  if (packageId) deletedTrendyolIds.add(String(packageId));
+  // processedOrderIds'e de ekle ki mevcut poll cycle'da da atlanır
+  if (orderId) processedOrderIds.add(String(orderId));
+  if (packageId) processedOrderIds.add(String(packageId));
+}
+
+export function isBlockedTrendyolOrder(orderId: string, packageId?: string): boolean {
+  if (orderId && deletedTrendyolIds.has(String(orderId))) return true;
+  if (packageId && deletedTrendyolIds.has(String(packageId))) return true;
+  return false;
+}
+
 export interface TrendyolStatusState {
   isEnabled: boolean;
   status: 'connected' | 'error' | 'disabled' | 'unconfigured' | 'checking';
@@ -253,6 +270,11 @@ async function pollTrendyol() {
     for (const rawOrder of orders) {
       const orderId = String(rawOrder.orderNumber || rawOrder.id || '');
       const packageId = String(rawOrder.packageId || rawOrder.id || '');
+
+      // Daha önce silinmiş sipariş — atla
+      if (isBlockedTrendyolOrder(orderId, packageId)) {
+        continue;
+      }
 
       if (!_addOrderFn) {
         log('error', '[Trendyol] addOrder fonksiyonu ayarlanmamış!');

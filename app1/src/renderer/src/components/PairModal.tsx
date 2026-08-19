@@ -43,7 +43,7 @@ export default function PairModal({ isOpen, onClose }: PairModalProps) {
         // Direct Web API fallback
         const token = localStorage.getItem('token') || '';
         const headers: any = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await fetch('https://bilalgnd.shop/api/shop/pair-code', { headers });
+        const res = await fetch('http://35.243.219.220:5000/api/shop/pair-code', { headers });
         const data = await res.json();
         if (data && (data.success || data.code)) {
           setCode(data.code);
@@ -54,7 +54,7 @@ export default function PairModal({ isOpen, onClose }: PairModalProps) {
           const fallbackCode = getLocalPairCode();
           const activeToken = localStorage.getItem('token') || '123456';
           setCode(fallbackCode);
-          setQrData(JSON.stringify({ app: 'saracapp', type: 'pair', code: fallbackCode, token: activeToken, shopId: 'sarac', url: 'bilalgnd.shop' }));
+          setQrData(JSON.stringify({ app: 'saracapp', type: 'pair', code: fallbackCode, token: activeToken, shopId: 'sarac', url: '35.243.219.220:5000' }));
         }
       }
     } catch (e) {
@@ -62,7 +62,7 @@ export default function PairModal({ isOpen, onClose }: PairModalProps) {
       const fallbackCode = getLocalPairCode();
       const activeToken = localStorage.getItem('token') || '123456';
       setCode(fallbackCode);
-      setQrData(JSON.stringify({ app: 'saracapp', type: 'pair', code: fallbackCode, token: activeToken, shopId: 'sarac', url: 'bilalgnd.shop' }));
+      setQrData(JSON.stringify({ app: 'saracapp', type: 'pair', code: fallbackCode, token: activeToken, shopId: 'sarac', url: '35.243.219.220:5000' }));
     } finally {
       setLoading(false);
     }
@@ -87,7 +87,7 @@ export default function PairModal({ isOpen, onClose }: PairModalProps) {
         const newCode = Math.floor(100000 + Math.random() * 900000).toString();
         const activeToken = localStorage.getItem('token') || '123456';
         setCode(newCode);
-        setQrData(JSON.stringify({ app: 'saracapp', type: 'pair', code: newCode, token: activeToken, shopId: 'sarac', url: 'bilalgnd.shop' }));
+        setQrData(JSON.stringify({ app: 'saracapp', type: 'pair', code: newCode, token: activeToken, shopId: 'sarac', url: '35.243.219.220:5000' }));
         localStorage.setItem('kasa_pair_code', newCode);
         customAlert('Eşleşme kodu başarıyla yenilendi!', 'success');
       }
@@ -96,7 +96,7 @@ export default function PairModal({ isOpen, onClose }: PairModalProps) {
       const newCode = Math.floor(100000 + Math.random() * 900000).toString();
       const activeToken = localStorage.getItem('token') || '123456';
       setCode(newCode);
-      setQrData(JSON.stringify({ app: 'saracapp', type: 'pair', code: newCode, token: activeToken, shopId: 'sarac', url: 'bilalgnd.shop' }));
+      setQrData(JSON.stringify({ app: 'saracapp', type: 'pair', code: newCode, token: activeToken, shopId: 'sarac', url: '35.243.219.220:5000' }));
       localStorage.setItem('kasa_pair_code', newCode);
       customAlert('Eşleşme kodu başarıyla yenilendi!', 'success');
     } finally {
@@ -120,7 +120,7 @@ export default function PairModal({ isOpen, onClose }: PairModalProps) {
 
   const matrix = useMemo(() => {
     const activeToken = localStorage.getItem('token') || '123456';
-    const rawData = qrData || JSON.stringify({ app: 'saracapp', type: 'pair', code: code || '123456', token: activeToken, shopId: shopId || 'sarac', url: 'bilalgnd.shop' });
+    const rawData = qrData || JSON.stringify({ app: 'saracapp', type: 'pair', code: code || '123456', token: activeToken, shopId: shopId || 'sarac', url: '35.243.219.220:5000' });
     try {
       return generateQRMatrix(rawData);
     } catch (e) {

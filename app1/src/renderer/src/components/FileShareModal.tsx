@@ -21,7 +21,7 @@ export default function FileShareModal() {
 
   const fetchFiles = async () => {
     try {
-      const res = await fetch(`https://bilalgnd.shop/api/shared`)
+      const res = await fetch(`http://35.243.219.220:5000/api/shared`)
       const data = await res.json()
       setFiles(data)
     } catch (e) {
@@ -92,7 +92,7 @@ export default function FileShareModal() {
       customAlert('Yükleme iptal edildi.')
     }
 
-    xhr.open('POST', `https://bilalgnd.shop/api/shared/upload`)
+    xhr.open('POST', `http://35.243.219.220:5000/api/shared/upload`)
     xhr.send(formData)
   }
 
@@ -105,7 +105,7 @@ export default function FileShareModal() {
   const deleteFile = async (filename: string) => {
     if (await customConfirm(`${filename} dosyasını silmek istediğinize emin misiniz?`)) {
       try {
-        await fetch(`https://bilalgnd.shop/api/shared/${filename}`, { method: 'DELETE' })
+        await fetch(`http://35.243.219.220:5000/api/shared/${filename}`, { method: 'DELETE' })
         fetchFiles()
       } catch (e) {
         customAlert('Silinirken hata oluştu.')
@@ -114,7 +114,7 @@ export default function FileShareModal() {
   }
 
   const downloadFile = (filename: string) => {
-    window.open(`https://bilalgnd.shop/shared_files/${filename}`, '_blank')
+    window.open(`http://35.243.219.220:5000/shared_files/${filename}`, '_blank')
   }
 
   if (!isOpen) return null
