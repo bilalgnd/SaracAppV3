@@ -55,7 +55,10 @@ const api = {
   },
 
   onServerEvent: (callback: (action: string, data?: any) => void) => {
-    const subscription = (_event: any, args: any) => callback(args.action, args.data)
+    const subscription = (_event: any, args: any) => {
+      const payload = args.data !== undefined ? args.data : args.status !== undefined ? args.status : args;
+      callback(args.action, payload);
+    }
     ipcRenderer.on('server-event', subscription)
     return subscription
   },

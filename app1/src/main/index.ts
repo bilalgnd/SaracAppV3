@@ -168,7 +168,7 @@ function connectWebSocket() {
     console.log('Connected to Cloud WebSocket')
     sendLogToServer('success', `WebSocket bulut sunucusuna bağlandı (Cihaz: ${systemSettings.deviceId})`)
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('server-event', { action: 'network_status', status: 'online' })
+      mainWindow.webContents.send('server-event', { action: 'network_status', data: 'online', status: 'online' })
     }
     fetchCloudOrders()
     
@@ -433,7 +433,7 @@ function connectWebSocket() {
     console.log('Disconnected from Cloud WS, retrying...')
     sendLogToServer('warning', 'Bulut sunucusu ile bağlantı koptu. Yeniden bağlanılıyor...')
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('server-event', { action: 'network_status', status: 'offline' })
+      mainWindow.webContents.send('server-event', { action: 'network_status', data: 'offline', status: 'offline' })
     }
     setTimeout(connectWebSocket, 3000)
   })
@@ -1068,11 +1068,12 @@ app.whenReady().then(() => {
   })
   
   ipcMain.handle('get-network-status', async () => {
+    const isWsOpen = Boolean(wsClient && wsClient.readyState === WebSocket.OPEN)
     try {
       const res = await axios.get(`${CLOUD_URL}/network_status`, { timeout: 3000 })
-      return { ...res.data, localIp: getLocalIpAddress() }
+      return { ...res.data, localIp: getLocalIpAddress(), isOnline: true, status: 'online', wsConnected: isWsOpen }
     } catch(e) {
-      return { ip: CLOUD_URL, port: 443, localIp: getLocalIpAddress(), connectedDevices: [], status: 'offline' }
+      return { ip: CLOUD_URL, port: 443, localIp: getLocalIpAddress(), connectedDevices: [], status: isWsOpen ? 'online' : 'offline', isOnline: isWsOpen }
     }
   })
 

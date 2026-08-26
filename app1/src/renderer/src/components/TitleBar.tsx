@@ -1,38 +1,51 @@
 import { useEffect, useState } from 'react'
 
 export default function TitleBar() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [isOnline, setIsOnline] = useState(true)
   const [localIp, setLocalIp] = useState('')
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true)
+    const checkNetwork = async () => {
+      try {
+        if (window.api && (window.api as any).getNetworkStatus) {
+          const net = await (window.api as any).getNetworkStatus()
+          if (net?.localIp) setLocalIp(net.localIp)
+          if (net?.isOnline !== undefined) {
+            setIsOnline(Boolean(net.isOnline))
+          } else if (net?.status) {
+            setIsOnline(net.status === 'online')
+          }
+        }
+      } catch (e) {}
+    }
+
+    checkNetwork()
+    const interval = setInterval(checkNetwork, 4000)
+
+    const handleOnline = () => {
+      setIsOnline(true)
+      checkNetwork()
+    }
     const handleOffline = () => setIsOnline(false)
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
 
+    let sub: any = null
     if (window.api && window.api.onServerEvent) {
-      const sub = window.api.onServerEvent((action: string, status?: any) => {
+      sub = window.api.onServerEvent((action: string, data?: any) => {
         if (action === 'network_status') {
-          setIsOnline(status === 'online')
+          const statusStr = typeof data === 'string' ? data : data?.status || data?.data
+          setIsOnline(statusStr === 'online')
         }
       })
-      return () => {
-        if (window.api && window.api.offServerEvent) {
-          window.api.offServerEvent(sub)
-        }
-        window.removeEventListener('online', handleOnline)
-        window.removeEventListener('offline', handleOffline)
-      }
-    }
-
-    if (window.api && (window.api as any).getNetworkStatus) {
-      (window.api as any).getNetworkStatus().then((net: any) => {
-        if (net?.localIp) setLocalIp(net.localIp)
-      }).catch(() => {})
     }
 
     return () => {
+      clearInterval(interval)
+      if (window.api && window.api.offServerEvent && sub) {
+        window.api.offServerEvent(sub)
+      }
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
