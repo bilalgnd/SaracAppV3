@@ -1631,16 +1631,181 @@ export default function SettingsModal() {
 
           {activeTab === 'printer' && (
             <div>
-              <div className="settings-section-title">Yazıcı Ayarları</div>
-              <div className="settings-card">
+              <div className="settings-section-title">Yazıcı & Fiş Tasarımı</div>
+
+              {/* 1. Yazıcı Seçimi */}
+              <div className="settings-card" style={{ marginBottom: 15 }}>
                 <div className="settings-card-title">Mevcut Yazıcı: <span style={{ color: 'var(--primary)' }}>{settings.YAZICI_ADI || 'Seçilmedi'}</span></div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 15 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
                   {printers.map((p, i) => (
-                    <button key={i} className="settings-btn" style={{ textAlign: 'left', padding: 15 }} onClick={() => selectPrinter(p.name)}>
+                    <button key={i} className={`settings-btn ${settings.YAZICI_ADI === p.name ? 'primary' : ''}`} style={{ textAlign: 'left', padding: 12 }} onClick={() => selectPrinter(p.name)}>
                       🖨️ {p.name} {p.isDefault ? '(Varsayılan)' : ''}
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* 2. Metinler & İşletme Bilgileri */}
+              <div className="settings-card" style={{ marginBottom: 15 }}>
+                <div className="settings-card-title">Fiş Metinleri & İşletme Bilgileri</div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'gray', marginBottom: 4 }}>Fiş Başlığı (İşletme İsmi)</label>
+                    <input
+                      className="settings-input"
+                      placeholder="Örn: VANTAGE"
+                      value={settings.RECEIPT_HEADER_TITLE !== undefined ? settings.RECEIPT_HEADER_TITLE : 'VANTAGE'}
+                      onChange={e => handleSettingChange('RECEIPT_HEADER_TITLE', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'gray', marginBottom: 4 }}>Alt Başlık / Telefon / Adres</label>
+                    <input
+                      className="settings-input"
+                      placeholder="Örn: Tel: 0532 000 00 00 / Şube 1"
+                      value={settings.RECEIPT_SUBHEADER || ''}
+                      onChange={e => handleSettingChange('RECEIPT_SUBHEADER', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'gray', marginBottom: 4 }}>Kapanış Mesajı (Footer)</label>
+                    <input
+                      className="settings-input"
+                      placeholder="Örn: AFIYET OLSUN"
+                      value={settings.RECEIPT_FOOTER_TEXT !== undefined ? settings.RECEIPT_FOOTER_TEXT : 'AFIYET OLSUN'}
+                      onChange={e => handleSettingChange('RECEIPT_FOOTER_TEXT', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'gray', marginBottom: 4 }}>Wi-Fi Bilgisi</label>
+                    <input
+                      className="settings-input"
+                      placeholder="Örn: Saracoglu / Şifre: 123456"
+                      value={settings.RECEIPT_WIFI_INFO || ''}
+                      onChange={e => handleSettingChange('RECEIPT_WIFI_INFO', e.target.value)}
+                    />
+                  </div>
+
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', fontSize: 12, color: 'gray', marginBottom: 4 }}>Instagram / Sosyal Medya</label>
+                    <input
+                      className="settings-input"
+                      placeholder="Örn: @saracoglucafe"
+                      value={settings.RECEIPT_INSTAGRAM || ''}
+                      onChange={e => handleSettingChange('RECEIPT_INSTAGRAM', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Düzen, Kağıt & Yazı Boyutu */}
+              <div className="settings-card" style={{ marginBottom: 15 }}>
+                <div className="settings-card-title">Yazdırma Düzeni & Kağıt Ayarları</div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'gray', marginBottom: 4 }}>Kağıt Genişliği</label>
+                    <select
+                      className="settings-input"
+                      value={settings.RECEIPT_PAPER_WIDTH || '58mm'}
+                      onChange={e => handleSettingChange('RECEIPT_PAPER_WIDTH', e.target.value)}
+                    >
+                      <option value="58mm">58mm (Standart Dar Rulo)</option>
+                      <option value="80mm">80mm (Geniş Rulo)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'gray', marginBottom: 4 }}>Yazı Boyutu</label>
+                    <select
+                      className="settings-input"
+                      value={settings.RECEIPT_FONT_SIZE || 'normal'}
+                      onChange={e => handleSettingChange('RECEIPT_FONT_SIZE', e.target.value)}
+                    >
+                      <option value="small">Küçük (Kompakt)</option>
+                      <option value="normal">Normal</option>
+                      <option value="large">Büyük</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'gray', marginBottom: 4 }}>Kopya Sayısı</label>
+                    <select
+                      className="settings-input"
+                      value={settings.RECEIPT_COPIES || 1}
+                      onChange={e => handleSettingChange('RECEIPT_COPIES', Number(e.target.value))}
+                    >
+                      <option value={1}>1 Nüsha (Tek Fiş)</option>
+                      <option value={2}>2 Nüsha (Çift Fiş)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 20, marginTop: 15 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                    <input
+                      type="checkbox"
+                      checked={settings.RECEIPT_SHOW_WAITER !== false}
+                      onChange={e => handleSettingChange('RECEIPT_SHOW_WAITER', e.target.checked)}
+                    />
+                    Garson İsmi Fişte Görünsün
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                    <input
+                      type="checkbox"
+                      checked={settings.RECEIPT_SHOW_ORDER_NO !== false}
+                      onChange={e => handleSettingChange('RECEIPT_SHOW_ORDER_NO', e.target.checked)}
+                    />
+                    Günlük Fiş Sıra Numarası (#001) Görünsün
+                  </label>
+                </div>
+              </div>
+
+              {/* 4. Google / Instagram QR Kod */}
+              <div className="settings-card" style={{ marginBottom: 15 }}>
+                <div className="settings-card-title">Fiş Altı QR Kod (Google Puanlama / Menü)</div>
+                <div style={{ fontSize: 13, color: '#aaa', marginBottom: 8 }}>
+                  Müşterilerin fişi okutarak değerlendirme yapması veya dijital menüye ulaşması için link girin. Boş bırakılırsa QR kod basılmaz.
+                </div>
+                <input
+                  className="settings-input"
+                  placeholder="Örn: https://g.page/r/saracoglu/review veya https://bilalgnd.shop"
+                  value={settings.RECEIPT_QR_CODE_URL || ''}
+                  onChange={e => handleSettingChange('RECEIPT_QR_CODE_URL', e.target.value)}
+                />
+              </div>
+
+              {/* 5. Kaydet & Test Et */}
+              <div style={{ display: 'flex', gap: 12, marginTop: 15 }}>
+                <button className="settings-btn primary" style={{ flex: 1, padding: 12 }} onClick={handleSaveSettings}>
+                  💾 Tüm Fiş Ayarlarını Kaydet
+                </button>
+                <button
+                  className="settings-btn success"
+                  style={{ flex: 1, padding: 12 }}
+                  onClick={() => {
+                    handleSaveSettings()
+                    window.api.printReceipt({
+                      customerName: 'Test Masası 1',
+                      time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+                      items: [
+                        { name: 'Filtre Kahve', portion: 'Büyük', price: 90, quantity: 1 },
+                        { name: 'Cheesecake', portion: 'Standart', price: 160, quantity: 1, notes: 'Çilekli' }
+                      ],
+                      totalAmount: 250,
+                      orderNote: 'Test Çıktısıdır',
+                      createdBy: 'Kasa Test'
+                    })
+                    customAlert('Test fişi yazıcıya gönderildi!', 'success')
+                  }}
+                >
+                  🖨️ Kaydet & Örnek Fiş Yazdır
+                </button>
               </div>
             </div>
           )}

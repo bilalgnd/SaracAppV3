@@ -158,6 +158,16 @@ const processTgoRawData = (rawData: any, currentOrders: any[], saveFn: any, setF
     const orderNumberStr = rawData && rawData.orderNumber ? String(rawData.orderNumber) : '';
     const packageIdStr = rawData && (rawData.id || rawData.packageId) ? String(rawData.id || rawData.packageId) : '';
     const finalId = orderNumberStr || packageIdStr || Date.now().toString();
+    const rawPkgStatus = rawData ? (rawData.packageStatus || 'Created') : 'Created';
+
+    const orderTimestamp = rawData ? (rawData.packageCreationDate || rawData.orderDate || rawData.creationDate) : null;
+    let orderTimeStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    if (orderTimestamp) {
+      const d = new Date(typeof orderTimestamp === 'number' ? orderTimestamp : orderTimestamp);
+      if (!isNaN(d.getTime())) {
+        orderTimeStr = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      }
+    }
 
     const newApp1Order: any = {
         id: finalId,
@@ -165,10 +175,14 @@ const processTgoRawData = (rawData: any, currentOrders: any[], saveFn: any, setF
         orderNumber: orderNumberStr,
         order_id: finalId,
         customer_name: tgoCustomerName,
-        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        time: orderTimeStr,
+        packageCreationDate: orderTimestamp,
         items: tgoItems,
         total_amount: rawData ? (rawData.totalPrice || 0) : 0,
-        status: 'waiting',
+        status: rawPkgStatus,
+        packageStatus: rawPkgStatus,
+        tgo_status: rawPkgStatus,
+        trendyol_status: rawPkgStatus,
         order_note: finalNote,
         color: '#FF9800',
         platform: 'trendyol'
@@ -201,6 +215,17 @@ const processTgoRawData = (rawData: any, currentOrders: any[], saveFn: any, setF
         setFn(updatedOrders);
       }
       return;
+    }
+
+    // Yeni masa/sipariş eklenirken: Sadece Created durumunda ve son 2 saat içindeyse ekle
+    if (String(rawPkgStatus).toLowerCase() !== 'created') {
+      return;
+    }
+    if (orderTimestamp) {
+      const d = new Date(typeof orderTimestamp === 'number' ? orderTimestamp : orderTimestamp);
+      if (!isNaN(d.getTime()) && (Date.now() - d.getTime()) > 2 * 60 * 60 * 1000) {
+        return;
+      }
     }
 
     const newOrders = [newApp1Order, ...currentOrders];

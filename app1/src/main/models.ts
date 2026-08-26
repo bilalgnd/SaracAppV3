@@ -26,7 +26,19 @@ export async function initializeModels() {
     systemSettings["API_TOKEN"] = "123456";
     changed = true;
   }
-  
+
+  // Receipt Customization Settings
+  if (systemSettings["RECEIPT_HEADER_TITLE"] === undefined) { systemSettings["RECEIPT_HEADER_TITLE"] = "VANTAGE"; changed = true; }
+  if (systemSettings["RECEIPT_SUBHEADER"] === undefined) { systemSettings["RECEIPT_SUBHEADER"] = ""; changed = true; }
+  if (systemSettings["RECEIPT_FOOTER_TEXT"] === undefined) { systemSettings["RECEIPT_FOOTER_TEXT"] = "AFIYET OLSUN"; changed = true; }
+  if (systemSettings["RECEIPT_WIFI_INFO"] === undefined) { systemSettings["RECEIPT_WIFI_INFO"] = ""; changed = true; }
+  if (systemSettings["RECEIPT_INSTAGRAM"] === undefined) { systemSettings["RECEIPT_INSTAGRAM"] = ""; changed = true; }
+  if (systemSettings["RECEIPT_SHOW_WAITER"] === undefined) { systemSettings["RECEIPT_SHOW_WAITER"] = true; changed = true; }
+  if (systemSettings["RECEIPT_SHOW_ORDER_NO"] === undefined) { systemSettings["RECEIPT_SHOW_ORDER_NO"] = true; changed = true; }
+  if (systemSettings["RECEIPT_PAPER_WIDTH"] === undefined) { systemSettings["RECEIPT_PAPER_WIDTH"] = "58mm"; changed = true; }
+  if (systemSettings["RECEIPT_FONT_SIZE"] === undefined) { systemSettings["RECEIPT_FONT_SIZE"] = "normal"; changed = true; }
+  if (systemSettings["RECEIPT_COPIES"] === undefined) { systemSettings["RECEIPT_COPIES"] = 1; changed = true; }
+  if (systemSettings["RECEIPT_QR_CODE_URL"] === undefined) { systemSettings["RECEIPT_QR_CODE_URL"] = ""; changed = true; }
 
 
 

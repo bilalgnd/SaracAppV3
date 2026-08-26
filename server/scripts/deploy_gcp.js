@@ -23,6 +23,11 @@ async function deployGcp() {
   const serverDir = path.join(__dirname, '..');
   const remoteServerDir = '/home/bilalgnd00/saracapp/server';
 
+  console.log('🔨 Compiling TypeScript locally with tsc...');
+  const { execSync } = require('child_process');
+  execSync('npx tsc', { cwd: serverDir, stdio: 'inherit' });
+  console.log('✅ Local build complete!');
+
   console.log('📦 Uploading server package.json & tsconfig.json...');
   await ssh.putFile(path.join(serverDir, 'package.json'), `${remoteServerDir}/package.json`);
   await ssh.putFile(path.join(serverDir, 'tsconfig.json'), `${remoteServerDir}/tsconfig.json`);

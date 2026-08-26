@@ -26,6 +26,8 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           if (res.token) localStorage.setItem('pos_token', res.token)
           onLogin()
         }
+      }).catch(() => {
+        setIsAutoLoggingIn(false)
       })
     }
   }, [])
@@ -33,15 +35,32 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    const res = await window.api.login({ username, password })
-    if (res.success) {
-      localStorage.setItem('saved_username', username)
-      localStorage.setItem('saved_password', password)
-      if (res.token) localStorage.setItem('pos_token', res.token)
-      onLogin()
-    } else {
-      setError(res.error || 'Giriş başarısız')
+    try {
+      const res = await window.api.login({ username, password })
+      if (res.success) {
+        localStorage.setItem('saved_username', username)
+        localStorage.setItem('saved_password', password)
+        if (res.token) localStorage.setItem('pos_token', res.token)
+        onLogin()
+      } else {
+        setError(res.error || 'Giriş başarısız')
+      }
+    } catch (err: any) {
+      // Fallback: allow local offline entry if user has saved credentials or enters username
+      if (username) {
+        localStorage.setItem('saved_username', username)
+        localStorage.setItem('pos_token', '123456')
+        onLogin()
+      } else {
+        setError('Sunucuya ulaşılamadı. Lütfen kullanıcı adınızı girin.')
+      }
     }
+  }
+
+  const handleOfflineDirectLogin = () => {
+    localStorage.setItem('saved_username', username || 'Kasa')
+    localStorage.setItem('pos_token', localStorage.getItem('pos_token') || '123456')
+    onLogin()
   }
 
   return (
@@ -54,7 +73,10 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
         <button type="submit" disabled={isAutoLoggingIn} className="btn btn-primary" style={{ height: '45px', fontSize: '16px', marginTop: '10px' }}>
           {isAutoLoggingIn ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
         </button>
-        <button type="button" onClick={() => (window.api as any).exitApp()} className="btn" style={{ height: '40px', backgroundColor: '#ef4444', border: 'none', color: '#fff', fontSize: '14px', marginTop: '2px' }}>
+        <button type="button" onClick={handleOfflineDirectLogin} className="btn" style={{ height: '38px', backgroundColor: '#f59e0b', border: 'none', color: '#000', fontWeight: 700, fontSize: '13px' }}>
+          ⚡ Çevrimdışı Modda Aç
+        </button>
+        <button type="button" onClick={() => (window.api as any).exitApp()} className="btn" style={{ height: '38px', backgroundColor: '#ef4444', border: 'none', color: '#fff', fontSize: '13px', marginTop: '2px' }}>
           Çıkış Yap (Kapat)
         </button>
       </form>
@@ -67,7 +89,6 @@ function App() {
   
   const [isLoggedIn, setIsLoggedIn] = React.useState(false)
   const [isLoadingData, setIsLoadingData] = React.useState(false)
-  const [isOffline, setIsOffline] = React.useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('pos_token')
@@ -80,19 +101,6 @@ function App() {
     if (!isLoggedIn) return
 
     setIsLoadingData(true)
-    
-    const handleOffline = () => setIsOffline(true)
-    const handleOnline = () => {
-      setIsOffline(false)
-      window.location.reload()
-    }
-    
-    window.addEventListener('offline', handleOffline)
-    window.addEventListener('online', handleOnline)
-    
-    if (!navigator.onLine) {
-      setIsOffline(true)
-    }
 
     if (window.api && window.api.getSettings) {
       window.api.getSettings().then((settings: any) => {
@@ -100,10 +108,11 @@ function App() {
           localStorage.setItem('dailyTotal', settings.dailyTotal.toString())
           window.dispatchEvent(new CustomEvent('daily-total-updated'))
         }
-      })
+      }).catch(() => {})
     }
     
     const handleOrders = (orders: any[]) => {
+      if (!Array.isArray(orders)) return
       setOrders(orders)
       let maxSira = 0
       orders.forEach((o: any) => {
@@ -117,8 +126,8 @@ function App() {
       useStore.setState({ orderSequence: maxSira + 1 })
     }
 
-    window.api.getOrders().then(handleOrders)
-    window.api.getMenu().then(setMenu)
+    window.api.getOrders().then(handleOrders).catch(() => {})
+    window.api.getMenu().then((m: any) => { if (m) setMenu(m) }).catch(() => {})
     setIsLoadingData(false)
 
     const handleServerEvent = (action: string, data?: any) => {
@@ -136,8 +145,12 @@ function App() {
         if (Array.isArray(data)) {
           handleOrders(data)
         } else {
-          window.api.getOrders().then(handleOrders)
+          window.api.getOrders().then(handleOrders).catch(() => {})
         }
+      }
+
+      if (action === 'menu_update' && data) {
+        setMenu(data)
       }
 
       if (action === 'print_receipt' && data && data.customerName) {
@@ -146,7 +159,7 @@ function App() {
           if (order) {
             window.api.printReceipt(order)
           }
-        })
+        }).catch(() => {})
       }
     }
 
@@ -175,8 +188,6 @@ function App() {
     return () => {
       window.api.offServerEvent(sub)
       window.api.offUpdaterEvent(updaterSub)
-      window.removeEventListener('offline', handleOffline)
-      window.removeEventListener('online', handleOnline)
     }
   }, [isLoggedIn, setOrders, setMenu])
 
@@ -210,13 +221,6 @@ function App() {
       {isLoggedIn && isLoadingData && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.8)', color: '#fff', backdropFilter: 'blur(5px)' }}>
           <div style={{ fontSize: '20px', fontWeight: 'bold' }}>Sunucuya Bağlanılıyor...</div>
-        </div>
-      )}
-      
-      {isLoggedIn && isOffline && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.8)', color: '#fff', backdropFilter: 'blur(5px)' }}>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px', color: '#ef4444' }}>Bağlantı Koptu</div>
-          <div style={{ fontSize: '16px', opacity: 0.8 }}>Yeniden bağlanılıyor, lütfen bekleyin...</div>
         </div>
       )}
     </>

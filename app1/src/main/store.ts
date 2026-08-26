@@ -9,7 +9,8 @@ export const storePaths = {
   settings: path.join(userDataPath, 'saracoglu_settings.json'),
   orders: path.join(userDataPath, 'active_orders.json'),
   menu: path.join(userDataPath, 'custom_menu.json'),
-  past_orders: path.join(userDataPath, 'past_orders.json')
+  past_orders: path.join(userDataPath, 'past_orders.json'),
+  tgo_processed: path.join(userDataPath, 'tgo_processed.json')
 }
 
 // Write queue to prevent blocking and overlapping writes

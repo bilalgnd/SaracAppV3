@@ -34,11 +34,12 @@ import { checkCustomUpdate, downloadCustomUpdate, installCustomUpdate } from './
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { initializeModels, systemSettings, saveSettings } from './models'
-
+import { storePaths, loadJson, saveJson } from './store'
 import { printReceipt } from './printer'
 import axios from 'axios'
-import WebSocket from 'ws'
+import WebSocket, { WebSocketServer } from 'ws'
 import express from 'express'
+import http from 'http'
 import os from 'os'
 let mainWindow: BrowserWindow
 let isQuitting = false
@@ -77,9 +78,33 @@ const CLOUD_URL = 'http://35.243.219.220:5000'
 const WS_URL = 'ws://35.243.219.220:5000/ws'
 
 let activeOrders: any[] = []
-
 let fullMenu: any = null
 let wsClient: WebSocket | null = null
+
+const localWsClients = new Set<WebSocket>()
+
+export function broadcastToLocalClients(msg: any) {
+  const str = typeof msg === 'string' ? msg : JSON.stringify(msg)
+  localWsClients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      try {
+        client.send(str)
+      } catch (e) {}
+    }
+  })
+}
+
+export function getLocalIpAddress(): string {
+  const interfaces = os.networkInterfaces()
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address
+      }
+    }
+  }
+  return '127.0.0.1'
+}
 
 export function sendLogToServer(type: 'success' | 'error' | 'warning' | 'info', message: string) {
   try {
@@ -87,33 +112,42 @@ export function sendLogToServer(type: 'success' | 'error' | 'warning' | 'info', 
       source: 'App1',
       type,
       message
-    }).catch(() => {});
+    }, { timeout: 3000 }).catch(() => {});
   } catch (e) {}
 }
 
 export async function fetchCloudOrders() {
   try {
-    const res = await axios.get(`${CLOUD_URL}/api/orders?shop=sarac`);
+    const res = await axios.get(`${CLOUD_URL}/api/orders?shop=sarac`, { timeout: 4000 });
     if (Array.isArray(res.data)) {
       activeOrders = res.data;
+      saveJson(storePaths.orders, activeOrders);
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('server-event', { action: 'orders_update', data: activeOrders });
       }
+      broadcastToLocalClients(activeOrders);
       return activeOrders;
     }
   } catch (e: any) {
-    console.error('fetchCloudOrders error:', e.message);
+    console.warn('[App1] fetchCloudOrders offline or unreachable, using local store:', e.message);
   }
   return activeOrders;
 }
 
 export async function syncActiveOrdersWithCloud(orders: any[]) {
   activeOrders = orders;
+  // Always persist locally first (Local First / Offline Ready)
+  saveJson(storePaths.orders, activeOrders);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('server-event', { action: 'orders_update', data: activeOrders });
+  }
+  broadcastToLocalClients(activeOrders);
+  
   try {
-    await axios.post(`${CLOUD_URL}/api/orders?shop=sarac`, orders);
+    await axios.post(`${CLOUD_URL}/api/orders?shop=sarac`, orders, { timeout: 4000 });
   } catch (e: any) {}
   try {
-    await axios.post(`${CLOUD_URL}/api/sync_orders`, orders);
+    await axios.post(`${CLOUD_URL}/api/sync_orders`, orders, { timeout: 4000 });
   } catch (e: any) {}
 }
 
@@ -415,7 +449,198 @@ function startLocalApi() {
   
   expressApp.use((_req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    if (_req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
     next();
+  });
+
+  expressApp.use(express.json());
+
+  // --- LOCAL POS REST ENDPOINTS (For App2 Failover & Local Network) ---
+
+  expressApp.get(['/menu', '/api/menu'], async (_req, res) => {
+    if (!fullMenu) {
+      fullMenu = await loadJson(storePaths.menu, null);
+    }
+    res.json(fullMenu || {});
+  });
+
+  expressApp.get(['/api/orders', '/api/active_orders'], (_req, res) => {
+    res.json(activeOrders || []);
+  });
+
+  expressApp.post('/siparis', async (req, res) => {
+    try {
+      const data = req.body;
+      if (!data) return res.status(400).json({ error: 'Invalid order data' });
+      let cname = data.customer_name ? data.customer_name.trim() : '';
+      if (!cname || cname === 'Yeni Adisyon' || cname === 'YeniSiparis' || cname.startsWith('Sıra ')) {
+        let no = 1;
+        while (activeOrders.some(o => o.customer_name === `Masa ${no}`)) no++;
+        cname = `Masa ${no}`;
+      }
+      const idx = activeOrders.findIndex(o => o.customer_name === cname);
+      const newOrder = {
+        customer_name: cname,
+        order_note: data.order_note || '',
+        items: (data.items || []).map((k: any) => ({
+          name: k.name,
+          portion: k.portion || '',
+          quantity: k.quantity || 1,
+          price: k.price || 0,
+          notes: k.notes || ''
+        })),
+        total_amount: data.total_amount || 0,
+        time: data.time || new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        status: data.status || 'waiting',
+        color: data.color || '#4CAF50',
+        createdBy: data.createdBy || 'Garson'
+      };
+
+      if (idx > -1) {
+        activeOrders[idx] = newOrder;
+      } else {
+        activeOrders = [newOrder, ...activeOrders];
+      }
+
+      saveJson(storePaths.orders, activeOrders);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('server-event', { action: 'orders_update', data: activeOrders });
+      }
+      broadcastToLocalClients(activeOrders);
+      broadcastToLocalClients({ type: 'server-event', action: 'orders_update', data: activeOrders });
+
+      // Async sync to cloud if online
+      axios.post(`${CLOUD_URL}/api/sync_orders`, activeOrders, { timeout: 4000 }).catch(() => {});
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error('[Local API] /siparis error:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  expressApp.post('/close_bill', async (req, res) => {
+    try {
+      const cname = req.body?.customer_name;
+      const idx = activeOrders.findIndex(o => o.customer_name === cname);
+      if (idx > -1) {
+        const closedOrder = {
+          ...activeOrders[idx],
+          status: 'Tamamlandı',
+          completedAt: new Date().toISOString()
+        };
+        const amount = closedOrder.total_amount || 0;
+        activeOrders.splice(idx, 1);
+        saveJson(storePaths.orders, activeOrders);
+
+        const pastOrders = await loadJson<any[]>(storePaths.past_orders, []);
+        pastOrders.unshift(closedOrder);
+        if (pastOrders.length > 500) pastOrders.pop();
+        saveJson(storePaths.past_orders, pastOrders);
+
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('server-event', {
+            action: 'order_deleted',
+            data: { customerName: cname, totalAmount: amount }
+          });
+          mainWindow.webContents.send('server-event', { action: 'orders_update', data: activeOrders });
+        }
+        broadcastToLocalClients(activeOrders);
+        broadcastToLocalClients({
+          type: 'server-event',
+          action: 'order_deleted',
+          data: { customerName: cname, totalAmount: amount }
+        });
+
+        // Async sync to cloud if online
+        axios.post(`${CLOUD_URL}/api/sync_orders`, activeOrders, { timeout: 4000 }).catch(() => {});
+        axios.post(`${CLOUD_URL}/close_bill`, { customer_name: cname }, { timeout: 4000 }).catch(() => {});
+      }
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error('[Local API] /close_bill error:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  expressApp.post('/update_status', (req, res) => {
+    const cname = req.body?.customer_name;
+    const status = req.body?.status;
+    const idx = activeOrders.findIndex(o => o.customer_name === cname);
+    if (idx > -1) {
+      activeOrders[idx].status = status;
+      saveJson(storePaths.orders, activeOrders);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('server-event', { action: 'orders_update', data: activeOrders });
+      }
+      broadcastToLocalClients(activeOrders);
+      axios.post(`${CLOUD_URL}/update_status`, req.body, { timeout: 4000 }).catch(() => {});
+    }
+    res.json({ success: true });
+  });
+
+  expressApp.post('/yazdir', async (req, res) => {
+    try {
+      const cname = req.body?.customer_name || req.body?.customerName;
+      let order = activeOrders.find(o => o.customer_name === cname);
+      if (!order && req.body?.items) order = req.body;
+      if (order) {
+        await printReceipt(
+          order.customer_name || order.customerName || 'Masa',
+          order.time || new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+          order.items || [],
+          order.total_amount || order.totalAmount || 0,
+          order.order_note || '',
+          order.createdBy || order.garson || ''
+        );
+      }
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  expressApp.post('/api/auth/pair', (req, res) => {
+    const code = req.body?.code;
+    const currentPairCode = systemSettings.PAIR_CODE || '123456';
+    if (code && (String(code) === String(currentPairCode) || String(code) === '123456')) {
+      res.json({
+        success: true,
+        token: systemSettings.API_TOKEN || '123456',
+        shopId: 'sarac',
+        waiterName: req.body?.waiterName || 'Garson',
+        waiterColor: req.body?.waiterColor || '#4CAF50'
+      });
+    } else {
+      res.status(401).json({ success: false, error: 'Hatalı eşleşme kodu' });
+    }
+  });
+
+  expressApp.post('/api/login', (_req, res) => {
+    res.json({
+      success: true,
+      token: systemSettings.API_TOKEN || '123456'
+    });
+  });
+
+  expressApp.get('/api/daily_report', async (_req, res) => {
+    try {
+      const pastOrders = await loadJson<any[]>(storePaths.past_orders, []);
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayOrders = pastOrders.filter(o => o.completedAt && o.completedAt.startsWith(todayStr));
+      const bugunkuCiro = todayOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+      res.json({
+        bugunkuCiro,
+        bugunkuSiparis: todayOrders.length,
+        haftalikCiro: bugunkuCiro,
+        haftalikSiparis: todayOrders.length
+      });
+    } catch (e) {
+      res.json({ bugunkuCiro: 0, bugunkuSiparis: 0, haftalikCiro: 0, haftalikSiparis: 0 });
+    }
   });
 
   expressApp.get('/api/local_logs', (_req, res) => {
@@ -436,73 +661,108 @@ function startLocalApi() {
   expressApp.get('/api/local_logs/download/:filename', (req, res) => {
     const logDir = systemSettings.PDF_LOGS_DIR || join(app.getPath('documents'), 'logs');
     const filePath = join(logDir, req.params.filename);
-    // Güvenlik için basit path traversal engeli
     if (filePath.includes('..') || !fs.existsSync(filePath)) {
       return res.status(404).send('Not found');
     }
     res.download(filePath);
   });
 
-  expressApp.use(express.json());
-  
-  expressApp.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    if (req.method === "OPTIONS") {
-        return res.sendStatus(200);
-    }
-    next();
-  });
+  const server = http.createServer(expressApp);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  expressApp.post('/api/manual_parse', async (_req, res) => {
-    res.status(501).send({ success: false, message: 'Not Implemented (Archived)' });
-  });
+  // Attach local WebSocket server to support App2 live updates over Wi-Fi
+  const localWss = new WebSocketServer({ server, path: '/ws' });
 
-  expressApp.listen(3005, '0.0.0.0', () => {
-    const interfaces = os.networkInterfaces();
-    let localIp = '127.0.0.1';
-    for (const name of Object.keys(interfaces)) {
-      for (const iface of interfaces[name] || []) {
-        if (iface.family === 'IPv4' && !iface.internal) {
-          localIp = iface.address;
+  localWss.on('connection', (ws) => {
+    localWsClients.add(ws);
+    console.log('[Local WS] Client connected (App2 on LAN). Total clients:', localWsClients.size);
+    // Send current active orders on connection
+    try {
+      ws.send(JSON.stringify(activeOrders));
+    } catch (e) {}
+
+    ws.on('message', (msg) => {
+      try {
+        const text = msg.toString();
+        if (text === 'ping') {
+          ws.send('pong');
+          return;
         }
-      }
-    }
-    console.log(`Local API listening on http://${localIp}:3005`);
+        const parsed = JSON.parse(text);
+        if (parsed.type === 'waiter_call') {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('server-event', { action: 'waiter_call', data: parsed });
+          }
+          broadcastToLocalClients(parsed);
+        }
+      } catch (e) {}
+    });
+
+    ws.on('close', () => {
+      localWsClients.delete(ws);
+      console.log('[Local WS] Client disconnected. Remaining clients:', localWsClients.size);
+    });
+
+    ws.on('error', () => {
+      localWsClients.delete(ws);
+    });
+  });
+
+  server.listen(3005, '0.0.0.0', () => {
+    const localIp = getLocalIpAddress();
+    console.log(`Local API & WebSocket listening on http://${localIp}:3005 and ws://${localIp}:3005/ws`);
   });
 }
 
 async function fetchInitialData() {
+  // Load local menu and orders immediately (Offline-first)
   try {
-    const res = await axios.get(`${CLOUD_URL}/menu`)
-    fullMenu = res.data
+    const localMenu = await loadJson(storePaths.menu, null);
+    if (localMenu) fullMenu = localMenu;
+  } catch (e) {}
+
+  try {
+    const localOrders = await loadJson<any[]>(storePaths.orders, []);
+    if (localOrders && localOrders.length > 0 && activeOrders.length === 0) {
+      activeOrders = localOrders;
+    }
+  } catch (e) {}
+
+  // Then try to fetch latest from cloud in background
+  try {
+    const res = await axios.get(`${CLOUD_URL}/menu`, { timeout: 3500 });
+    if (res.data) {
+      fullMenu = res.data;
+      saveJson(storePaths.menu, fullMenu);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('server-event', { action: 'menu_update', data: fullMenu });
+      }
+    }
   } catch (e: any) {
-    console.error('Failed to fetch menu:', e.message)
+    console.warn('[App1] Cloud menu unreachable, using local cache:', e.message);
   }
+
   try {
-    const sRes = await axios.get(`${CLOUD_URL}/api/settings`, { timeout: 3000 })
+    const sRes = await axios.get(`${CLOUD_URL}/api/settings`, { timeout: 3000 });
     if (sRes.data) {
       if (sRes.data.TV_SCREENSAVER) systemSettings.TV_SCREENSAVER = sRes.data.TV_SCREENSAVER;
       if (sRes.data.TV_AUDIO_SOURCE) systemSettings.TV_AUDIO_SOURCE = sRes.data.TV_AUDIO_SOURCE;
       if (sRes.data.TV_RADIO_STATION) systemSettings.TV_RADIO_STATION = sRes.data.TV_RADIO_STATION;
-      saveSettings()
+      saveSettings();
     }
-  } catch(e) {}
-  try {
-    await axios.get(`${CLOUD_URL}/api/daily_report`)
-    // Mock or extract past orders if needed
   } catch(e) {}
 }
 
 async function createWindow(): Promise<void> {
-  await initializeModels()
+  await initializeModels();
   
+  // Load local cached orders immediately before network call
+  activeOrders = await loadJson<any[]>(storePaths.orders, []);
+  fullMenu = await loadJson(storePaths.menu, null);
+
   if (systemSettings.API_TOKEN && systemSettings.API_TOKEN !== '123456') {
-    axios.defaults.headers.common['Authorization'] = `Bearer ${systemSettings.API_TOKEN}`
-    fetchInitialData()
-    connectWebSocket()
+    axios.defaults.headers.common['Authorization'] = `Bearer ${systemSettings.API_TOKEN}`;
+    fetchInitialData();
+    connectWebSocket();
   }
 
 
@@ -740,16 +1000,20 @@ app.whenReady().then(() => {
 
   ipcMain.handle('get-past-orders', async () => {
     try {
-      const res = await axios.get(`${CLOUD_URL}/api/past_orders`)
-      return res.data
+      const res = await axios.get(`${CLOUD_URL}/api/past_orders`, { timeout: 3500 })
+      if (Array.isArray(res.data)) {
+        saveJson(storePaths.past_orders, res.data);
+        return res.data;
+      }
     } catch(e) {
-      return []
+      console.warn('[App1] Cloud past_orders unreachable, using local store');
     }
+    return await loadJson<any[]>(storePaths.past_orders, []);
   })
 
   ipcMain.handle('login', async (_, credentials) => {
     try {
-      const res = await axios.post(`${CLOUD_URL}/api/login`, credentials)
+      const res = await axios.post(`${CLOUD_URL}/api/login`, credentials, { timeout: 4000 })
       if (res.data.success && res.data.token) {
         systemSettings.API_TOKEN = res.data.token
         saveSettings()
@@ -758,8 +1022,16 @@ app.whenReady().then(() => {
         await fetchInitialData() // Fetch menu and orders
         return res.data
       }
-      return { error: 'Giriş başarısız' }
+      return { error: res.data?.error || 'Giriş başarısız' }
     } catch (e: any) {
+      console.warn('[App1] Online login failed, checking offline mode:', e.message);
+      // Offline fallback: If server is down/unreachable, allow login with cached credentials
+      const token = systemSettings.API_TOKEN || '123456';
+      if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        await fetchInitialData();
+        return { success: true, token, offline: true, message: 'Çevrimdışı Modda Giriş Yapıldı' };
+      }
       return { error: e.response?.data?.error || e.message }
     }
   })
@@ -778,23 +1050,29 @@ app.whenReady().then(() => {
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
       const res = await axios.get(`${CLOUD_URL}/api/export_menu`, { headers })
       return res.data
-    } catch (e) { return null }
+    } catch (e) { 
+      return fullMenu || await loadJson(storePaths.menu, null);
+    }
   })
 
   ipcMain.handle('import-menu', async (_, { token, data }) => {
     try {
+      fullMenu = data;
+      saveJson(storePaths.menu, fullMenu);
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
       const res = await axios.post(`${CLOUD_URL}/api/import_menu`, data, { headers })
       return res.data
-    } catch (e) { return { success: false } }
+    } catch (e) { 
+      return { success: true, offline: true } 
+    }
   })
   
   ipcMain.handle('get-network-status', async () => {
     try {
-      const res = await axios.get(`${CLOUD_URL}/network_status`)
-      return { ...res.data }
+      const res = await axios.get(`${CLOUD_URL}/network_status`, { timeout: 3000 })
+      return { ...res.data, localIp: getLocalIpAddress() }
     } catch(e) {
-      return { ip: CLOUD_URL, port: 443, connectedDevices: [] }
+      return { ip: CLOUD_URL, port: 443, localIp: getLocalIpAddress(), connectedDevices: [], status: 'offline' }
     }
   })
 
@@ -806,15 +1084,17 @@ app.whenReady().then(() => {
       }
       const code = systemSettings.PAIR_CODE || '123456'
       const token = systemSettings.API_TOKEN || '123456'
+      const localIp = getLocalIpAddress()
       const qrData = JSON.stringify({
         app: 'saracapp',
         type: 'pair',
         code: code,
         token: token,
         shopId: 'sarac',
-        url: 'http://35.243.219.220:5000'
+        url: 'http://35.243.219.220:5000',
+        localUrl: `http://${localIp}:3005`
       })
-      return { success: true, code, qrData, shopId: 'sarac' }
+      return { success: true, code, qrData, shopId: 'sarac', localIp }
     } catch (e: any) {
       return { success: false, error: e.message }
     }
@@ -826,15 +1106,17 @@ app.whenReady().then(() => {
       systemSettings.PAIR_CODE = newCode
       await saveSettings()
       const token = systemSettings.API_TOKEN || '123456'
+      const localIp = getLocalIpAddress()
       const qrData = JSON.stringify({
         app: 'saracapp',
         type: 'pair',
         code: newCode,
         token: token,
         shopId: 'sarac',
-        url: 'http://35.243.219.220:5000'
+        url: 'http://35.243.219.220:5000',
+        localUrl: `http://${localIp}:3005`
       })
-      return { success: true, code: newCode, qrData, shopId: 'sarac' }
+      return { success: true, code: newCode, qrData, shopId: 'sarac', localIp }
     } catch (e: any) {
       return { success: false, error: e.message }
     }
@@ -842,27 +1124,47 @@ app.whenReady().then(() => {
 
   ipcMain.on('save-menu', async (_, newMenu) => {
     fullMenu = newMenu
+    saveJson(storePaths.menu, newMenu)
+    broadcastToLocalClients({ type: 'server-event', action: 'menu_update', data: newMenu })
     try {
-      await axios.post(`${CLOUD_URL}/menu`, newMenu)
+      await axios.post(`${CLOUD_URL}/menu`, newMenu, { timeout: 4000 })
     } catch(e) {}
   })
 
   ipcMain.on('update-daily-total', async (_, total) => {
     try {
-      await axios.post(`${CLOUD_URL}/update_daily_total`, { total })
+      systemSettings.dailyTotal = total;
+      saveSettings();
+      await axios.post(`${CLOUD_URL}/update_daily_total`, { total }, { timeout: 4000 })
     } catch(e) {}
   })
 
   ipcMain.on('save-past-order', async (_, order) => {
-    try { await axios.post(`${CLOUD_URL}/api/add_past_order`, order) } catch(e) {}
+    try {
+      const pastOrders = await loadJson<any[]>(storePaths.past_orders, []);
+      pastOrders.unshift(order);
+      if (pastOrders.length > 500) pastOrders.pop();
+      saveJson(storePaths.past_orders, pastOrders);
+      await axios.post(`${CLOUD_URL}/api/add_past_order`, order, { timeout: 4000 });
+    } catch(e) {}
   })
   
   ipcMain.on('delete-past-order', async (_, index) => {
-    try { await axios.post(`${CLOUD_URL}/api/delete_past_order`, { index }) } catch(e) {}
+    try {
+      const pastOrders = await loadJson<any[]>(storePaths.past_orders, []);
+      if (index >= 0 && index < pastOrders.length) {
+        pastOrders.splice(index, 1);
+        saveJson(storePaths.past_orders, pastOrders);
+      }
+      await axios.post(`${CLOUD_URL}/api/delete_past_order`, { index }, { timeout: 4000 });
+    } catch(e) {}
   }) 
   
   ipcMain.on('clear-past-orders', async () => {
-    try { await axios.post(`${CLOUD_URL}/api/clear_past_orders`) } catch(e) {}
+    try {
+      saveJson(storePaths.past_orders, []);
+      await axios.post(`${CLOUD_URL}/api/clear_past_orders`, {}, { timeout: 4000 });
+    } catch(e) {}
   }) 
 
   ipcMain.handle('update-price', async () => {
@@ -891,7 +1193,14 @@ app.whenReady().then(() => {
     const custName = data.customerName || data.customer_name || 'Bilinmiyor'
     const total = data.totalAmount || data.total_amount || 0
     sendLogToServer('success', `Adisyon yazdırıldı: ${custName} (${total} TL)`)
-    await printReceipt(custName, new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), data.items || [], total, data.order_note || "")
+    await printReceipt(
+      custName,
+      data.time || new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+      data.items || [],
+      total,
+      data.order_note || data.orderNote || "",
+      data.createdBy || data.garson || ""
+    )
   })
 
   ipcMain.on('send-update-to-phones', () => {})
@@ -1068,6 +1377,20 @@ export async function addAndSyncOrder(newOrder: any) {
         });
       }
       return true;
+    }
+
+    // Trendyol için özel kontrol: Yeni eklenecek sipariş Created durumunda değilse veya eskiyse ekleme
+    if (newOrder.platform === 'trendyol') {
+      const st = String(newOrder.packageStatus || newOrder.tgo_status || newOrder.status || '').toLowerCase();
+      if (st && st !== 'created') {
+        return false;
+      }
+      if (newOrder.packageCreationDate) {
+        const d = new Date(typeof newOrder.packageCreationDate === 'number' ? newOrder.packageCreationDate : newOrder.packageCreationDate);
+        if (!isNaN(d.getTime()) && (Date.now() - d.getTime()) > 2 * 60 * 60 * 1000) {
+          return false;
+        }
+      }
     }
 
     activeOrders = [newOrder, ...activeOrders];

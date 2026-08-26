@@ -1,4 +1,5 @@
 import { systemSettings } from './models';
+import { loadJson, saveJson, storePaths } from './store';
 import axios from 'axios';
 
 let trendyolInterval: NodeJS.Timeout | null = null;
@@ -8,12 +9,100 @@ const processedOrderIds = new Set<string>();
 // Silinen TGO sipariş ID'leri — uygulama yeniden başlasa bile tekrar eklenmesin
 const deletedTrendyolIds = new Set<string>();
 
+interface TgoStorageData {
+  processed?: string[];
+  deleted?: string[];
+  totalOrdersReceived?: number;
+  todayOrdersCount?: number;
+  lastOrderId?: string | null;
+  lastOrderTime?: string | null;
+  lastResetDateStr?: string;
+}
+
+let isStorageLoaded = false;
+async function ensureStorageLoaded() {
+  if (isStorageLoaded) return;
+  try {
+    const data = await loadJson<TgoStorageData>(storePaths.tgo_processed, { processed: [], deleted: [] });
+    if (Array.isArray(data.processed)) {
+      data.processed.forEach(id => processedOrderIds.add(String(id)));
+    }
+    if (Array.isArray(data.deleted)) {
+      data.deleted.forEach(id => deletedTrendyolIds.add(String(id)));
+    }
+    if (typeof data.totalOrdersReceived === 'number') {
+      statusState.totalOrdersReceived = data.totalOrdersReceived;
+    }
+    if (typeof data.todayOrdersCount === 'number') {
+      statusState.todayOrdersCount = data.todayOrdersCount;
+    }
+    if (data.lastOrderId) {
+      statusState.lastOrderId = data.lastOrderId;
+    }
+    if (data.lastOrderTime) {
+      statusState.lastOrderTime = data.lastOrderTime;
+    }
+    if (data.lastResetDateStr) {
+      lastResetDateStr = data.lastResetDateStr;
+    }
+
+    // Eğer sayaç 0 ise veya ilk yükleme ise kayıtlı geçmiş siparişlerden ve aktif siparişlerden sayıları hesapla
+    if (statusState.totalOrdersReceived === 0) {
+      try {
+        const pastOrders = await loadJson<any[]>(storePaths.past_orders, []);
+        const activeOrders = await loadJson<any[]>(storePaths.orders, []);
+        const allOrders = [...(Array.isArray(activeOrders) ? activeOrders : []), ...(Array.isArray(pastOrders) ? pastOrders : [])];
+        const tgoOrders = allOrders.filter(o => o.platform === 'trendyol' || (o.customer_name && o.customer_name.includes('(TGO)')));
+        
+        if (tgoOrders.length > 0) {
+          statusState.totalOrdersReceived = tgoOrders.length;
+          const todayStr = new Date().toLocaleDateString('tr-TR');
+          const todayOrders = tgoOrders.filter(o => {
+            const d = o.packageCreationDate || o.orderDate || o.date;
+            if (d) {
+              return new Date(typeof d === 'number' ? d : d).toLocaleDateString('tr-TR') === todayStr;
+            }
+            return false;
+          });
+          statusState.todayOrdersCount = todayOrders.length;
+          const latest = tgoOrders[0];
+          if (latest) {
+            statusState.lastOrderId = latest.orderNumber || latest.order_id || latest.id || null;
+            statusState.lastOrderTime = latest.time || null;
+          }
+        } else if (processedOrderIds.size > 0) {
+          statusState.totalOrdersReceived = processedOrderIds.size;
+        }
+      } catch (err) {}
+    }
+
+    checkDayReset();
+    isStorageLoaded = true;
+  } catch (e) {
+    isStorageLoaded = true;
+  }
+}
+
+function persistTgoStorage() {
+  saveJson(storePaths.tgo_processed, {
+    processed: Array.from(processedOrderIds).slice(-1000), // Son 1000 id tut
+    deleted: Array.from(deletedTrendyolIds).slice(-1000),
+    totalOrdersReceived: statusState.totalOrdersReceived,
+    todayOrdersCount: statusState.todayOrdersCount,
+    lastOrderId: statusState.lastOrderId,
+    lastOrderTime: statusState.lastOrderTime,
+    lastResetDateStr: lastResetDateStr
+  });
+}
+
 export function blockTrendyolOrder(orderId: string, packageId?: string) {
-  if (orderId) deletedTrendyolIds.add(String(orderId));
-  if (packageId) deletedTrendyolIds.add(String(packageId));
-  // processedOrderIds'e de ekle ki mevcut poll cycle'da da atlanır
-  if (orderId) processedOrderIds.add(String(orderId));
-  if (packageId) processedOrderIds.add(String(packageId));
+  ensureStorageLoaded().then(() => {
+    if (orderId) deletedTrendyolIds.add(String(orderId));
+    if (packageId) deletedTrendyolIds.add(String(packageId));
+    if (orderId) processedOrderIds.add(String(orderId));
+    if (packageId) processedOrderIds.add(String(packageId));
+    persistTgoStorage();
+  });
 }
 
 export function isBlockedTrendyolOrder(orderId: string, packageId?: string): boolean {
@@ -105,14 +194,14 @@ export function getTrendyolApiUrl(supplierId: string): string {
     let url = customUrl.trim();
     // If user mistakenly entered the E-Commerce (OMS) URL instead of Trendyol Yemek (TGO) API:
     if (url.includes('api.trendyol.com/integration')) {
-      return `https://api.tgoapis.com/integrator/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking,Invoiced,Shipped,Delivered,Cancelled&size=50`;
+      return `https://api.tgoapis.com/integrator/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking&size=50`;
     }
     if (url.includes('{supplierId}')) {
       url = url.replace('{supplierId}', supplierId);
     }
     return url;
   }
-  return `https://api.tgoapis.com/integrator/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking,Invoiced,Shipped,Delivered,Cancelled&size=50`;
+  return `https://api.tgoapis.com/integrator/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking&size=50`;
 }
 
 function transformTrendyolOrder(rawData: any): any {
@@ -178,13 +267,24 @@ function transformTrendyolOrder(rawData: any): any {
   const packageId = String(rawData.id || rawData.packageId || rawData.orderNumber || '');
   const rawPkgStatus = rawData.packageStatus || 'Created';
 
+  // Gerçek sipariş zamanını al
+  const orderTimestamp = rawData.packageCreationDate || rawData.orderDate || rawData.creationDate;
+  let orderTimeStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  if (orderTimestamp) {
+    const d = new Date(typeof orderTimestamp === 'number' ? orderTimestamp : orderTimestamp);
+    if (!isNaN(d.getTime())) {
+      orderTimeStr = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    }
+  }
+
   return {
     id: orderNumber,
     packageId: packageId,
     orderNumber: orderNumber,
     order_id: orderNumber,
     customer_name: customerName,
-    time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+    time: orderTimeStr,
+    packageCreationDate: orderTimestamp,
     items: items,
     total_amount: rawData.totalPrice || 0,
     status: rawPkgStatus,
@@ -203,6 +303,7 @@ async function pollTrendyol() {
 
   try {
     checkDayReset();
+    await ensureStorageLoaded();
     const isEnabled = systemSettings["ENABLE_TRENDYOL"];
     statusState.isEnabled = !!isEnabled;
     statusState.supplierId = systemSettings["TRENDYOL_SUPPLIER_ID"] || null;
@@ -281,9 +382,33 @@ async function pollTrendyol() {
         break;
       }
 
+      const rawPkgStatus = rawOrder.packageStatus || 'Created';
+      const isCreated = String(rawPkgStatus).toLowerCase() === 'created';
+      const isNew = !orderId || (!processedOrderIds.has(orderId) && !processedOrderIds.has(packageId));
+
+      // Kullanıcı kuralı: Yeni eklenecek sipariş Created durumunda değilse eklenmesin
+      if (isNew && !isCreated) {
+        if (orderId) processedOrderIds.add(orderId);
+        if (packageId) processedOrderIds.add(packageId);
+        continue;
+      }
+
+      // Tarih/Saat kontrolü: Sipariş tarihi 2 saatten eskiyse veya önceki günlere aitse yeni sipariş olarak ekleme
+      const orderTimestamp = rawOrder.packageCreationDate || rawOrder.orderDate || rawOrder.creationDate;
+      if (isNew && orderTimestamp) {
+        const orderDate = new Date(typeof orderTimestamp === 'number' ? orderTimestamp : orderTimestamp);
+        if (!isNaN(orderDate.getTime())) {
+          const diffMinutes = (Date.now() - orderDate.getTime()) / (1000 * 60);
+          if (diffMinutes > 120) {
+            if (orderId) processedOrderIds.add(orderId);
+            if (packageId) processedOrderIds.add(packageId);
+            continue;
+          }
+        }
+      }
+
       // Transform to app1 format and add or update in-place
       const app1Order = transformTrendyolOrder(rawOrder);
-      const isNew = !orderId || (!processedOrderIds.has(orderId) && !processedOrderIds.has(packageId));
       const success = await _addOrderFn(app1Order);
       
       if (success && isNew) {
@@ -291,6 +416,7 @@ async function pollTrendyol() {
         if (packageId) processedOrderIds.add(packageId);
         if (rawOrder.id) processedOrderIds.add(String(rawOrder.id));
         if (rawOrder.orderNumber) processedOrderIds.add(String(rawOrder.orderNumber));
+        persistTgoStorage();
         addedCount++;
         statusState.totalOrdersReceived++;
         statusState.todayOrdersCount++;
@@ -318,7 +444,9 @@ async function pollTrendyol() {
   }
 }
 
-export function getTrendyolStatus(): TrendyolStatusState {
+export async function getTrendyolStatus(): Promise<TrendyolStatusState> {
+  await ensureStorageLoaded();
+  checkDayReset();
   return {
     ...statusState,
     isEnabled: !!systemSettings["ENABLE_TRENDYOL"],
@@ -327,6 +455,7 @@ export function getTrendyolStatus(): TrendyolStatusState {
 }
 
 export async function testTrendyolConnection(): Promise<{ success: boolean; message: string; statusCode?: number; ordersCount?: number }> {
+  await ensureStorageLoaded();
   const supplierId = systemSettings["TRENDYOL_SUPPLIER_ID"];
   const token = getEffectiveTrendyolToken();
   const nowStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });

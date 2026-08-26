@@ -17,8 +17,8 @@ android {
         applicationId = "com.bilalgnd.saracapp"
         minSdk = 26
         targetSdk = 35
-        versionCode = 613000
-        versionName = "6.1.3"
+        versionCode = 615000
+        versionName = "6.1.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -26,6 +26,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

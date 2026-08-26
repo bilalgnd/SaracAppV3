@@ -59,14 +59,15 @@ export async function checkTrendyolOrders() {
     const apiSecret = settings.trendyolApiSecret || process.env.TRENDYOL_API_SECRET;
     const supplierId = getTrendyolSupplierId();
 
-    // API bilgileri girilmemişse sorgu atma
-    if (!apiKey || !apiSecret || !supplierId) {
+    // API bilgileri girilmemişse veya pasifse sorgu atma
+    const isEnabled = settings.trendyolEnabled !== false && settings.ENABLE_TRENDYOL !== false;
+    if (!isEnabled || !apiKey || !apiSecret || !supplierId) {
       isPolling = false;
       return;
     }
 
-    // Trendyol Yemek API - Tüm aktif durumdaki siparişleri ve durum güncellemelerini sorgula
-    const url = `${getTgoBaseUrl()}/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking,Invoiced,Shipped,Delivered,Cancelled&size=50`;
+    // Trendyol Yemek API - Aktif durumdaki siparişleri ve durum güncellemelerini sorgula
+    const url = `${getTgoBaseUrl()}/order/meal/suppliers/${supplierId}/packages?packageStatuses=Created,Approved,Preparing,Picking&size=50`;
     const res = await axios.get(url, {
       headers: getTgoHeaders(),
       timeout: 10000
@@ -169,6 +170,30 @@ export async function checkTrendyolOrders() {
         continue;
       }
 
+      // Kullanıcı kuralı: Yeni eklenecek sipariş Created durumunda değilse aktif listeye ekleme
+      const isCreated = String(rawPkgStatus).toLowerCase() === 'created';
+      if (!isCreated) {
+        if (pId) tgoProcessedOrdersSet.add(pId);
+        if (orderNumber) tgoProcessedOrdersSet.add(orderNumber);
+        if (packageId) tgoProcessedOrdersSet.add(packageId);
+        continue;
+      }
+
+      // Tarih/Saat kontrolü: Sipariş tarihi 2 saatten eskiyse yeni sipariş olarak ekleme
+      const orderTimestamp = rawData.packageCreationDate || rawData.orderDate || rawData.creationDate;
+      if (orderTimestamp) {
+        const orderDate = new Date(typeof orderTimestamp === 'number' ? orderTimestamp : orderTimestamp);
+        if (!isNaN(orderDate.getTime())) {
+          const diffMinutes = (Date.now() - orderDate.getTime()) / (1000 * 60);
+          if (diffMinutes > 120) {
+            if (pId) tgoProcessedOrdersSet.add(pId);
+            if (orderNumber) tgoProcessedOrdersSet.add(orderNumber);
+            if (packageId) tgoProcessedOrdersSet.add(packageId);
+            continue;
+          }
+        }
+      }
+
       // Format items with modifierProducts, extraIngredients, removedIngredients, and notes
       const formattedItems = (rawData.lines || []).flatMap((l: any) => {
         const qty = l.items ? l.items.length : (l.quantity || 1);
@@ -221,6 +246,14 @@ export async function checkTrendyolOrders() {
 
       const custName = rawData.customer ? `${rawData.customer.firstName || ''} ${rawData.customer.lastName || ''}`.trim() : 'Trendyol Siparişi';
 
+      let orderTimeStr = new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' });
+      if (orderTimestamp) {
+        const d = new Date(typeof orderTimestamp === 'number' ? orderTimestamp : orderTimestamp);
+        if (!isNaN(d.getTime())) {
+          orderTimeStr = d.toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' });
+        }
+      }
+
       const newOrder = {
         customer_name: `${custName} (TGO)`,
         masa_no: saracShop.getNextQueueNo().toString(),
@@ -229,7 +262,8 @@ export async function checkTrendyolOrders() {
         packageId: packageId || pId,
         id: orderNumber || pId,
         orderNumber: orderNumber || pId,
-        time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' }),
+        time: orderTimeStr,
+        packageCreationDate: orderTimestamp,
         items: formattedItems,
         total_amount: rawData.totalPrice || 0,
         status: rawPkgStatus,

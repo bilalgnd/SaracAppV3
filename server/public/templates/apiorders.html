@@ -24,6 +24,9 @@
       } catch(e) {}
     })();
   </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -38,6 +41,9 @@
       darkMode: 'class',
       theme: {
         extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
           colors: {
             dark: '#121212',
             panel: '#1e1e1e',
@@ -49,7 +55,13 @@
     }
   </script>
   <style>
-    body { background-color: #0a0a0a; color: #fff; font-family: 'Inter', sans-serif; }
+    body, button, input, select, textarea {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    body { background-color: #0a0a0a; color: #fff; }
+    .font-num { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
     .glass-panel {
       background: #1c1c1e;
       border: 1px solid rgba(255, 255, 255, 0.05);
@@ -862,24 +874,25 @@
       <div class="bg-gradient-to-br from-[#18181b] via-[#121214] to-emerald-950/20 rounded-xl p-3.5 border border-emerald-500/30 flex flex-col justify-between shadow-lg relative overflow-hidden group">
         <div class="absolute -right-4 -top-4 w-14 h-14 bg-emerald-500/15 rounded-full blur-xl group-hover:scale-125 transition-transform duration-500"></div>
         <div class="flex justify-between items-center mb-1">
-          <h3 class="text-gray-400 font-semibold text-[11px] tracking-wide" x-text="dashboardFilters.range === 'hourly' ? 'Saatlik Ciro' : (dashboardFilters.range === 'weekly' ? 'Haftalık Ciro' : (dashboardFilters.range === 'monthly' ? 'Aylık Ciro' : 'Bugünkü Ciro'))">Ciro</h3>
-          <span x-show="dashboardFilters.range === 'daily' || dashboardFilters.range === 'hourly'" class="text-[9px] font-bold text-emerald-400 flex items-center bg-emerald-500/15 px-1.5 py-0.5 rounded-md border border-emerald-500/20">
-             <i class="fa-solid mr-1 text-[8px]" :class="parseFloat(dashboardData.revenueChange) >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'"></i>
-             <span x-text="(parseFloat(dashboardData.revenueChange) > 0 ? '+' : '') + dashboardData.revenueChange + '%'"></span>
+          <h3 class="text-gray-400 font-semibold text-[11px] tracking-wide" x-text="dashboardFilters.range === 'hourly' ? 'Saatlik Ciro (Son 24 Saat)' : (dashboardFilters.range === 'weekly' ? 'Haftalık Ciro (Son 7 Gün)' : (dashboardFilters.range === 'monthly' ? 'Aylık Ciro (Son 30 Gün)' : 'Bugünkü Ciro'))">Ciro</h3>
+          <span class="text-[9px] font-bold flex items-center px-1.5 py-0.5 rounded-md border"
+                :class="parseFloat(dashboardData.rangeRevenueChange || 0) >= 0 ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/20' : 'text-rose-400 bg-rose-500/15 border-rose-500/20'">
+             <i class="fa-solid mr-1 text-[8px]" :class="parseFloat(dashboardData.rangeRevenueChange || 0) >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'"></i>
+             <span x-text="(parseFloat(dashboardData.rangeRevenueChange || 0) > 0 ? '+' : '') + (dashboardData.rangeRevenueChange || '0.0') + '%'"></span>
           </span>
         </div>
-        <div class="text-xl font-black text-emerald-400 tracking-tight" x-text="(dashboardFilters.range === 'weekly' ? dashboardData.weekRevenue : (dashboardFilters.range === 'monthly' ? (dashboardData.monthRevenue || 0) : dashboardData.todayRevenue)) + ' ₺'">0 ₺</div>
+        <div class="text-xl font-black text-emerald-400 tracking-tight" x-text="(dashboardData.rangeRevenue !== undefined ? dashboardData.rangeRevenue : dashboardData.todayRevenue) + ' ₺'">0 ₺</div>
       </div>
 
       <!-- Sipariş Sayısı Kartı (Üst Filtreye Duyarlı) -->
       <div class="bg-gradient-to-br from-[#18181b] via-[#121214] to-purple-950/20 rounded-xl p-3.5 border border-purple-500/30 flex flex-col justify-between shadow-lg relative overflow-hidden group">
         <div class="absolute -right-4 -top-4 w-14 h-14 bg-purple-500/15 rounded-full blur-xl group-hover:scale-125 transition-transform duration-500"></div>
         <div class="flex justify-between items-center mb-1">
-          <h3 class="text-gray-400 font-semibold text-[11px] tracking-wide" x-text="dashboardFilters.range === 'hourly' ? 'Saatlik Sipariş' : (dashboardFilters.range === 'weekly' ? 'Haftalık Sipariş' : (dashboardFilters.range === 'monthly' ? 'Aylık Sipariş' : 'Bugünkü Sipariş'))">Sipariş Sayısı</h3>
+          <h3 class="text-gray-400 font-semibold text-[11px] tracking-wide" x-text="dashboardFilters.range === 'hourly' ? 'Saatlik Sipariş' : (dashboardFilters.range === 'weekly' ? 'Haftalık Sipariş (Son 7 Gün)' : (dashboardFilters.range === 'monthly' ? 'Aylık Sipariş (Son 30 Gün)' : 'Bugünkü Sipariş'))">Sipariş Sayısı</h3>
           <i class="fa-solid fa-box-archive text-purple-400 text-xs"></i>
         </div>
         <div class="text-xl font-extrabold text-white tracking-tight">
-          <span x-text="dashboardFilters.range === 'weekly' ? dashboardData.weekOrdersCount : (dashboardFilters.range === 'monthly' ? (dashboardData.monthOrdersCount || 0) : dashboardData.todayOrdersCount)">0</span> 
+          <span x-text="dashboardData.rangeOrdersCount !== undefined ? dashboardData.rangeOrdersCount : dashboardData.todayOrdersCount">0</span> 
           <span class="text-xs font-normal text-gray-400">Adet</span>
         </div>
       </div>
@@ -891,7 +904,7 @@
           <h3 class="text-gray-400 font-semibold text-[11px] tracking-wide">Ortalama Sepet Tutarı</h3>
           <i class="fa-solid fa-receipt text-blue-400 text-xs"></i>
         </div>
-        <div class="text-xl font-bold text-blue-400" x-text="(dashboardFilters.range === 'weekly' ? (dashboardData.weekOrdersCount ? (dashboardData.weekRevenue / dashboardData.weekOrdersCount).toFixed(2) : 0) : (dashboardFilters.range === 'monthly' ? (dashboardData.monthOrdersCount ? (dashboardData.monthRevenue / dashboardData.monthOrdersCount).toFixed(2) : 0) : dashboardData.averageOrderValue)) + ' ₺'">0 ₺</div>
+        <div class="text-xl font-bold text-blue-400" x-text="(dashboardData.rangeAverageOrderValue !== undefined ? dashboardData.rangeAverageOrderValue : dashboardData.averageOrderValue) + ' ₺'">0 ₺</div>
         <div class="text-[9px] text-gray-500 font-medium">Sipariş Başına</div>
       </div>
 
@@ -901,11 +914,11 @@
         <h3 class="text-gray-400 font-semibold text-[11px] tracking-wide mb-1" x-text="dashboardFilters.range === 'weekly' ? 'Haftalık Satılan Döner' : (dashboardFilters.range === 'monthly' ? 'Aylık Satılan Döner' : (dashboardFilters.range === 'hourly' ? 'Saatlik Satılan Döner' : 'Günlük Satılan Döner'))">Satılan Döner Miktarı</h3>
         <div class="flex justify-between items-end">
           <div>
-             <div class="text-base font-bold text-red-400" x-text="(dashboardData.rangeEtDonerKg ?? dashboardData.todayEtDonerKg) + ' kg'">0.00 kg</div>
+             <div class="text-base font-bold text-red-400" x-text="(dashboardData.rangeEtDonerKg ?? '0.00') + ' kg'">0.00 kg</div>
              <div class="text-[9px] text-gray-500 font-medium">Et Döner</div>
           </div>
           <div>
-             <div class="text-base font-bold text-blue-400" x-text="(dashboardData.rangeTavukDonerKg ?? dashboardData.todayTavukDonerKg) + ' kg'">0.00 kg</div>
+             <div class="text-base font-bold text-blue-400" x-text="(dashboardData.rangeTavukDonerKg ?? '0.00') + ' kg'">0.00 kg</div>
              <div class="text-[9px] text-gray-500 font-medium">Tavuk Döner</div>
           </div>
         </div>
@@ -933,7 +946,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
       <div class="lg:col-span-2 bg-[#151517] rounded-xl p-4 border border-gray-800 relative min-h-[220px]">
         <div class="flex justify-between items-center mb-2">
-           <h3 class="text-white font-bold text-xs">Günlük Satış Trendi (Ciro)</h3>
+           <h3 class="text-white font-bold text-xs" x-text="dashboardFilters.range === 'hourly' ? 'Saatlik Satış Trendi (Son 24 Saat)' : (dashboardFilters.range === 'weekly' ? 'Günlük Satış Trendi (Son 7 Gün)' : (dashboardFilters.range === 'monthly' ? 'Günlük Satış Trendi (Son 30 Gün)' : 'Saatlik Satış Trendi (Bugün)'))">Satış Trendi (Ciro)</h3>
         </div>
         <div class="h-[180px] w-full">
            <canvas id="trendChart"></canvas>
@@ -971,11 +984,11 @@
                 <div class="flex items-center justify-between text-[11px]">
                   <div class="flex items-center gap-2 truncate pr-2">
                     <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" :style="'background-color: ' + cat.color"></span>
-                    <span class="font-bold text-gray-200 truncate group-hover/item:text-white transition-colors" x-text="cat.name"></span>
+                    <span class="font-semibold text-gray-200 truncate group-hover/item:text-white transition-colors" x-text="cat.name"></span>
                   </div>
-                  <div class="flex items-center gap-1.5 shrink-0 font-mono">
-                    <span class="font-extrabold text-white text-[11px]" x-text="cat.count + ' Adet'"></span>
-                    <span class="text-[9px] font-bold text-gray-400 bg-gray-800/80 px-1.5 py-0.2 rounded" x-text="cat.percent + '%'"></span>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <span class="font-bold text-white text-[11px] font-num" x-text="cat.count + ' Adet'"></span>
+                    <span class="text-[10px] font-semibold text-gray-300 bg-gray-800/90 border border-gray-700/60 px-1.5 py-0.5 rounded-md font-num" x-text="cat.percent + '%'"></span>
                   </div>
                 </div>
                 <!-- Progress bar -->
@@ -993,6 +1006,106 @@
 
         </div>
       </div>
+    </div>
+
+    <!-- Analytics Row 2: Mahalle & Ödeme Yöntemleri Dağılımı -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      
+      <!-- 1. Mahalle Dağılımı Kartı -->
+      <div class="bg-gradient-to-br from-[#151517] via-[#121214] to-[#18181c] rounded-2xl p-4 border border-gray-800/80 relative flex flex-col shadow-xl overflow-hidden group">
+        <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/15 transition-all duration-500"></div>
+
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-3 border-b border-gray-800/60 pb-2">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-400">
+              <i class="fa-solid fa-map-location-dot text-xs"></i>
+            </div>
+            <h3 class="text-white font-bold text-xs">Mahalle Dağılımı</h3>
+          </div>
+          <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 font-num"
+                x-text="((dashboardData.neighborhoodData || []).reduce((a, b) => a + b.count, 0)) + ' Sipariş'"></span>
+        </div>
+
+        <!-- Mahalle Listesi & İlerleme Çubukları -->
+        <div class="space-y-2.5 max-h-[190px] overflow-y-auto pr-1">
+          <template x-for="(item, idx) in (dashboardData.neighborhoodData || [])" :key="idx">
+            <div class="p-2.5 rounded-xl bg-[#1a1a1d]/80 border border-gray-800/60 hover:border-cyan-500/30 transition-all duration-200 group/item flex flex-col gap-1.5 shadow-sm">
+              <div class="flex items-center justify-between text-[11px]">
+                <div class="flex items-center gap-2 truncate pr-2">
+                  <span class="w-5 h-5 rounded-md bg-cyan-500/15 text-cyan-400 font-bold text-[10px] flex items-center justify-center shrink-0 font-num" x-text="'#' + (idx + 1)"></span>
+                  <span class="font-semibold text-gray-200 truncate group-hover/item:text-white transition-colors" x-text="item.name"></span>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span class="font-bold text-white text-[11px] font-num" x-text="item.count + ' Sipariş'"></span>
+                  <span class="text-[10px] font-bold text-cyan-300 bg-cyan-950/60 border border-cyan-500/30 px-1.5 py-0.5 rounded-md font-num" x-text="'%' + item.percent"></span>
+                </div>
+              </div>
+              <div class="w-full bg-gray-800/60 rounded-full h-1.5 overflow-hidden">
+                <div class="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-500"
+                     :style="'width: ' + item.percent + '%'"></div>
+              </div>
+            </div>
+          </template>
+
+          <template x-if="!dashboardData.neighborhoodData || dashboardData.neighborhoodData.length === 0">
+            <div class="text-center text-gray-500 py-8 text-xs font-medium">Seçili dönemde mahalle verisi bulunamadı.</div>
+          </template>
+        </div>
+      </div>
+
+      <!-- 2. Ödeme Yöntemleri Dağılımı Kartı -->
+      <div class="bg-gradient-to-br from-[#151517] via-[#121214] to-[#18181c] rounded-2xl p-4 border border-gray-800/80 relative flex flex-col shadow-xl overflow-hidden group">
+        <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/15 transition-all duration-500"></div>
+
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-3 border-b border-gray-800/60 pb-2">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-lg bg-purple-500/15 flex items-center justify-center text-purple-400">
+              <i class="fa-solid fa-credit-card text-xs"></i>
+            </div>
+            <h3 class="text-white font-bold text-xs">Ödeme Yöntemleri</h3>
+          </div>
+          <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-950/60 text-purple-300 border border-purple-500/30 font-num"
+                x-text="((dashboardData.paymentData || []).reduce((a, b) => a + b.count, 0)) + ' Toplam İşlem'"></span>
+        </div>
+
+        <!-- Body: Donut Chart + Breakdown List -->
+        <div class="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-3 items-center min-h-[170px]">
+          <!-- Left: Payment Donut Chart -->
+          <div class="sm:col-span-5 relative flex items-center justify-center h-[160px]">
+            <canvas id="paymentChart"></canvas>
+          </div>
+
+          <!-- Right: Payment Methods Breakdown List -->
+          <div class="sm:col-span-7 space-y-2 max-h-[170px] overflow-y-auto pr-1">
+            <template x-for="(pay, idx) in (dashboardData.paymentData || [])" :key="idx">
+              <div class="p-2 rounded-xl bg-[#1a1a1d]/80 border border-gray-800/60 hover:border-gray-700/80 transition-all duration-200 group/item flex flex-col gap-1 shadow-sm">
+                <div class="flex items-center justify-between text-[11px]">
+                  <div class="flex items-center gap-2 truncate pr-2">
+                    <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" :style="'background-color: ' + pay.color"></span>
+                    <span class="font-semibold text-gray-200 truncate group-hover/item:text-white transition-colors" x-text="pay.name"></span>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <span class="font-bold text-white text-[11px] font-num" x-text="pay.count + ' Adet'"></span>
+                    <span class="text-[10px] font-bold text-purple-300 bg-purple-950/60 border border-purple-500/30 px-1.5 py-0.5 rounded-md font-num" x-text="'%' + pay.percent"></span>
+                  </div>
+                </div>
+                <!-- Progress bar -->
+                <div class="w-full bg-gray-800/60 rounded-full h-1.5 overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-500"
+                       :style="'width: ' + pay.percent + '%; background-color: ' + pay.color"></div>
+                </div>
+              </div>
+            </template>
+
+            <template x-if="!dashboardData.paymentData || dashboardData.paymentData.length === 0">
+              <div class="text-center text-gray-500 py-6 text-xs font-medium">Ödeme verisi bulunamadı.</div>
+            </template>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- Top Products -->
@@ -1687,10 +1800,13 @@
           todayOrdersCount: 0, weekOrdersCount: 0, monthOrdersCount: 0, averageOrderValue: 0,
           todayEtDonerKg: 0, todayTavukDonerKg: 0,
           favoriDoner: {name: '-', count: 0}, favoriUrun: {name: '-', count: 0},
-          topProducts: []
+          topProducts: [],
+          neighborhoodData: [],
+          paymentData: []
         },
         trendChartInstance: null,
         categoryChartInstance: null,
+        paymentChartInstance: null,
         formattedCategories: [],
 
         integrationStatus: {},
@@ -2237,17 +2353,22 @@
             const data = await res.json();
             if (res.ok) {
               this.dashboardData = Object.assign(this.dashboardData, data);
-              this.renderCharts(data.trendData, data.categoryData);
+              this.renderCharts(data.trendData, data.categoryData, data.paymentData);
             }
           } catch(e) {
             console.error('Dashboard stats error:', e);
           }
         },
 
-        renderCharts(trendData, categoryData) {
+        renderCharts(trendData, categoryData, paymentData) {
           if (!document.getElementById('trendChart') || !document.getElementById('categoryChart')) return;
-          this._lastTrendData = trendData;
-          this._lastCategoryData = categoryData;
+          this._lastTrendData = trendData || this._lastTrendData;
+          this._lastCategoryData = categoryData || this._lastCategoryData;
+          this._lastPaymentData = paymentData || this._lastPaymentData || this.dashboardData.paymentData || [];
+
+          const currentTrend = this._lastTrendData;
+          const currentCategory = this._lastCategoryData;
+          const currentPayment = this._lastPaymentData;
 
           const isDark = this.isDarkMode;
           const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)';
@@ -2260,123 +2381,190 @@
           const centerTextColor = isDark ? '#ffffff' : '#0f172a';
           const centerSubColor = isDark ? '#9ca3af' : '#64748b';
 
-          // Trend Chart
-          const trendCtx = document.getElementById('trendChart').getContext('2d');
-          if (this.trendChartInstance) this.trendChartInstance.destroy();
-          
-          let gradient = trendCtx.createLinearGradient(0, 0, 0, 300);
-          gradient.addColorStop(0, isDark ? 'rgba(34, 197, 94, 0.4)' : 'rgba(34, 197, 94, 0.25)');
-          gradient.addColorStop(1, 'rgba(34, 197, 94, 0.0)');
+          // 1. Trend Line Chart
+          if (currentTrend && document.getElementById('trendChart')) {
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            if (this.trendChartInstance) this.trendChartInstance.destroy();
+            
+            let gradient = trendCtx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, isDark ? 'rgba(34, 197, 94, 0.4)' : 'rgba(34, 197, 94, 0.25)');
+            gradient.addColorStop(1, 'rgba(34, 197, 94, 0.0)');
 
-          this.trendChartInstance = new Chart(trendCtx, {
-            type: 'line',
-            data: {
-              labels: trendData.labels,
-              datasets: [{
-                label: 'Ciro (₺)',
-                data: trendData.data,
-                borderColor: '#22c55e', // text-green-500
-                backgroundColor: gradient,
-                borderWidth: 3,
-                pointBackgroundColor: pointBg,
-                pointBorderColor: '#22c55e',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                fill: true,
-                tension: 0.4
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
-              scales: {
-                y: { beginAtZero: true, grid: { color: gridColor }, border: { dash: [4, 4] }, ticks: { color: tickColor, font: { size: 10 } } },
-                x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10 } } }
-              }
-            }
-          });
-
-          // Category Donut Chart
-          const catCtx = document.getElementById('categoryChart').getContext('2d');
-          if (this.categoryChartInstance) this.categoryChartInstance.destroy();
-          
-          const catColors = ['#f59e0b', '#3b82f6', '#10b981', '#06b6d4', '#ec4899', '#8b5cf6'];
-          const totalCategoryCount = categoryData.reduce((a, b) => a + (parseInt(b.count) || 0), 0);
-          
-          this.formattedCategories = categoryData.map((c, i) => {
-            const count = parseInt(c.count) || 0;
-            const percent = totalCategoryCount > 0 ? ((count / totalCategoryCount) * 100).toFixed(1) : '0';
-            return {
-              name: c.name,
-              count: count,
-              percent: percent,
-              color: catColors[i % catColors.length]
-            };
-          });
-
-          this.categoryChartInstance = new Chart(catCtx, {
-            type: 'doughnut',
-            data: {
-              labels: categoryData.map(c => c.name),
-              datasets: [{
-                data: categoryData.map(c => c.count),
-                backgroundColor: catColors.slice(0, categoryData.length),
-                borderWidth: 0,
-                borderRadius: 6,
-                spacing: 3,
-                hoverOffset: 6
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              cutout: '76%',
-              plugins: {
-                legend: {
-                  display: false
-                },
-                tooltip: {
-                  enabled: true,
-                  backgroundColor: tooltipBg,
-                  titleColor: tooltipTitle,
-                  bodyColor: tooltipBody,
-                  borderColor: tooltipBorder,
-                  borderWidth: 1,
-                  padding: 10,
-                  cornerRadius: 8,
-                  displayColors: true
+            this.trendChartInstance = new Chart(trendCtx, {
+              type: 'line',
+              data: {
+                labels: currentTrend.labels || [],
+                datasets: [{
+                  label: 'Ciro (₺)',
+                  data: currentTrend.data || [],
+                  borderColor: '#22c55e',
+                  backgroundColor: gradient,
+                  borderWidth: 3,
+                  pointBackgroundColor: pointBg,
+                  pointBorderColor: '#22c55e',
+                  pointBorderWidth: 2,
+                  pointRadius: 4,
+                  fill: true,
+                  tension: 0.4
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                  y: { beginAtZero: true, grid: { color: gridColor }, border: { dash: [4, 4] }, ticks: { color: tickColor, font: { size: 10 } } },
+                  x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10 } } }
                 }
               }
-            },
-            plugins: [{
-              id: 'centerText',
-              beforeDraw: function(chart) {
-                var width = chart.width, height = chart.height, ctx = chart.ctx;
-                ctx.restore();
-                
-                var mainFontSize = Math.max(Math.round(height / 6), 22);
-                var subFontSize = Math.max(Math.round(mainFontSize * 0.4), 10);
-                var text = String(totalCategoryCount);
-                var subText = "Satışlar";
+            });
+          }
 
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
+          // 2. Category Donut Chart
+          if (currentCategory && document.getElementById('categoryChart')) {
+            const catCtx = document.getElementById('categoryChart').getContext('2d');
+            if (this.categoryChartInstance) this.categoryChartInstance.destroy();
+            
+            const catColors = ['#f59e0b', '#3b82f6', '#10b981', '#06b6d4', '#ec4899', '#8b5cf6'];
+            const totalCategoryCount = currentCategory.reduce((a, b) => a + (parseInt(b.count) || 0), 0);
+            
+            this.formattedCategories = currentCategory.map((c, i) => {
+              const count = parseInt(c.count) || 0;
+              const percent = totalCategoryCount > 0 ? ((count / totalCategoryCount) * 100).toFixed(1) : '0';
+              return {
+                name: c.name,
+                count: count,
+                percent: percent,
+                color: catColors[i % catColors.length]
+              };
+            });
 
-                // Main Number (Bold Modern Sans-Serif)
-                ctx.font = `900 ${mainFontSize}px Inter, system-ui, -apple-system, sans-serif`;
-                ctx.fillStyle = centerTextColor;
-                ctx.fillText(text, width / 2, (height / 2) - 5);
+            this.categoryChartInstance = new Chart(catCtx, {
+              type: 'doughnut',
+              data: {
+                labels: currentCategory.map(c => c.name),
+                datasets: [{
+                  data: currentCategory.map(c => c.count),
+                  backgroundColor: catColors.slice(0, currentCategory.length),
+                  borderWidth: 0,
+                  borderRadius: 6,
+                  spacing: 3,
+                  hoverOffset: 6
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '76%',
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    enabled: true,
+                    backgroundColor: tooltipBg,
+                    titleColor: tooltipTitle,
+                    bodyColor: tooltipBody,
+                    borderColor: tooltipBorder,
+                    borderWidth: 1,
+                    padding: 10,
+                    cornerRadius: 8,
+                    displayColors: true
+                  }
+                }
+              },
+              plugins: [{
+                id: 'centerText',
+                beforeDraw: function(chart) {
+                  var width = chart.width, height = chart.height, ctx = chart.ctx;
+                  ctx.restore();
+                  
+                  var mainFontSize = Math.max(Math.round(height / 6), 22);
+                  var subFontSize = Math.max(Math.round(mainFontSize * 0.4), 10);
+                  var text = String(totalCategoryCount);
+                  var subText = "Satışlar";
 
-                // Subtitle
-                ctx.font = `600 ${subFontSize}px Inter, system-ui, -apple-system, sans-serif`;
-                ctx.fillStyle = centerSubColor;
-                ctx.fillText(subText, width / 2, (height / 2) + (mainFontSize / 2));
+                  ctx.textAlign = "center";
+                  ctx.textBaseline = "middle";
 
-                ctx.save();
-              }
-            }]
-          });
+                  ctx.font = `900 ${mainFontSize}px Inter, system-ui, -apple-system, sans-serif`;
+                  ctx.fillStyle = centerTextColor;
+                  ctx.fillText(text, width / 2, (height / 2) - 5);
+
+                  ctx.font = `600 ${subFontSize}px Inter, system-ui, -apple-system, sans-serif`;
+                  ctx.fillStyle = centerSubColor;
+                  ctx.fillText(subText, width / 2, (height / 2) + (mainFontSize / 2));
+
+                  ctx.save();
+                }
+              }]
+            });
+          }
+
+          // 3. Payment Methods Donut Chart
+          if (currentPayment && document.getElementById('paymentChart')) {
+            const payCtx = document.getElementById('paymentChart').getContext('2d');
+            if (this.paymentChartInstance) this.paymentChartInstance.destroy();
+
+            const totalPaymentCount = currentPayment.reduce((a, b) => a + (parseInt(b.count) || 0), 0);
+
+            this.paymentChartInstance = new Chart(payCtx, {
+              type: 'doughnut',
+              data: {
+                labels: currentPayment.map(p => p.name),
+                datasets: [{
+                  data: currentPayment.map(p => p.count),
+                  backgroundColor: currentPayment.map(p => p.color),
+                  borderWidth: 0,
+                  borderRadius: 6,
+                  spacing: 3,
+                  hoverOffset: 6
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '76%',
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    enabled: true,
+                    backgroundColor: tooltipBg,
+                    titleColor: tooltipTitle,
+                    bodyColor: tooltipBody,
+                    borderColor: tooltipBorder,
+                    borderWidth: 1,
+                    padding: 10,
+                    cornerRadius: 8,
+                    displayColors: true
+                  }
+                }
+              },
+              plugins: [{
+                id: 'paymentCenterText',
+                beforeDraw: function(chart) {
+                  var width = chart.width, height = chart.height, ctx = chart.ctx;
+                  ctx.restore();
+                  
+                  var mainFontSize = Math.max(Math.round(height / 6), 22);
+                  var subFontSize = Math.max(Math.round(mainFontSize * 0.4), 10);
+                  var text = String(totalPaymentCount);
+                  var subText = "İşlem";
+
+                  ctx.textAlign = "center";
+                  ctx.textBaseline = "middle";
+
+                  ctx.font = `900 ${mainFontSize}px Inter, system-ui, -apple-system, sans-serif`;
+                  ctx.fillStyle = centerTextColor;
+                  ctx.fillText(text, width / 2, (height / 2) - 5);
+
+                  ctx.font = `600 ${subFontSize}px Inter, system-ui, -apple-system, sans-serif`;
+                  ctx.fillStyle = centerSubColor;
+                  ctx.fillText(subText, width / 2, (height / 2) + (mainFontSize / 2));
+
+                  ctx.save();
+                }
+              }]
+            });
+          }
         },
 
         calculateStats() {
