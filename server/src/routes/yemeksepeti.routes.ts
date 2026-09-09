@@ -139,6 +139,11 @@ router.post('/api/yemeksepeti/catalog/export', requireAuth, async (req: any, res
 
 router.post('/api/yemeksepeti/catalog-webhook', async (req: any, res: any) => {
   try {
+    const webhookSecret = process.env.YEMEKSEPETI_WEBHOOK_SECRET;
+    const providedSecret = req.headers['x-deliveryhero-signature'] || req.headers['x-webhook-secret'];
+    if (webhookSecret && providedSecret !== webhookSecret) {
+      return res.status(401).json({ error: 'Geçersiz veya eksik webhook imzası' });
+    }
     const result = YemeksepetiCatalogService.handleCatalogWebhook(req.body);
     res.json(result);
   } catch (error: any) {
@@ -179,7 +184,6 @@ function fuzzyMatchProduct(platformName: string) {
 }
 
 router.post('/yemeksepeti_siparis', requireAuth, idempotencyMiddleware, (req: any, res: any): any => {
-    res.header("Access-Control-Allow-Origin", "*");
     try {
         const data = req.body;
         if (!data || !data.order_id) return res.status(400).json({ error: 'Missing order_id' });

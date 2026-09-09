@@ -24,13 +24,13 @@ router.get('/settings', requireAuth, (_req, res) => {
   res.json(getShop().systemSettings);
 });
 
-// GET /api/logs
-router.get('/logs', (_req, res) => {
+// GET /api/logs — kimlik doğrulama zorunlu (Issue #7)
+router.get('/logs', requireAuth, (_req, res) => {
   res.json(_systemLogs);
 });
 
-// POST /api/logs
-router.post('/logs', (req, res) => {
+// POST /api/logs — kimlik doğrulama zorunlu (Issue #7)
+router.post('/logs', requireAuth, (req, res) => {
   const { source, type, message } = req.body;
   if (source && type && message) {
     _addSystemLog(source, type, message);
@@ -234,13 +234,8 @@ router.post('/test_print', requireAuth, (_req, res) => {
   res.json({ success: true });
 });
 
-// GET /test_orders
-router.get('/test_orders', (_req, res) => {
-  res.json({ orders: getShop().activeOrders.map(a => a.customer_name) });
-});
-
-// GET /network_status
-router.get('/network_status', (_req, res) => {
+// GET /network_status — kimlik doğrulama zorunlu (Issue #7)
+router.get('/network_status', requireAuth, (_req, res) => {
   const os = require('os');
   const nets = os.networkInterfaces();
   let localIp = '127.0.0.1';
@@ -273,8 +268,8 @@ router.get('/active_devices', requireAuth, (req: any, res: any) => {
   }
 });
 
-// POST /panic
-router.post('/panic', requireAuth, (req: any, res: any) => {
+// POST /panic — Yalnızca Admin yetkisiyle tetiklenebilir
+router.post('/panic', requireAdminAuth, (req: any, res: any) => {
   try {
     const { deviceId } = req.body;
     if (!deviceId) return res.status(400).json({ error: 'deviceId required' });
@@ -307,12 +302,10 @@ router.post('/yazdir', requireAuth, (req: any, res: any) => {
   }
 });
 
-// TV Kontrol endpoints
-router.post('/api/set_tv_audio', (req: any, res: any) => {
+// TV Kontrol endpoints (requireAuth ZORUNLU)
+router.post('/api/set_tv_audio', requireAuth, (req: any, res: any) => {
   const { source, station } = req.body;
-  const targetShopId = (req.query.shop as string) || 'sarac';
-  if (!shops.has(targetShopId)) shops.set(targetShopId, new ShopState(targetShopId));
-  const shop = shops.get(targetShopId)!;
+  const shop = getShop();
 
   if (source) shop.systemSettings['TV_AUDIO_SOURCE'] = source;
   if (station) shop.systemSettings['TV_RADIO_STATION'] = station;
@@ -322,11 +315,9 @@ router.post('/api/set_tv_audio', (req: any, res: any) => {
   res.json({ success: true, source, station });
 });
 
-router.post('/api/set_tv_screensaver', (req: any, res: any) => {
+router.post('/api/set_tv_screensaver', requireAuth, (req: any, res: any) => {
   const { mode } = req.body;
-  const targetShopId = (req.query.shop as string) || 'sarac';
-  if (!shops.has(targetShopId)) shops.set(targetShopId, new ShopState(targetShopId));
-  const shop = shops.get(targetShopId)!;
+  const shop = getShop();
 
   if (mode) {
     shop.systemSettings['TV_SCREENSAVER'] = mode;
@@ -339,11 +330,9 @@ router.post('/api/set_tv_screensaver', (req: any, res: any) => {
   }
 });
 
-router.post('/api/set_tv_card_scale', (req: any, res: any) => {
+router.post('/api/set_tv_card_scale', requireAuth, (req: any, res: any) => {
   const { scale } = req.body;
-  const targetShopId = (req.query.shop as string) || 'sarac';
-  if (!shops.has(targetShopId)) shops.set(targetShopId, new ShopState(targetShopId));
-  const shop = shops.get(targetShopId)!;
+  const shop = getShop();
 
   const numScale = parseInt(scale, 10) || 100;
   shop.systemSettings['TV_CARD_SCALE'] = numScale;

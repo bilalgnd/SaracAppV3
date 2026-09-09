@@ -774,7 +774,6 @@ router.post('/api/tgo/send_to_app1', requireAdminAuth, async (req: any, res: any
 });
 
 router.post('/upload_trendyol_log', (req: any, res: any): any => {
-    res.header("Access-Control-Allow-Origin", "*");
     try {
         console.log('[TRENDYOL LOG SERVER] Received log data:', JSON.stringify(req.body).slice(0, 200) + '...');
         // Here we could save it to DB, but for now we just acknowledge receipt
@@ -813,8 +812,6 @@ function fuzzyMatchProduct(platformName: string) {
 }
 
 router.post('/trendyol_web_siparis', requireAuth, idempotencyMiddleware, (req: any, res: any): any => {
-    // Restrict CORS purely for extension
-    res.header("Access-Control-Allow-Origin", "*");
     try {
         const data = req.body;
         if (!data || !data.order_id) return res.status(400).json({ error: 'Missing order_id' });

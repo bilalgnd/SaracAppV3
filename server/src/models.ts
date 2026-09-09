@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { AsyncLocalStorage } from 'async_hooks';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -18,12 +19,15 @@ const DataModel = mongoose.model('Data', DataSchema);
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password_hash: { type: String, required: true },
-  plain_password: { type: String },
+  // plain_password alanı kaldırıldı — plaintext şifre saklamak güvenlik açığıdır (Issue #5)
   role: { type: String, enum: ['admin', 'kasa', 'garson'], default: 'garson' },
   account_id: { type: String },
   status: { type: String, enum: ['active', 'suspended'], default: 'active' },
   lastSeen: { type: Date },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  // tokenVersion: incremented on password change or forced logout.
+  // JWT payload must match — mismatched tokens are rejected. (Issue #9)
+  tokenVersion: { type: Number, default: 0 },
 });
 
 const UserModel = mongoose.model('User', UserSchema);
@@ -80,7 +84,10 @@ export class ShopState {
  async saveToDB(key: string, value: any) {
  try {
  await DataModel.findOneAndUpdate({ key: this.getDbKey(key) }, { value }, { upsert: true });
- } catch (err) { }
+ } catch (err: any) {
+   // DB kaydetme hatası sessizce yutulmasın
+   console.error(`[ShopState:${this.shopId}] saveToDB error for key "${key}":`, err?.message ?? err);
+ }
  }
 
   isInitialized: boolean = false;
@@ -151,7 +158,8 @@ export class ShopState {
     }
 
     if (!this.systemSettings['API_TOKEN']) {
-      this.systemSettings['API_TOKEN'] = '123456';
+      // Güvenli rastgele token üret — hardcoded '123456' kullanma
+      this.systemSettings['API_TOKEN'] = crypto.randomBytes(32).toString('hex');
       changed = true;
     }
 
@@ -181,7 +189,20 @@ export class ShopState {
   }
 
   saveOrders() { this.saveToDB('activeOrders', this.activeOrders); }
-  savePastOrders() { this.saveToDB('pastOrders', this.pastOrders); }
+  
+  // Cap pastOrders at 5000 entries (most recent preserved) to avoid MongoDB's 16MB doc limit.
+  // A typical restaurant doing 100 orders/day can store ~50 days of history safely.
+  // For longer history, migrate to a proper Orders collection with date-range queries.
+  private static readonly MAX_PAST_ORDERS = 5000;
+
+  savePastOrders() {
+    if (this.pastOrders.length > ShopState.MAX_PAST_ORDERS) {
+      const trimCount = this.pastOrders.length - ShopState.MAX_PAST_ORDERS;
+      console.warn(`[ShopState:${this.shopId}] pastOrders trimmed: removed ${trimCount} oldest entries (cap: ${ShopState.MAX_PAST_ORDERS})`);
+      this.pastOrders = this.pastOrders.slice(trimCount);
+    }
+    this.saveToDB('pastOrders', this.pastOrders);
+  }
   saveMenu() { this.saveToDB('customMenu', this.customMenu); }
   saveSettings() { 
     if (!this.isInitialized) {

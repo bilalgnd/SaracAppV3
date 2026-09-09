@@ -24,4 +24,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "saracapp"
 include(":app")
+include(":tv")
+include(":deployer")
  

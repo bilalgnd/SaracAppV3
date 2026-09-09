@@ -266,16 +266,23 @@ interface KasaApi {
 object ApiClient {
     private var retrofit: Retrofit? = null
     private var cachedToken: String? = null
+    private var cachedBaseUrl: String? = null
     fun getApi(ip: String, token: String = ""): KasaApi {
         val temizIp = ip.trim().ifEmpty { "bilalgnd.shop" }
-        val baseUrl = if (temizIp.startsWith("http")) {
-            if (!temizIp.endsWith("/")) "$temizIp/" else temizIp
-        } else {
-            "https://$temizIp/"
+        val baseUrl = when {
+            temizIp.startsWith("http://") || temizIp.startsWith("https://") -> {
+                if (!temizIp.endsWith("/")) "$temizIp/" else temizIp
+            }
+            temizIp.contains(".shop") || temizIp.contains(".com") || temizIp.contains(".net") -> {
+                "https://$temizIp/"
+            }
+            else -> {
+                "http://$temizIp/"
+            }
         }
 
         var r = retrofit
-        if (r == null || r.baseUrl().toString() != baseUrl || cachedToken != token) {
+        if (r == null || cachedBaseUrl != baseUrl || cachedToken != token) {
             val client = OkHttpClient.Builder()
                 .connectTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
                 .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
@@ -294,6 +301,7 @@ object ApiClient {
                 null
             }
             retrofit = r
+            cachedBaseUrl = baseUrl
             cachedToken = token
         }
         return retrofit!!.create(KasaApi::class.java)
@@ -368,17 +376,73 @@ class HafizaYoneticisi(context: Context) {
         return id!!
     }
 
+    @Synchronized
     fun cevrimdisiEylemEkle(action: OfflineAction) {
         val liste = cevrimdisiEylemleriGetir().toMutableList()
-        liste.add(action)
+        if (action.type == "siparis" && action.adisyon != null) {
+            val existingIdx = liste.indexOfFirst { it.type == "siparis" && it.adisyon?.musteriAdi == action.adisyon.musteriAdi }
+            if (existingIdx != -1) {
+                liste[existingIdx] = action
+            } else {
+                liste.add(action)
+            }
+            liste.removeAll { it.type == "hesapKapat" && it.customerName == action.adisyon.musteriAdi }
+        } else if (action.type == "hesapKapat" && action.customerName != null) {
+            liste.removeAll { (it.type == "siparis" && it.adisyon?.musteriAdi == action.customerName) || (it.type == "update_status" && it.customerName == action.customerName) }
+            val existingIdx = liste.indexOfFirst { it.type == "hesapKapat" && it.customerName == action.customerName }
+            if (existingIdx != -1) {
+                liste[existingIdx] = action
+            } else {
+                liste.add(action)
+            }
+        } else if (action.type == "update_status" && action.customerName != null) {
+            val siparisIdx = liste.indexOfFirst { it.type == "siparis" && it.adisyon?.musteriAdi == action.customerName }
+            if (siparisIdx != -1 && liste[siparisIdx].adisyon != null) {
+                val guncel = liste[siparisIdx].adisyon!!.copy(durum = action.status ?: "waiting")
+                liste[siparisIdx] = liste[siparisIdx].copy(adisyon = guncel)
+            }
+            val existingIdx = liste.indexOfFirst { it.type == "update_status" && it.customerName == action.customerName }
+            if (existingIdx != -1) {
+                liste[existingIdx] = action
+            } else {
+                liste.add(action)
+            }
+        } else {
+            liste.add(action)
+        }
         defter.edit().putString("OFFLINE_ACTIONS_QUEUE", gson.toJson(liste)).apply()
     }
+
+    @Synchronized
+    fun cevrimdisiEylemSil(actionId: String) {
+        val liste = cevrimdisiEylemleriGetir().toMutableList()
+        liste.removeAll { it.id == actionId }
+        defter.edit().putString("OFFLINE_ACTIONS_QUEUE", gson.toJson(liste)).apply()
+    }
+
+    @Synchronized
+    fun cevrimdisiSiparisSil(musteriAdi: String) {
+        val liste = cevrimdisiEylemleriGetir().toMutableList()
+        liste.removeAll { it.type == "siparis" && it.adisyon?.musteriAdi == musteriAdi }
+        defter.edit().putString("OFFLINE_ACTIONS_QUEUE", gson.toJson(liste)).apply()
+    }
+
+    @Synchronized
+    fun cevrimdisiEylemSilCustomerName(customerName: String, type: String) {
+        val liste = cevrimdisiEylemleriGetir().toMutableList()
+        liste.removeAll { it.type == type && it.customerName == customerName }
+        defter.edit().putString("OFFLINE_ACTIONS_QUEUE", gson.toJson(liste)).apply()
+    }
+
+    @Synchronized
     fun cevrimdisiEylemleriGetir(): List<OfflineAction> {
         val json = defter.getString("OFFLINE_ACTIONS_QUEUE", "[]")
         return try {
             gson.fromJson(json, object : TypeToken<List<OfflineAction>>() {}.type) ?: emptyList()
         } catch (e: Exception) { emptyList() }
     }
+
+    @Synchronized
     fun cevrimdisiEylemleriTemizle() = defter.edit().remove("OFFLINE_ACTIONS_QUEUE").apply()
 
     fun cevrimdisiSiparisEkle(adisyon: Adisyon) {
@@ -417,6 +481,82 @@ class HafizaYoneticisi(context: Context) {
 
     fun tvCardScaleKaydet(scale: Int) = defter.edit().putInt("TV_CARD_SCALE", scale).apply()
     fun tvCardScaleOku(): Int = try { defter.getInt("TV_CARD_SCALE", 100) } catch (e: Exception) { 100 }
+}
+
+fun birlestirAktifSiparisler(gelenListe: List<Adisyon>, hafiza: HafizaYoneticisi): List<Adisyon> {
+    val bekleyenEylemler = hafiza.cevrimdisiEylemleriGetir()
+    val bekleyenSiparisler = bekleyenEylemler.filter { it.type == "siparis" && it.adisyon != null }.map { it.adisyon!! }
+    val bekleyenIptaller = bekleyenEylemler.filter { it.type == "hesapKapat" }.mapNotNull { it.customerName }.toSet()
+    val bekleyenDurumlar = bekleyenEylemler.filter { it.type == "update_status" && it.customerName != null && it.status != null }.associate { it.customerName!! to it.status!! }
+
+    // 1. Sunucudan gelen siparişlerden, yerelde çevrimdışı kapatılmış masaları filtrele
+    val sonuc = gelenListe.filter { it.musteriAdi !in bekleyenIptaller }.toMutableList()
+
+    // 2. Durum güncellemelerini uygula
+    for (i in sonuc.indices) {
+        val st = bekleyenDurumlar[sonuc[i].musteriAdi]
+        if (st != null) {
+            sonuc[i] = sonuc[i].copy(durum = st)
+        }
+    }
+
+    // 3. Henüz sunucuda olmayan veya yerelde güncellenmiş çevrimdışı siparişleri birleştir
+    for (offlineAdisyon in bekleyenSiparisler) {
+        val idx = sonuc.indexOfFirst { it.musteriAdi == offlineAdisyon.musteriAdi }
+        if (idx != -1) {
+            sonuc[idx] = offlineAdisyon
+        } else {
+            sonuc.add(offlineAdisyon)
+        }
+    }
+
+    return sonuc
+}
+
+val isSyncingOfflineQueue = java.util.concurrent.atomic.AtomicBoolean(false)
+
+suspend fun senkronizeEtCevrimdisiEylemler(
+    context: Context,
+    hafiza: HafizaYoneticisi,
+    isLanMode: Boolean,
+    localIp: String,
+    cloudIp: String,
+    tokenParam: String
+) {
+    if (!isSyncingOfflineQueue.compareAndSet(false, true)) return
+    try {
+        val bekleyenEylemler = hafiza.cevrimdisiEylemleriGetir()
+        if (bekleyenEylemler.isEmpty()) return
+
+        val activeApiIp = if (isLanMode && localIp.isNotBlank()) localIp else cloudIp
+        val api = ApiClient.getApi(activeApiIp, tokenParam)
+
+        var senkronizeEdilenSayi = 0
+        for (action in bekleyenEylemler) {
+            try {
+                val res = when (action.type) {
+                    "siparis" -> if (action.adisyon != null) api.siparisGonder(action.adisyon) else null
+                    "hesapKapat" -> if (action.customerName != null) api.hesapKapat(mapOf("customer_name" to action.customerName)) else null
+                    "update_status" -> if (action.customerName != null && action.status != null) api.guncelleDurum(mapOf("customer_name" to action.customerName, "status" to action.status)) else null
+                    "yazdir" -> if (action.customerName != null) api.yazdir(mapOf("customer_name" to action.customerName)) else null
+                    else -> null
+                }
+                if (res != null && res.isSuccessful) {
+                    hafiza.cevrimdisiEylemSil(action.id)
+                    senkronizeEdilenSayi++
+                }
+            } catch (e: Exception) {
+                break
+            }
+        }
+        if (senkronizeEdilenSayi > 0) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "✅ $senkronizeEdilenSayi Çevrimdışı İşlem Senkronize Edildi!", Toast.LENGTH_SHORT).show()
+            }
+        }
+    } finally {
+        isSyncingOfflineQueue.set(false)
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -488,26 +628,60 @@ fun LoginScreen(hafiza: HafizaYoneticisi, onLoginSuccess: () -> Unit) {
                             var usedUrl = finalUrl
 
                             try {
-                                var testApi = ApiClient.getApi(finalUrl, tokenCandidate)
-                                var verifyRes = testApi.menuGetir()
-                                if (verifyRes.isSuccessful) {
-                                    connected = true
-                                } else {
-                                    testApi = ApiClient.getApi(finalUrl, "123456")
-                                    val fallbackRes = testApi.menuGetir()
-                                    if (fallbackRes.isSuccessful) {
+                                if (tokenCandidate.length == 6 && tokenCandidate.all { it.isDigit() }) {
+                                    try {
+                                        val testPairApi = ApiClient.getApi(finalUrl)
+                                        val pairRes = testPairApi.pairWithCode(mapOf(
+                                            "code" to cleanCode,
+                                            "nickname" to garsonAdi.trim(),
+                                            "color" to garsonRengi,
+                                            "deviceId" to hafiza.cihazIdOku()
+                                        ))
+                                        if (pairRes.isSuccessful && pairRes.body()?.token != null) {
+                                            connected = true
+                                            validToken = pairRes.body()!!.token!!
+                                        }
+                                    } catch (_: Exception) {}
+                                }
+
+                                if (!connected) {
+                                    var testApi = ApiClient.getApi(finalUrl, tokenCandidate)
+                                    var verifyRes = testApi.menuGetir()
+                                    if (verifyRes.isSuccessful) {
                                         connected = true
-                                        validToken = "123456"
+                                    } else {
+                                        testApi = ApiClient.getApi(finalUrl, "123456")
+                                        val fallbackRes = testApi.menuGetir()
+                                        if (fallbackRes.isSuccessful) {
+                                            connected = true
+                                            validToken = "123456"
+                                        }
                                     }
                                 }
                             } catch (_: Exception) {
                                 if (finalLocalUrl.isNotBlank()) {
                                     try {
-                                        val localApi = ApiClient.getApi(finalLocalUrl, tokenCandidate)
-                                        val localRes = localApi.menuGetir()
-                                        if (localRes.isSuccessful) {
-                                            connected = true
-                                            usedUrl = finalLocalUrl
+                                        if (tokenCandidate.length == 6 && tokenCandidate.all { it.isDigit() }) {
+                                            val localPairApi = ApiClient.getApi(finalLocalUrl)
+                                            val pairRes = localPairApi.pairWithCode(mapOf(
+                                                "code" to cleanCode,
+                                                "nickname" to garsonAdi.trim(),
+                                                "color" to garsonRengi,
+                                                "deviceId" to hafiza.cihazIdOku()
+                                            ))
+                                            if (pairRes.isSuccessful && pairRes.body()?.token != null) {
+                                                connected = true
+                                                validToken = pairRes.body()!!.token!!
+                                                usedUrl = finalLocalUrl
+                                            }
+                                        }
+                                        if (!connected) {
+                                            val localApi = ApiClient.getApi(finalLocalUrl, tokenCandidate)
+                                            val localRes = localApi.menuGetir()
+                                            if (localRes.isSuccessful) {
+                                                connected = true
+                                                usedUrl = finalLocalUrl
+                                            }
                                         }
                                     } catch (_: Exception) {}
                                 }
@@ -561,6 +735,40 @@ fun LoginScreen(hafiza: HafizaYoneticisi, onLoginSuccess: () -> Unit) {
                                 try {
                                     if (rawVal.trim().startsWith("{")) {
                                         val json = JSONObject(rawVal)
+                                        if (json.optString("type") == "sarac_tv_pair" || json.has("sessionId")) {
+                                            val sId = json.optString("sessionId")
+                                            val lIp = hafiza.kasaYerelIpOku().trim()
+                                            val tkn = hafiza.kasaTokenOku()
+                                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                                try {
+                                                    val client = okhttp3.OkHttpClient()
+                                                    val bodyJson = JSONObject().apply {
+                                                        put("sessionId", sId)
+                                                        put("localIp", lIp)
+                                                    }.toString()
+                                                    val reqBody = bodyJson.toRequestBody("application/json".toMediaTypeOrNull())
+                                                    val approveUrl = "https://bilalgnd.shop/api/tv/approve"
+                                                    val req = okhttp3.Request.Builder()
+                                                        .url(approveUrl)
+                                                        .post(reqBody)
+                                                        .header("Authorization", "Bearer $tkn")
+                                                        .build()
+                                                    val res = client.newCall(req).execute()
+                                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                        if (res.isSuccessful) {
+                                                            Toast.makeText(context, "🎉 TV Başarıyla Eşlendi!", Toast.LENGTH_LONG).show()
+                                                        } else {
+                                                            Toast.makeText(context, "TV Eşleme Başarısız (${res.code})", Toast.LENGTH_LONG).show()
+                                                        }
+                                                    }
+                                                } catch (e: Exception) {
+                                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                        Toast.makeText(context, "TV Eşleme Hatası: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            }
+                                            return@addOnSuccessListener
+                                        }
                                         parsedCode = json.optString("code", "")
                                         directToken = json.optString("token", "")
                                         shopId = json.optString("shopId", "sarac")
@@ -749,7 +957,7 @@ fun AnaEkran() {
     var siparisIcinAcilanUrun by remember { mutableStateOf<Urun?>(null) }
     var notDuzenlenecekKalem by remember { mutableStateOf<Pair<Adisyon, SiparisKalemi>?>(null) }
 
-    val aktifSiparisler = remember { mutableStateListOf<Adisyon>().apply { addAll(hafiza.aktifMasalariGetir()) } }
+    val aktifSiparisler = remember { mutableStateListOf<Adisyon>().apply { addAll(birlestirAktifSiparisler(hafiza.aktifMasalariGetir(), hafiza)) } }
     var siparisEkraniAcik by remember { mutableStateOf(false) }
     var raporEkraniAcik by remember { mutableStateOf(false) }
     var aktifMasaAdi by remember { mutableStateOf<String?>(null) }
@@ -837,6 +1045,7 @@ fun AnaEkran() {
         var activeWebSocket: WebSocket? = null
         var lastMenuFetchTime = 0L
         var fcmSent = false
+        var lastTargetTriedWasLocal = false
 
         while (true) {
             val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
@@ -844,19 +1053,21 @@ fun AnaEkran() {
             val tokenParam = hafiza.kasaTokenOku().ifEmpty { "123456" }
             val devId = hafiza.cihazIdOku()
 
-            // Determine active target IP (Cloud preferred, fallback to Local LAN)
-            var targetIp = cloudIp
+            // Determine active target IP (alternate so we never get stuck trying unreachable local IP)
             if (activeWebSocket == null) {
-                val tryLocalFirst = !kasaOnline && localIp.isNotBlank()
-                val targetToTry = if (tryLocalFirst) localIp else cloudIp
-                val wsUrl = if (targetToTry.startsWith("https://")) {
-                    targetToTry.replace("https://", "wss://") + (if (targetToTry.endsWith("/")) "ws?token=$tokenParam&deviceId=$devId" else "/ws?token=$tokenParam&deviceId=$devId")
-                } else if (targetToTry.startsWith("http://")) {
-                    targetToTry.replace("http://", "ws://") + (if (targetToTry.endsWith("/")) "ws?token=$tokenParam&deviceId=$devId" else "/ws?token=$tokenParam&deviceId=$devId")
-                } else if (targetToTry.contains("bilalgnd.shop")) {
-                    "wss://$targetToTry/ws?token=$tokenParam&deviceId=$devId"
+                val targetToTry = if (localIp.isNotBlank() && !lastTargetTriedWasLocal) {
+                    lastTargetTriedWasLocal = true
+                    localIp
                 } else {
-                    "ws://$targetToTry/ws?token=$tokenParam&deviceId=$devId"
+                    lastTargetTriedWasLocal = false
+                    cloudIp
+                }
+
+                val wsUrl = when {
+                    targetToTry.startsWith("https://") -> targetToTry.replace("https://", "wss://") + (if (targetToTry.endsWith("/")) "ws?token=$tokenParam&deviceId=$devId" else "/ws?token=$tokenParam&deviceId=$devId")
+                    targetToTry.startsWith("http://") -> targetToTry.replace("http://", "ws://") + (if (targetToTry.endsWith("/")) "ws?token=$tokenParam&deviceId=$devId" else "/ws?token=$tokenParam&deviceId=$devId")
+                    targetToTry.contains(".shop") || targetToTry.contains(".com") -> "wss://$targetToTry/ws?token=$tokenParam&deviceId=$devId"
+                    else -> "ws://$targetToTry/ws?token=$tokenParam&deviceId=$devId"
                 }
 
                 val request = Request.Builder().url(wsUrl).build()
@@ -874,6 +1085,11 @@ fun AnaEkran() {
                             webSocket.send(regMsg.toString())
                         } catch (_: Exception) {}
                         sendLogToServer(context, "success", "WebSocket bağlantısı kuruldu ($targetToTry).")
+
+                        // Bağlantı açıldığı an bekleyen çevrimdışı işlemleri hemen senkronize et
+                        CoroutineScope(Dispatchers.IO).launch {
+                            senkronizeEtCevrimdisiEylemler(context, hafiza, isLanMode, localIp, cloudIp, tokenParam)
+                        }
                     }
                     override fun onMessage(webSocket: WebSocket, text: String) {
                         try {
@@ -904,15 +1120,21 @@ fun AnaEkran() {
                                     if (dataArr != null) {
                                         val gelenListe: List<Adisyon> = Gson().fromJson(dataArr.toString(), object : TypeToken<List<Adisyon>>() {}.type)
                                         CoroutineScope(Dispatchers.Main).launch {
-                                            aktifSiparisler.clear(); aktifSiparisler.addAll(gelenListe); hafiza.aktifMasalariKaydet(gelenListe)
+                                            val birlestirilmis = birlestirAktifSiparisler(gelenListe, hafiza)
+                                            aktifSiparisler.clear()
+                                            aktifSiparisler.addAll(birlestirilmis)
+                                            hafiza.aktifMasalariKaydet(birlestirilmis)
                                         }
                                     }
                                 }
                             } else {
                                 val gelenListe: List<Adisyon> = Gson().fromJson(text, object : TypeToken<List<Adisyon>>() {}.type)
                                 CoroutineScope(Dispatchers.Main).launch {
-                                    aktifSiparisler.clear(); aktifSiparisler.addAll(gelenListe); hafiza.aktifMasalariKaydet(gelenListe)
-                                    if (duzenlenenAdisyonIsmi != null && gelenListe.none { it.musteriAdi == duzenlenenAdisyonIsmi }) {
+                                    val birlestirilmis = birlestirAktifSiparisler(gelenListe, hafiza)
+                                    aktifSiparisler.clear()
+                                    aktifSiparisler.addAll(birlestirilmis)
+                                    hafiza.aktifMasalariKaydet(birlestirilmis)
+                                    if (duzenlenenAdisyonIsmi != null && birlestirilmis.none { it.musteriAdi == duzenlenenAdisyonIsmi }) {
                                         if (aktifMasaAdi == duzenlenenAdisyonIsmi) aktifMasaAdi = null
                                         duzenlenenAdisyonIsmi = null
                                         taslakKalemler.clear()
@@ -933,29 +1155,9 @@ fun AnaEkran() {
             }
 
             // 2. Bekleyen çevrimdışı işlemleri (Sipariş, Hesap Kapatma, Durum) gönderme
-            val bekleyenEylemler = hafiza.cevrimdisiEylemleriGetir()
-            if (bekleyenEylemler.isNotEmpty() && kasaOnline) {
+            if (kasaOnline) {
                 CoroutineScope(Dispatchers.IO).launch {
-                    val activeApiIp = if (isLanMode && localIp.isNotBlank()) localIp else cloudIp
-                    val api = ApiClient.getApi(activeApiIp, tokenParam)
-                    var allSucceeded = true
-                    for (action in bekleyenEylemler) {
-                        try {
-                            when (action.type) {
-                                "siparis" -> if (action.adisyon != null) api.siparisGonder(action.adisyon)
-                                "hesapKapat" -> if (action.customerName != null) api.hesapKapat(mapOf("customer_name" to action.customerName))
-                                "update_status" -> if (action.customerName != null && action.status != null) api.guncelleDurum(mapOf("customer_name" to action.customerName, "status" to action.status))
-                                "yazdir" -> if (action.customerName != null) api.yazdir(mapOf("customer_name" to action.customerName))
-                            }
-                        } catch (e: Exception) {
-                            allSucceeded = false
-                            break
-                        }
-                    }
-                    if (allSucceeded) {
-                        hafiza.cevrimdisiEylemleriTemizle()
-                        withContext(Dispatchers.Main) { Toast.makeText(context, "✅ Çevrimdışı İşlemler Senkronize Edildi!", Toast.LENGTH_SHORT).show() }
-                    }
+                    senkronizeEtCevrimdisiEylemler(context, hafiza, isLanMode, localIp, cloudIp, tokenParam)
                 }
             }
 
@@ -1204,21 +1406,26 @@ fun AnaEkran() {
                                         if (idx != -1) aktifSiparisler[idx] = adisyon else aktifSiparisler.add(adisyon)
                                         hafiza.aktifMasalariKaydet(aktifSiparisler)
 
+                                        // Her halükarda çevrimdışı kuyruğa güvenle ekle (sunucu onaylayana kadar yerelde ve ekranda garanti korunur)
+                                        hafiza.cevrimdisiSiparisEkle(adisyon)
+
                                         if (kasaOnline) {
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 try {
                                                     val activeApiIp = if (isLanMode && hafiza.kasaYerelIpOku().isNotBlank()) hafiza.kasaYerelIpOku() else hafiza.kasaIpOku()
-                                                    if (ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).siparisGonder(adisyon).isSuccessful) {
+                                                    val res = ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).siparisGonder(adisyon)
+                                                    if (res.isSuccessful) {
+                                                        hafiza.cevrimdisiSiparisSil(adisyon.musteriAdi)
                                                         sendLogToServer(context, "success", "Sipariş gönderildi: ${adisyon.musteriAdi}")
                                                         withContext(Dispatchers.Main) { Toast.makeText(context, "✅ Kasaya Gitti!", Toast.LENGTH_SHORT).show() }
-                                                    } else throw Exception("Sunucu Hatası")
+                                                    } else {
+                                                        withContext(Dispatchers.Main) { Toast.makeText(context, "💾 Sipariş Çevrimdışı Kaydedildi", Toast.LENGTH_SHORT).show() }
+                                                    }
                                                 } catch (e: Exception) {
-                                                    hafiza.cevrimdisiSiparisEkle(adisyon)
                                                     withContext(Dispatchers.Main) { Toast.makeText(context, "💾 Sipariş Çevrimdışı Kaydedildi", Toast.LENGTH_SHORT).show() }
                                                 }
                                             }
                                         } else {
-                                            hafiza.cevrimdisiSiparisEkle(adisyon)
                                             Toast.makeText(context, "💾 Sipariş Çevrimdışı Kaydedildi", Toast.LENGTH_SHORT).show()
                                         }
 
@@ -1327,17 +1534,17 @@ fun AnaEkran() {
                                     aktifSiparisler[index] = aktifSiparisler[index].copy(durum = yeniDurum)
                                     hafiza.aktifMasalariKaydet(aktifSiparisler)
                                 }
+                                hafiza.cevrimdisiEylemEkle(OfflineAction(type = "update_status", customerName = adisyon.musteriAdi, status = yeniDurum))
                                 if (kasaOnline) {
                                     CoroutineScope(Dispatchers.IO).launch {
                                         try {
                                             val activeApiIp = if (isLanMode && hafiza.kasaYerelIpOku().isNotBlank()) hafiza.kasaYerelIpOku() else hafiza.kasaIpOku()
-                                            ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).guncelleDurum(mapOf("customer_name" to adisyon.musteriAdi, "status" to yeniDurum))
-                                        } catch (e: Exception) {
-                                            hafiza.cevrimdisiEylemEkle(OfflineAction(type = "update_status", customerName = adisyon.musteriAdi, status = yeniDurum))
-                                        }
+                                            val res = ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).guncelleDurum(mapOf("customer_name" to adisyon.musteriAdi, "status" to yeniDurum))
+                                            if (res.isSuccessful) {
+                                                hafiza.cevrimdisiEylemSilCustomerName(adisyon.musteriAdi, "update_status")
+                                            }
+                                        } catch (e: Exception) {}
                                     }
-                                } else {
-                                    hafiza.cevrimdisiEylemEkle(OfflineAction(type = "update_status", customerName = adisyon.musteriAdi, status = yeniDurum))
                                 }
                             },
                             tamamlandiClick = {
@@ -1348,17 +1555,18 @@ fun AnaEkran() {
                                     taslakKalemler.clear()
                                     duzenlenenAdisyonIsmi = null
                                 }
+                                hafiza.cevrimdisiEylemEkle(OfflineAction(type = "hesapKapat", customerName = adisyon.musteriAdi))
                                 if (kasaOnline) {
                                     CoroutineScope(Dispatchers.IO).launch {
                                         try {
                                             val activeApiIp = if (isLanMode && hafiza.kasaYerelIpOku().isNotBlank()) hafiza.kasaYerelIpOku() else hafiza.kasaIpOku()
-                                            ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).hesapKapat(mapOf("customer_name" to adisyon.musteriAdi))
-                                        } catch (e: Exception) {
-                                            hafiza.cevrimdisiEylemEkle(OfflineAction(type = "hesapKapat", customerName = adisyon.musteriAdi))
-                                        }
+                                            val res = ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).hesapKapat(mapOf("customer_name" to adisyon.musteriAdi))
+                                            if (res.isSuccessful) {
+                                                hafiza.cevrimdisiEylemSilCustomerName(adisyon.musteriAdi, "hesapKapat")
+                                            }
+                                        } catch (e: Exception) {}
                                     }
                                 } else {
-                                    hafiza.cevrimdisiEylemEkle(OfflineAction(type = "hesapKapat", customerName = adisyon.musteriAdi))
                                     Toast.makeText(context, "💾 Hesap Çevrimdışı Kapatıldı", Toast.LENGTH_SHORT).show()
                                 }
                             },
@@ -1376,32 +1584,33 @@ fun AnaEkran() {
                                             taslakKalemler.clear()
                                             duzenlenenAdisyonIsmi = null
                                         }
+                                        hafiza.cevrimdisiEylemEkle(OfflineAction(type = "hesapKapat", customerName = adisyon.musteriAdi))
                                         if (kasaOnline) {
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 try {
                                                     val activeApiIp = if (isLanMode && hafiza.kasaYerelIpOku().isNotBlank()) hafiza.kasaYerelIpOku() else hafiza.kasaIpOku()
-                                                    ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).hesapKapat(mapOf("customer_name" to adisyon.musteriAdi))
-                                                } catch (e: Exception) {
-                                                    hafiza.cevrimdisiEylemEkle(OfflineAction(type = "hesapKapat", customerName = adisyon.musteriAdi))
-                                                }
+                                                    val res = ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).hesapKapat(mapOf("customer_name" to adisyon.musteriAdi))
+                                                    if (res.isSuccessful) {
+                                                        hafiza.cevrimdisiEylemSilCustomerName(adisyon.musteriAdi, "hesapKapat")
+                                                    }
+                                                } catch (e: Exception) {}
                                             }
-                                        } else {
-                                            hafiza.cevrimdisiEylemEkle(OfflineAction(type = "hesapKapat", customerName = adisyon.musteriAdi))
                                         }
                                     } else {
                                         aktifSiparisler[orderIndex] = aktifSiparisler[orderIndex].copy(kalemler = yeniKalemler, toplamTutar = yeniKalemler.sumOf { it.fiyat })
+                                        val guncelAdisyon = aktifSiparisler[orderIndex]
                                         hafiza.aktifMasalariKaydet(aktifSiparisler)
+                                        hafiza.cevrimdisiSiparisEkle(guncelAdisyon)
                                         if (kasaOnline) {
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 try {
                                                     val activeApiIp = if (isLanMode && hafiza.kasaYerelIpOku().isNotBlank()) hafiza.kasaYerelIpOku() else hafiza.kasaIpOku()
-                                                    ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).siparisGonder(aktifSiparisler[orderIndex])
-                                                } catch (e: Exception) {
-                                                    hafiza.cevrimdisiSiparisEkle(aktifSiparisler[orderIndex])
-                                                }
+                                                    val res = ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).siparisGonder(guncelAdisyon)
+                                                    if (res.isSuccessful) {
+                                                        hafiza.cevrimdisiSiparisSil(guncelAdisyon.musteriAdi)
+                                                    }
+                                                } catch (e: Exception) {}
                                             }
-                                        } else {
-                                            hafiza.cevrimdisiSiparisEkle(aktifSiparisler[orderIndex])
                                         }
                                     }
                                 }
@@ -1409,32 +1618,36 @@ fun AnaEkran() {
                             ilaveClick = { aktifMasaAdi = adisyon.musteriAdi; taslakKalemler.clear(); taslakKalemler.addAll(adisyon.kalemler.map { it.copy(notlar = it.notlar.replace("[YENİ]", "").trim()) }); duzenlenenAdisyonIsmi = adisyon.musteriAdi; siparisEkraniAcik = false },
                             notDuzenleClick = { kalem -> notDuzenlenecekKalem = Pair(adisyon, kalem) },
                             yazdirClick = {
+                                hafiza.cevrimdisiEylemEkle(OfflineAction(type = "yazdir", customerName = adisyon.musteriAdi))
                                 if (kasaOnline) {
                                     CoroutineScope(Dispatchers.IO).launch {
                                         try {
                                             val activeApiIp = if (isLanMode && hafiza.kasaYerelIpOku().isNotBlank()) hafiza.kasaYerelIpOku() else hafiza.kasaIpOku()
-                                            ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).yazdir(mapOf("customer_name" to adisyon.musteriAdi))
+                                            val res = ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).yazdir(mapOf("customer_name" to adisyon.musteriAdi))
+                                            if (res.isSuccessful) {
+                                                hafiza.cevrimdisiEylemSilCustomerName(adisyon.musteriAdi, "yazdir")
+                                            }
                                         } catch (e: Exception) {
                                             withContext(Dispatchers.Main) { Toast.makeText(context, "Yazdırma isteği iletilemedi", Toast.LENGTH_SHORT).show() }
                                         }
                                     }
                                 } else {
-                                    hafiza.cevrimdisiEylemEkle(OfflineAction(type = "yazdir", customerName = adisyon.musteriAdi))
                                     Toast.makeText(context, "💾 Yazdırma isteği çevrimdışı kuyruğa alındı", Toast.LENGTH_SHORT).show()
                                 }
                             },
                             yolaCiktiClick = {
+                                hafiza.cevrimdisiEylemEkle(OfflineAction(type = "update_status", customerName = adisyon.musteriAdi, status = "yola_cikti"))
                                 if (kasaOnline) {
                                     CoroutineScope(Dispatchers.IO).launch {
                                         try {
                                             val activeApiIp = if (isLanMode && hafiza.kasaYerelIpOku().isNotBlank()) hafiza.kasaYerelIpOku() else hafiza.kasaIpOku()
-                                            ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).guncelleDurum(mapOf("customer_name" to adisyon.musteriAdi, "status" to "yola_cikti"))
-                                        } catch (e: Exception) {
-                                            hafiza.cevrimdisiEylemEkle(OfflineAction(type = "update_status", customerName = adisyon.musteriAdi, status = "yola_cikti"))
-                                        }
+                                            val res = ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).guncelleDurum(mapOf("customer_name" to adisyon.musteriAdi, "status" to "yola_cikti"))
+                                            if (res.isSuccessful) {
+                                                hafiza.cevrimdisiEylemSilCustomerName(adisyon.musteriAdi, "update_status")
+                                            }
+                                        } catch (e: Exception) {}
                                     }
                                 } else {
-                                    hafiza.cevrimdisiEylemEkle(OfflineAction(type = "update_status", customerName = adisyon.musteriAdi, status = "yola_cikti"))
                                     Toast.makeText(context, "💾 Durum güncellemesi çevrimdışı kaydedildi", Toast.LENGTH_SHORT).show()
                                 }
                             },
@@ -1462,8 +1675,20 @@ fun AnaEkran() {
                             if (kalemIndex != -1) {
                                 yeniKalemler[kalemIndex] = yeniKalemler[kalemIndex].copy(notlar = yeniNot.trim())
                                 aktifSiparisler[adisyonIndex] = aktifSiparisler[adisyonIndex].copy(kalemler = yeniKalemler)
+                                val guncelAdisyon = aktifSiparisler[adisyonIndex]
                                 hafiza.aktifMasalariKaydet(aktifSiparisler)
-                                if(kasaOnline) CoroutineScope(Dispatchers.IO).launch { try { ApiClient.getApi(hafiza.kasaIpOku(), hafiza.kasaTokenOku()).siparisGonder(aktifSiparisler[adisyonIndex]) } catch (e: Exception) {} }
+                                hafiza.cevrimdisiSiparisEkle(guncelAdisyon)
+                                if (kasaOnline) {
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        try {
+                                            val activeApiIp = if (isLanMode && hafiza.kasaYerelIpOku().isNotBlank()) hafiza.kasaYerelIpOku() else hafiza.kasaIpOku()
+                                            val res = ApiClient.getApi(activeApiIp, hafiza.kasaTokenOku()).siparisGonder(guncelAdisyon)
+                                            if (res.isSuccessful) {
+                                                hafiza.cevrimdisiSiparisSil(guncelAdisyon.musteriAdi)
+                                            }
+                                        } catch (e: Exception) {}
+                                    }
+                                }
                             }
                         }
                         notDuzenlenecekKalem = null
@@ -1848,6 +2073,66 @@ fun AnaEkran() {
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0))
                                 ) {
                                     Text("Ortak Dosya Paylaşımı", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
+
+                                Spacer(Modifier.height(16.dp))
+
+                                Button(
+                                    onClick = {
+                                        try {
+                                            val options = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).enableAutoZoom().build()
+                                            val scanner = GmsBarcodeScanning.getClient(context, options)
+                                            scanner.startScan().addOnSuccessListener { barcode ->
+                                                val rawVal = barcode.rawValue ?: barcode.displayValue ?: ""
+                                                if (rawVal.contains("sarac_tv_pair") || rawVal.contains("sessionId")) {
+                                                    try {
+                                                        val json = JSONObject(rawVal)
+                                                        val sId = json.optString("sessionId")
+                                                        val lIp = hafiza.kasaYerelIpOku().trim()
+                                                        val tkn = hafiza.kasaTokenOku()
+                                                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                                            try {
+                                                                val client = okhttp3.OkHttpClient()
+                                                                val bodyJson = JSONObject().apply {
+                                                                    put("sessionId", sId)
+                                                                    put("localIp", lIp)
+                                                                }.toString()
+                                                                val reqBody = bodyJson.toRequestBody("application/json".toMediaTypeOrNull())
+                                                                val approveUrl = "https://bilalgnd.shop/api/tv/approve"
+                                                                val req = okhttp3.Request.Builder()
+                                                                    .url(approveUrl)
+                                                                    .post(reqBody)
+                                                                    .header("Authorization", "Bearer $tkn")
+                                                                    .build()
+                                                                val res = client.newCall(req).execute()
+                                                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                                    if (res.isSuccessful) {
+                                                                        Toast.makeText(context, "🎉 TV Başarıyla Eşlendi!", Toast.LENGTH_LONG).show()
+                                                                    } else {
+                                                                        Toast.makeText(context, "TV Eşleme Başarısız (${res.code})", Toast.LENGTH_LONG).show()
+                                                                    }
+                                                                }
+                                                            } catch (e: Exception) {
+                                                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                                    Toast.makeText(context, "TV Eşleme: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                                }
+                                                            }
+                                                        }
+                                                    } catch (_: Exception) {}
+                                                } else {
+                                                    Toast.makeText(context, "Geçersiz TV QR Kodu", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Kamera Açılamadı: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(55.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD84315))
+                                ) {
+                                    androidx.compose.material3.Icon(Icons.Default.QrCode, contentDescription = null, tint = Color.White)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("TV QR Kodunu Tara ve Eşle", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                 }
                                 
                                 Spacer(Modifier.height(32.dp))

@@ -14,7 +14,12 @@ async function deploy() {
 
   const runCmd = async (cmd) => {
     console.log(`Running: ${cmd}`);
-    const res = await ssh.execCommand(cmd.startsWith('sudo') ? `echo '${process.env.SSH_PASSWORD}' | sudo -S ${cmd.substring(5)}` : cmd, { cwd: '/home/bilalgnd' });
+    const isSudo = cmd.startsWith('sudo ');
+    const execStr = isSudo ? `sudo -S ${cmd.substring(5)}` : cmd;
+    const res = await ssh.execCommand(execStr, {
+      cwd: '/home/bilalgnd',
+      stdin: isSudo && process.env.SSH_PASSWORD ? `${process.env.SSH_PASSWORD}\n` : undefined
+    });
     console.log(res.stdout);
     if (res.stderr) console.error(res.stderr);
     return res;

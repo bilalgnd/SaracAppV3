@@ -12,6 +12,16 @@ let active_order_note="";
 let is_order_screen_open=false;
 let ws=null;
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 //Elements
 const topAppBar=document.getElementById('topAppBar');
 const appTitle=document.getElementById('appTitle');
@@ -626,32 +636,34 @@ masalarList.innerHTML='';
 activeTables.forEach(t=>{
 const card=document.createElement('div');
 card.className='adisyon-card';
+const safeCustomerName = escapeHtml(t.customer_name);
+const jsCustomerName = (t.customer_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 let itemsHtml=(t.items||[]).map((k,index)=>`
 <div style="border-bottom:1px solid #444;padding: 10px 0;">
 <div class="a-item"style="display:flex;justify-content:space-between;align-items:center;">
-<div class="a-item-name"style="flex:1;">1x${k.name}${k.portion!=='Standart'?`(${k.portion})`:''}</div>
+<div class="a-item-name"style="flex:1;">1x${escapeHtml(k.name)}${k.portion!=='Standart'?`(${escapeHtml(k.portion)})`:''}</div>
 <div style="display:flex;align-items:center;gap:8px;">
-<div class="a-item-price"style="margin-right:8px;">${k.price}₺</div>
-<button class="btn-icon-small"onclick="editNote('${t.customer_name}',${index})">✏️</button>
-<button class="btn-icon-small"onclick="deleteItem('${t.customer_name}',${index})"style="color:var(--danger);">🗑️</button>
+<div class="a-item-price"style="margin-right:8px;">${escapeHtml(k.price)}₺</div>
+<button class="btn-icon-small"onclick="editNote('${jsCustomerName}',${index})">✏️</button>
+<button class="btn-icon-small"onclick="deleteItem('${jsCustomerName}',${index})"style="color:var(--danger);">🗑️</button>
 </div>
 </div>
-${k.notes?`<div style="font-size:12px;color:#aaa;margin-top:4px;">*${k.notes}</div>`:''}
+${k.notes?`<div style="font-size:12px;color:#aaa;margin-top:4px;">*${escapeHtml(k.notes)}</div>`:''}
 </div>
 `).join('');
 
-let colorIndicator=t.color?`<div style="width:16px;height:16px;border-radius:50%;background-color:${t.color};margin-right:8px;display:inline-block;vertical-align:middle;"></div>`:'';
+let colorIndicator=t.color?`<div style="width:16px;height:16px;border-radius:50%;background-color:${escapeHtml(t.color)};margin-right:8px;display:inline-block;vertical-align:middle;"></div>`:'';
 let titlePrefix=t.status==='prepared'?'<span style="color:#4CAF50;font-weight:bold;margin-right:8px;">✔</span>':'';
 
 card.innerHTML=`
 <div class="adisyon-header"style="display:flex;align-items:center;justify-content:space-between;">
 <div class="adisyon-title"style="display:flex;align-items:center;">
 ${colorIndicator}
-${titlePrefix}${t.customer_name}${t.is_updated?'<span style="font-size:0.6em;color:#FF9800;margin-left:5px;">(Eklendi)</span>':''}
+${titlePrefix}${safeCustomerName}${t.is_updated?'<span style="font-size:0.6em;color:#FF9800;margin-left:5px;">(Eklendi)</span>':''}
 </div>
-<div class="adisyon-time">${t.time||''}</div>
+<div class="adisyon-time">${escapeHtml(t.time||'')}</div>
 </div>
-${t.order_note ? `<div style="color:#F44336; font-size:14px; margin-bottom:5px; white-space: pre-wrap;">📝 ${t.order_note}</div>` : ''}
+${t.order_note ? `<div style="color:#F44336; font-size:14px; margin-bottom:5px; white-space: pre-wrap;">📝 ${escapeHtml(t.order_note)}</div>` : ''}
 <div class="adisyon-items">${itemsHtml}</div>
 <div class="adisyon-footer"style="flex-direction:column;gap:12px;margin-top:8px;">
 <div style="display:flex;justify-content:space-between;width:100%;">

@@ -1,20 +1,29 @@
 import { Router } from 'express';
 import { getShop } from '../models';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, requireAdminAuth } from '../middleware/auth';
 import { idempotencyMiddleware } from '../middleware/idempotency';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
 import { z } from 'zod';
 
+const OrderItemSchema = z.object({
+  name:     z.string().min(1).max(200),
+  portion:  z.string().max(100).optional().default(''),
+  quantity: z.number().int().min(1).max(100).optional().default(1),
+  price:    z.number().min(0).max(100000),
+  notes:    z.string().max(500).optional().default(''),
+  options:  z.array(z.string().max(200)).optional().default([]),
+});
+
 const SiparisSchema = z.object({
-  customer_name: z.string().optional(),
-  items: z.array(z.any()).optional(),
-  total_amount: z.number().optional(),
-  order_note: z.string().optional(),
-  time: z.string().optional(),
-  status: z.string().optional(),
-  color: z.string().optional()
+  customer_name: z.string().max(200).optional(),
+  items:         z.array(OrderItemSchema).min(1).max(200),
+  total_amount:  z.number().min(0).max(999999).optional(),
+  order_note:    z.string().max(1000).optional().default(''),
+  time:          z.string().max(50).optional(),
+  status:        z.enum(['waiting', 'prepared', 'served', 'Tamamlandı', 'İptal']).optional(),
+  color:         z.string().max(30).optional(),
+  platform:      z.string().max(50).optional(),
+  packageId:     z.string().max(200).optional(),
+  createdBy:     z.string().max(100).optional(),
 });
 
 export const ordersRouter = Router();
@@ -49,10 +58,8 @@ ordersRouter.post('/siparis', requireAuth, (req: any, res: any): any => {
 
   try {
     const data = req.body;
-    fs.appendFileSync(path.join(os.tmpdir(), 'kasa_debug.txt'), 'SIPARIS RECEIVED: ' + JSON.stringify(data) + '\n');
-    
+
     if (!data) {
-      fs.appendFileSync(path.join(os.tmpdir(), 'kasa_debug.txt'), 'FAILED 400: no data\n');
       return res.status(400).json({ error: 'Invalid order data' });
     }
 
@@ -92,10 +99,9 @@ ordersRouter.post('/siparis', requireAuth, (req: any, res: any): any => {
     broadcastUpdateToPhones(currentShop);
     notifyUI('new_order', newOrder, currentShop);
     
-    fs.appendFileSync(path.join(os.tmpdir(), 'kasa_debug.txt'), 'SIPARIS SUCCESS\n');
     return res.json({ success: true });
   } catch (err: any) {
-    fs.appendFileSync(path.join(os.tmpdir(), 'kasa_debug.txt'), 'ERROR: ' + err.message + '\n');
+    console.error('[orders:/siparis] Hata:', err?.message ?? err);
     return res.status(500).json({ error: err.message });
   }
 })
@@ -142,21 +148,13 @@ ordersRouter.post('/close_bill', requireAuth, idempotencyMiddleware, async (req:
   res.json({ success: true })
 })
 
-ordersRouter.get('/api/orders', (req: any, res: any) => {
-  let shop = getShop()
-  const { shops, ShopState } = require('../models')
-  const targetShop = (req.query.shop as string) || 'sarac'
-  if (!shops.has(targetShop)) shops.set(targetShop, new ShopState(targetShop))
-  shop = shops.get(targetShop)
+ordersRouter.get('/api/orders', requireAuth, (req: any, res: any) => {
+  const shop = getShop()
   res.json(shop.activeOrders || [])
 })
 
-ordersRouter.post('/api/orders', (req: any, res: any) => {
-  let shop = getShop()
-  const { shops, ShopState } = require('../models')
-  const targetShop = (req.query.shop as string) || 'sarac'
-  if (!shops.has(targetShop)) shops.set(targetShop, new ShopState(targetShop))
-  shop = shops.get(targetShop)
+ordersRouter.post('/api/orders', requireAuth, idempotencyMiddleware, (req: any, res: any) => {
+  const shop = getShop()
 
   if (Array.isArray(req.body)) {
     shop.activeOrders.length = 0
@@ -273,10 +271,19 @@ ordersRouter.post('/update_daily_total', requireAuth, (req: any, res: any): any 
   res.json({ success: true })
 })
 
-ordersRouter.get('/daily_total', (_req, res) => {
+ordersRouter.get('/daily_total', (req, res) => {
   const shop = getShop();
+  // Revenue disclosure protection: only expose ciro total if SHOW_TV_DAILY_TOTAL is active or request has auth
+  const authHeader = req.headers['authorization'];
+  const hasAuth = Boolean(authHeader);
+  const showRevenue = shop.systemSettings['SHOW_TV_DAILY_TOTAL'] !== false;
+
+  const total = (hasAuth || showRevenue)
+    ? (shop.systemSettings['dailyTotal'] ?? getGlobalDailyTotal() ?? 0)
+    : 0;
+
   res.json({ 
-    total: shop.systemSettings['dailyTotal'] ?? getGlobalDailyTotal() ?? 0,
+    total,
     screensaver: shop.systemSettings['TV_SCREENSAVER'] || 'dvd',
     tvAudioSource: shop.systemSettings['TV_AUDIO_SOURCE'] || 'spotify',
     tvRadioStation: shop.systemSettings['TV_RADIO_STATION'] || 'powerturk',
@@ -284,7 +291,7 @@ ordersRouter.get('/daily_total', (_req, res) => {
   })
 })
 
-ordersRouter.post('/api/clear_data', (req: any, res) => {
+ordersRouter.post('/api/clear_data', requireAdminAuth, (req: any, res) => {
   const shop = getShop()
   shop.pastOrders.length = 0
   shop.savePastOrders()

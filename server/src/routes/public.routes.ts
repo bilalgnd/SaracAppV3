@@ -3,7 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
 import { getShop, shops, ShopState } from '../models';
-import { getMessaging } from 'firebase-admin/messaging'; // Adjust import paths as necessary
+import { requireAuth, requireAdminAuth } from '../middleware/auth';
+import { pairRateLimiter } from '../middleware/rateLimiter';
+import { getMessaging } from 'firebase-admin/messaging';
 
 const router = express.Router();
 
@@ -25,7 +27,6 @@ if (fs.existsSync(fcmTokensFile)) {
         console.error('Error reading FCM tokens file', e);
     }
 } else {
-    // Make sure data directory exists
     const dataDir = path.dirname(fcmTokensFile);
     if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
@@ -38,25 +39,31 @@ const saveFcmTokens = () => {
 
 export const getFcmTokens = () => fcmTokens;
 
+// Multer Storage — Safe filename & size limit
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: function (_req, _file, cb) {
     if (!fs.existsSync(sharedFilesDir)) fs.mkdirSync(sharedFilesDir, { recursive: true });
-    cb(null, sharedFilesDir)
+    cb(null, sharedFilesDir);
   },
-  filename: function (req, file, cb) {
-    cb(null, file.originalname)
+  filename: function (_req, file, cb) {
+    const safeName = path.basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, '_');
+    cb(null, `${Date.now()}_${safeName}`);
   }
-})
-const upload = multer({ storage: storage })
+});
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 20 * 1024 * 1024 } // max 20MB
+});
 
-router.post('/api/shared/upload', upload.single('file'), (req, res) => {
+// Shared Files (requireAuth)
+router.post('/api/shared/upload', requireAuth, upload.single('file'), (req: any, res: any) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
-  res.json({ message: 'File uploaded successfully', filename: req.file.originalname });
+  res.json({ message: 'File uploaded successfully', filename: req.file.filename });
 });
 
-router.get('/api/shared', (req, res) => {
+router.get('/api/shared', requireAuth, (_req, res) => {
   if (!fs.existsSync(sharedFilesDir)) fs.mkdirSync(sharedFilesDir, { recursive: true });
   const files = fs.readdirSync(sharedFilesDir).map(file => {
     const stats = fs.statSync(path.join(sharedFilesDir, file));
@@ -66,13 +73,13 @@ router.get('/api/shared', (req, res) => {
       time: stats.mtime
     };
   });
-  // Sort by modification time, newest first
   files.sort((a, b) => b.time.getTime() - a.time.getTime());
   res.json(files);
 });
 
-router.delete('/api/shared/:filename', (req, res) => {
-  const file = path.join(sharedFilesDir, req.params.filename);
+router.delete('/api/shared/:filename', requireAuth, (req, res) => {
+  const safeFilename = path.basename(String(req.params.filename));
+  const file = path.join(sharedFilesDir, safeFilename);
   if (fs.existsSync(file)) {
     fs.unlinkSync(file);
     res.json({ message: 'Deleted' });
@@ -81,85 +88,157 @@ router.delete('/api/shared/:filename', (req, res) => {
   }
 });
 
-router.get('/api/admin/fcm_tokens', (req, res) => res.json({ tokens: fcmTokens }))
+// Admin FCM Tokens (requireAdminAuth)
+router.get('/api/admin/fcm_tokens', requireAdminAuth, (_req, res) => res.json({ tokens: fcmTokens }));
 
-router.post('/api/register_fcm_token', (req, res) => {
-  const { token } = req.body
-  if (token && !fcmTokens.includes(token)) {
-    fcmTokens.push(token)
-    saveFcmTokens()
-    console.log('New FCM token registered:', token)
+router.post('/api/register_fcm_token', requireAuth, (req: any, res: any) => {
+  const { token } = req.body;
+  if (!token || typeof token !== 'string' || token.trim().length < 50 || token.length > 500) {
+    return res.status(400).json({ error: 'Geçersiz FCM token formatı' });
   }
-  res.json({ success: true })
-})
+
+  const cleanToken = token.trim();
+  // Alphanumeric + standard token symbols: : - _
+  if (!/^[a-zA-Z0-9:_-]+$/.test(cleanToken)) {
+    return res.status(400).json({ error: 'FCM token geçersiz karakterler içeriyor' });
+  }
+
+  if (!fcmTokens.includes(cleanToken)) {
+    // Keep max 50 recent tokens to prevent unbounded memory growth
+    if (fcmTokens.length >= 50) {
+      fcmTokens.shift();
+    }
+    fcmTokens.push(cleanToken);
+    saveFcmTokens();
+    const caller = req.user?.username || req.user?.waiterName || 'authenticated_device';
+    console.log(`[FCM] New token registered for ${caller}:`, cleanToken.substring(0, 15) + '...');
+  }
+  res.json({ success: true });
+});
 
 // QR Order Public Endpoints
 router.get('/api/public/menu', (req: any, res: any) => {
-  let activeShop = getShop()
-  const { shops, ShopState } = require('../models') // Adjust import path
+  let activeShop = getShop();
+  const { shops, ShopState } = require('../models');
   
   if (req.query.shop) {
-    if (!shops.has(req.query.shop)) shops.set(req.query.shop, new ShopState(req.query.shop))
-    activeShop = shops.get(req.query.shop)
+    if (!shops.has(req.query.shop)) shops.set(req.query.shop, new ShopState(req.query.shop));
+    activeShop = shops.get(req.query.shop);
   } else {
-    if (!shops.has('sarac')) shops.set('sarac', new ShopState('sarac'))
-    activeShop = shops.get('sarac')
+    if (!shops.has('sarac')) shops.set('sarac', new ShopState('sarac'));
+    activeShop = shops.get('sarac');
   }
   
-  res.json(activeShop.getFullMenu())
-})
+  res.json(activeShop.getFullMenu());
+});
 
+// Helper: Menüden ürünün gerçek fiyatını bul
+function resolveItemRealPrice(itemName: string, portionName: string, shop: any): number {
+  if (!itemName) return 0;
+  const cleanName = itemName.trim();
+  const cleanPortion = (portionName || '').trim();
+
+  // 1. Price memory kontrolü
+  if (shop.priceMemory) {
+    const memoryKey = cleanPortion ? `${cleanName} (${cleanPortion})` : cleanName;
+    if (typeof shop.priceMemory[memoryKey] === 'number' && shop.priceMemory[memoryKey] > 0) {
+      return shop.priceMemory[memoryKey];
+    }
+    if (typeof shop.priceMemory[cleanName] === 'number' && shop.priceMemory[cleanName] > 0) {
+      return shop.priceMemory[cleanName];
+    }
+  }
+
+  // 2. Menü kategorileri kontrolü
+  const fullMenu = shop.getFullMenu?.() || shop.customMenu;
+  if (fullMenu && Array.isArray(fullMenu.categories)) {
+    for (const cat of fullMenu.categories) {
+      if (Array.isArray(cat.items)) {
+        for (const item of cat.items) {
+          if (item.name && item.name.trim().toLowerCase() === cleanName.toLowerCase()) {
+            if (cleanPortion && Array.isArray(item.options)) {
+              const opt = item.options.find((o: any) => (o.portion || '').trim().toLowerCase() === cleanPortion.toLowerCase());
+              if (opt && typeof opt.price === 'number') return opt.price;
+            }
+            if (typeof item.price === 'number') return item.price;
+          }
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
+// POST /api/public/submit_order — Sunucu Tarafı Fiyat Doğrulamalı
 router.post('/api/public/submit_order', (req: any, res: any) => {
-  const { customerName, items, totalAmount } = req.body
+  const { customerName, items } = req.body;
   
-  if (!customerName || !items || !Array.isArray(items)) {
-    return res.status(400).json({ error: 'Invalid order data' })
+  if (!customerName || !items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Geçersiz sipariş verisi' });
   }
 
-  let shop = getShop()
-  const { shops, ShopState } = require('../models') // Adjust import path
+  let shop = getShop();
+  const { shops, ShopState } = require('../models');
   
   if (req.query.shop) {
-    if (!shops.has(req.query.shop)) shops.set(req.query.shop, new ShopState(req.query.shop))
-    shop = shops.get(req.query.shop)
+    if (!shops.has(req.query.shop)) shops.set(req.query.shop, new ShopState(req.query.shop));
+    shop = shops.get(req.query.shop);
   } else {
-    if (!shops.has('sarac')) shops.set('sarac', new ShopState('sarac'))
-    shop = shops.get('sarac')
+    if (!shops.has('sarac')) shops.set('sarac', new ShopState('sarac'));
+    shop = shops.get('sarac');
   }
 
-  const expandedItems: any[] = []
-  items.forEach((i: any) => {
-    const qty = i.quantity || 1
+  let calculatedTotal = 0;
+  const expandedItems: any[] = [];
+
+  for (const i of items) {
+    if (!i || !i.name || typeof i.name !== 'string') {
+      return res.status(400).json({ error: 'Geçersiz ürün bilgisi' });
+    }
+
+    const realPrice = resolveItemRealPrice(i.name, i.portion, shop);
+    if (realPrice <= 0) {
+      return res.status(400).json({ error: `Menüde bulunamayan veya geçersiz ürün: "${i.name}"` });
+    }
+
+    const qty = Math.max(1, Math.min(100, parseInt(i.quantity, 10) || 1));
+
     for (let j = 0; j < qty; j++) {
       expandedItems.push({
-        name: i.name,
-        portion: i.portion || '',
-        price: i.price,
-        notes: i.notes || ''
-      })
+        name: String(i.name).trim().substring(0, 200),
+        portion: String(i.portion || '').trim().substring(0, 100),
+        price: realPrice,
+        notes: String(i.notes || '').trim().substring(0, 500)
+      });
+      calculatedTotal += realPrice;
     }
-  })
+  }
+
+  if (calculatedTotal <= 0 || expandedItems.length === 0) {
+    return res.status(400).json({ error: 'Sipariş tutarı sıfır veya geçersiz' });
+  }
 
   const newOrder = {
     id: Date.now().toString(),
-    customer_name: `${customerName} (QR)`,
+    customer_name: `${String(customerName).trim().substring(0, 100)} (QR)`,
     time: new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' }),
     items: expandedItems,
-    total_amount: totalAmount,
+    total_amount: calculatedTotal,
     status: 'waiting'
-  }
+  };
 
-  shop.activeOrders.push(newOrder)
-  shop.saveOrders()
+  shop.activeOrders.push(newOrder);
+  shop.saveOrders();
   
-  broadcastUpdateToPhones(shop)
-  notifyUI('orders_update', null, shop)
+  broadcastUpdateToPhones(shop);
+  notifyUI('orders_update', null, shop);
 
   if (fcmTokens.length > 0) {
     const message = {
       notification: {
         title: 'Yeni Sipariş!',
-        body: `QR Menüden ${customerName} isimli müşteriden ${totalAmount} ₺ tutarında yeni sipariş geldi!`
+        body: `QR Menüden ${customerName} isimli müşteriden ${calculatedTotal} ₺ tutarında yeni sipariş geldi!`
       },
       android: { priority: 'high' as const },
       tokens: fcmTokens
@@ -169,54 +248,55 @@ router.post('/api/public/submit_order', (req: any, res: any) => {
         .then((response: any) => console.log(response.successCount + ' messages were sent successfully'))
         .catch((error: any) => console.log('Error sending message:', error));
     } catch (e) {
-      console.log('FCM error:', e)
+      console.log('FCM error:', e);
     }
   }
 
-  const { ActivityLogModel, shopContext } = require('../models') // Adjust import path
+  const { ActivityLogModel } = require('../models');
   try {
     ActivityLogModel.create({
       username: 'QR_CUSTOMER',
       shopId: shop.shopId || 'admin',
       action: 'qr_order',
-      details: `QR Siparişi alındı: ${customerName} (Toplam: ${totalAmount} ₺)`
-    })
+      details: `QR Siparişi alındı: ${customerName} (Doğrulanan Toplam: ${calculatedTotal} ₺)`
+    });
   } catch(e) {}
 
-  res.json({ success: true, orderId: newOrder.id })
-})
+  res.json({ success: true, orderId: newOrder.id, verifiedTotal: calculatedTotal });
+});
 
 router.get('/api/public/order_status', (req: any, res: any) => {
-  const { id } = req.query
-  if (!id) return res.status(400).json({ error: 'ID required' })
+  const { id } = req.query;
+  if (!id) return res.status(400).json({ error: 'ID required' });
 
-  let shop = getShop()
-  const { shops, ShopState } = require('../models') // Adjust import path
+  let shop = getShop();
+  const { shops, ShopState } = require('../models');
   
   if (req.query.shop) {
-    if (!shops.has(req.query.shop)) shops.set(req.query.shop, new ShopState(req.query.shop))
-    shop = shops.get(req.query.shop)
+    if (!shops.has(req.query.shop)) shops.set(req.query.shop, new ShopState(req.query.shop));
+    shop = shops.get(req.query.shop);
   } else {
-    if (!shops.has('sarac')) shops.set('sarac', new ShopState('sarac'))
-    shop = shops.get('sarac')
+    if (!shops.has('sarac')) shops.set('sarac', new ShopState('sarac'));
+    shop = shops.get('sarac');
   }
 
   // Check active orders
-  const active = shop.activeOrders.find((o: any) => o.id === id)
+  const active = shop.activeOrders.find((o: any) => o.id === id);
   if (active) {
-    return res.json({ status: active.status })
+    return res.json({ status: active.status });
   }
 
   // Check past orders
-  const past = shop.pastOrders.find((o: any) => o.id === id)
+  const past = shop.pastOrders.find((o: any) => o.id === id);
   if (past) {
-    return res.json({ status: past.status })
+    return res.json({ status: past.status });
   }
 
-  res.status(404).json({ error: 'Order not found' })
-})
+  res.status(404).json({ error: 'Order not found' });
+});
 
-router.post('/api/public/call_waiter', (req: any, res: any) => {
+// POST /api/public/call_waiter — Rate-Limited & Logged
+router.post('/api/public/call_waiter', pairRateLimiter, (req: any, res: any) => {
   const { id, customerName, table } = req.body;
 
   let shop = getShop();

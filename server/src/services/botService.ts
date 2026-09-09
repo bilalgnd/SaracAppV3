@@ -1,8 +1,22 @@
+/**
+ * @deprecated DEAD CODE — NOT USED
+ *
+ * This file is NOT imported anywhere in the server. It was an experimental approach
+ * to capture Trendyol/Yemeksepeti orders by attaching Puppeteer to an open Chrome
+ * browser session (remote debugging port 9222) and intercepting network traffic.
+ *
+ * The approach was abandoned in favour of the direct REST API poller (trendyolPoller.ts).
+ *
+ * Kept for historical reference. Safe to delete if Puppeteer dependency is to be removed.
+ * Do NOT activate this in production without a full security review — attaching to a
+ * live browser via remote debugging is a significant attack surface.
+ */
 import puppeteer, { Page } from 'puppeteer-core';
 import { parseTrendyolPayload, parseYemeksepetiPayload, ParsedOrder } from './networkListener';
 import { addSystemLog } from '../server';
 import { getShop } from '../models';
 import axios from 'axios';
+
 
 // Chrome'un uzaktan hata ayıklama portu (Kısayola --remote-debugging-port=9222 eklenecek)
 const CHROME_DEBUGGING_URL = 'http://localhost:9222';

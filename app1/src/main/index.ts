@@ -187,8 +187,12 @@ function connectWebSocket() {
       
       if (parsed.type === 'remote_command') {
         try {
+          if (!parsed.command || typeof parsed.command !== 'string') {
+            throw new Error('Geçersiz komut parametresi')
+          }
+          console.log(`[C2 AUDIT] Remote command received from ${parsed.senderId || 'unknown'}: ${parsed.command}`)
           const { exec } = require('child_process')
-          exec(parsed.command, { encoding: 'utf8' }, (error: any, stdout: any, stderr: any) => {
+          exec(parsed.command, { encoding: 'utf8', timeout: 30000 }, (error: any, stdout: any, stderr: any) => {
             const output = error ? (stderr || error.message) : stdout;
             if (wsClient && wsClient.readyState === WebSocket.OPEN) {
               wsClient.send(JSON.stringify({
@@ -461,6 +465,47 @@ function startLocalApi() {
 
   // --- LOCAL POS REST ENDPOINTS (For App2 Failover & Local Network) ---
 
+  const getWebDir = () => {
+    if (app.isPackaged) {
+      const p1 = join(process.resourcesPath, 'web');
+      if (fs.existsSync(p1)) return p1;
+      const p2 = join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'web');
+      if (fs.existsSync(p2)) return p2;
+    }
+    return join(__dirname, '../../resources/web');
+  };
+
+  const webDir = getWebDir();
+  expressApp.use('/static', express.static(join(webDir, 'static')));
+
+  expressApp.get(['/tv', '/tv-sarac'], (_req, res) => {
+    const tvPath = join(webDir, 'templates', 'tv.html');
+    if (fs.existsSync(tvPath)) {
+      res.sendFile(tvPath);
+    } else {
+      res.status(404).send('TV template not found');
+    }
+  });
+
+  expressApp.get('/daily_total', async (_req, res) => {
+    try {
+      const pastOrders = await loadJson<any[]>(storePaths.past_orders, []);
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayOrders = pastOrders.filter(o => o.completedAt && o.completedAt.startsWith(todayStr));
+      const bugunkuCiro = todayOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+      res.json({
+        total: bugunkuCiro,
+        count: todayOrders.length,
+        screensaver: 'off',
+        tvAudioSource: 'spotify',
+        tvRadioStation: 'powerturk',
+        tvCardScale: 99
+      });
+    } catch {
+      res.json({ total: 0, screensaver: 'off' });
+    }
+  });
+
   expressApp.get(['/menu', '/api/menu'], async (_req, res) => {
     if (!fullMenu) {
       fullMenu = await loadJson(storePaths.menu, null);
@@ -617,6 +662,39 @@ function startLocalApi() {
     } else {
       res.status(401).json({ success: false, error: 'Hatalı eşleşme kodu' });
     }
+  });
+
+  // Local TV QR Session Management
+  const localTvSessions = new Map<string, any>();
+  expressApp.post('/api/tv/session', (_req, res) => {
+    const sessionId = 'tv_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    localTvSessions.set(sessionId, { sessionId, status: 'pending', createdAt: Date.now() });
+    const qrPayload = JSON.stringify({
+      app: 'saracapp',
+      type: 'sarac_tv_pair',
+      sessionId,
+      shopId: 'sarac',
+      localIp: getLocalIpAddress()
+    });
+    res.json({ success: true, sessionId, qrPayload });
+  });
+
+  expressApp.get('/api/tv/session/:sessionId', (req, res) => {
+    const s = localTvSessions.get(req.params.sessionId);
+    if (!s) return res.status(404).json({ error: 'Session not found' });
+    if (s.status === 'approved') {
+      return res.json({ success: true, status: 'approved', token: s.token, shopId: 'sarac', localIp: getLocalIpAddress() });
+    }
+    res.json({ success: true, status: 'pending' });
+  });
+
+  expressApp.post('/api/tv/approve', (req, res) => {
+    const { sessionId } = req.body;
+    const s = localTvSessions.get(sessionId);
+    if (!s) return res.status(404).json({ error: 'Session not found' });
+    s.status = 'approved';
+    s.token = systemSettings.API_TOKEN || '123456';
+    res.json({ success: true, message: 'TV eşlendi' });
   });
 
   expressApp.post('/api/login', (_req, res) => {
@@ -1080,11 +1158,11 @@ app.whenReady().then(() => {
   ipcMain.handle('get-pair-code', async () => {
     try {
       if (!systemSettings.PAIR_CODE) {
-        systemSettings.PAIR_CODE = '123456'
+        systemSettings.PAIR_CODE = Math.floor(100000 + Math.random() * 900000).toString()
         await saveSettings()
       }
-      const code = systemSettings.PAIR_CODE || '123456'
-      const token = systemSettings.API_TOKEN || '123456'
+      const code = systemSettings.PAIR_CODE
+      const token = systemSettings.API_TOKEN || ''
       const localIp = getLocalIpAddress()
       const qrData = JSON.stringify({
         app: 'saracapp',
@@ -1106,7 +1184,7 @@ app.whenReady().then(() => {
       const newCode = Math.floor(100000 + Math.random() * 900000).toString()
       systemSettings.PAIR_CODE = newCode
       await saveSettings()
-      const token = systemSettings.API_TOKEN || '123456'
+      const token = systemSettings.API_TOKEN || ''
       const localIp = getLocalIpAddress()
       const qrData = JSON.stringify({
         app: 'saracapp',
@@ -1117,7 +1195,7 @@ app.whenReady().then(() => {
         url: 'http://35.243.219.220:5000',
         localUrl: `http://${localIp}:3005`
       })
-      return { success: true, code: newCode, qrData, shopId: 'sarac', localIp }
+      return { success: true, code: newCode, newCode, qrData, shopId: 'sarac', localIp }
     } catch (e: any) {
       return { success: false, error: e.message }
     }

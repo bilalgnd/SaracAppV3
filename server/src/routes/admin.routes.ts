@@ -2,9 +2,23 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import axios from 'axios';
+import { z } from 'zod';
 import { UserModel, ActivityLogModel, DataModel, ShopState, shops, getShop } from '../models';
 import { requireAdminAuth } from '../middleware/auth';
 import { env } from '../config/env';
+
+const CreateUserSchema = z.object({
+  username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_-]+$/, 'Username must be alphanumeric or contain _ -'),
+  password: z.string().min(8).max(100),
+  role: z.enum(['admin', 'kasa', 'garson']).optional().default('garson')
+});
+
+const UpdateUserSchema = z.object({
+  targetUsername: z.string().min(1),
+  newPassword: z.string().min(8).max(100).optional(),
+  newRole: z.enum(['admin', 'kasa', 'garson']).optional(),
+  newStatus: z.enum(['active', 'suspended']).optional()
+});
 
 export const adminRouter = Router();
 
@@ -77,22 +91,25 @@ adminRouter.post('/admin/toggle_registration', requireAdminAuth, async (req: any
 
 adminRouter.post('/admin/create_user', requireAdminAuth, async (req: any, res: any) => {
   try {
-    const { username, password, role } = req.body
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password required' })
+    const parseResult = CreateUserSchema.safeParse(req.body)
+    if (!parseResult.success) {
+      return res.status(400).json({ error: 'Geçersiz kullanıcı bilgileri', details: parseResult.error.format() })
     }
-    if (password.length < 4) {
-      return res.status(400).json({ error: 'Şifre en az 4 karakter olmalıdır' })
-    }
-    
+
+    const { username, password, role } = parseResult.data
     const assignedRole = role || 'garson'
+
+    const existingUser = await UserModel.findOne({ username })
+    if (existingUser) {
+      return res.status(409).json({ error: 'Bu kullanıcı adı zaten kullanılıyor' })
+    }
 
     const salt = await bcrypt.genSalt(10)
     const password_hash = await bcrypt.hash(password, salt)
 
     const account_id = 'ACC-' + Math.random().toString(36).substring(2, 8).toUpperCase()
 
-    const user = new UserModel({ username, password_hash, plain_password: password, role: assignedRole, account_id })
+    const user = new UserModel({ username, password_hash, role: assignedRole, account_id })
     await user.save()
 
     const shop = new ShopState(username)
@@ -107,23 +124,35 @@ adminRouter.post('/admin/create_user', requireAdminAuth, async (req: any, res: a
 
 adminRouter.post('/admin/update_user', requireAdminAuth, async (req: any, res: any) => {
   try {
-    const { targetUsername, newPassword, newRole, newStatus } = req.body
-    if (!targetUsername) return res.status(400).json({ error: 'targetUsername required' })
+    const parseResult = UpdateUserSchema.safeParse(req.body)
+    if (!parseResult.success) {
+      return res.status(400).json({ error: 'Geçersiz güncelleme parametreleri', details: parseResult.error.format() })
+    }
+
+    const { targetUsername, newPassword, newRole, newStatus } = parseResult.data
     if (targetUsername === 'bilalgnd' && newStatus === 'suspended') return res.status(403).json({ error: 'Cannot suspend main admin' })
 
     const user = await UserModel.findOne({ username: targetUsername })
     if (!user) return res.status(404).json({ error: 'User not found' })
 
-    if (newPassword && typeof newPassword === 'string' && newPassword.trim().length > 0) {
-      if (newPassword.trim().length < 4) {
-        return res.status(400).json({ error: 'Şifre en az 4 karakter olmalıdır' })
+    if (newPassword && newPassword.trim().length > 0) {
+      if (newPassword.trim().length < 8) {
+        return res.status(400).json({ error: 'Şifre en az 8 karakter olmalıdır' })
       }
       const salt = await bcrypt.genSalt(10)
       user.password_hash = await bcrypt.hash(newPassword.trim(), salt)
-      user.plain_password = newPassword.trim()
+      // plain_password artık saklanmıyor (Issue #5)
+      // Increment tokenVersion to invalidate all existing JWTs for this user (Issue #9)
+      ;(user as any).tokenVersion = ((user as any).tokenVersion ?? 0) + 1;
     }
     if (newRole) user.role = newRole
-    if (newStatus) user.status = newStatus
+    if (newStatus) {
+      user.status = newStatus
+      if (newStatus === 'suspended') {
+        // Also revoke all tokens when suspending (Issue #9)
+        ;(user as any).tokenVersion = ((user as any).tokenVersion ?? 0) + 1;
+      }
+    }
 
     await user.save()
 

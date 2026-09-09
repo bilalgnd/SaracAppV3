@@ -13,7 +13,8 @@ async function deployGcp() {
   };
   if (fs.existsSync('C:/Users/bilal/.ssh/id_ed25519')) {
     sshConfig.privateKeyPath = 'C:/Users/bilal/.ssh/id_ed25519';
-  } else if (process.env.SSH_PASSWORD) {
+  }
+  if (process.env.SSH_PASSWORD) {
     sshConfig.password = process.env.SSH_PASSWORD;
   }
 

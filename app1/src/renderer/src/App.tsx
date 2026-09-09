@@ -58,8 +58,13 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   }
 
   const handleOfflineDirectLogin = () => {
+    // Offline mode: use existing saved token from a previous valid session.
+    // If no token exists yet, the app will run in limited offline mode.
+    const existingToken = localStorage.getItem('pos_token') || ''
+    if (!existingToken) {
+      console.warn('[Offline] No saved token — offline mode will have limited functionality')
+    }
     localStorage.setItem('saved_username', username || 'Kasa')
-    localStorage.setItem('pos_token', localStorage.getItem('pos_token') || '123456')
     onLogin()
   }
 

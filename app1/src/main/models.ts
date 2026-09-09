@@ -1,6 +1,8 @@
 import { loadJson, saveJson, storePaths } from './store'
 
-export let systemSettings: Record<string, any> = { "YAZICI_ADI": "", "API_TOKEN": "123456" }
+// API_TOKEN intentionally empty — the real token is fetched from the server on first login
+// and stored in AppData/SaracApp/settings.json. Never hardcode "123456" here.
+export let systemSettings: Record<string, any> = { "YAZICI_ADI": "", "API_TOKEN": "" }
 export let priceMemory: Record<string, number> = {}
 
 export async function initializeModels() {
@@ -21,9 +23,10 @@ export async function initializeModels() {
     changed = true;
   }
   
-  // API_TOKEN is preserved across sessions
+  // API_TOKEN is populated after first login from server response.
+  // An empty string means no token — the app will prompt login.
   if (!systemSettings["API_TOKEN"]) {
-    systemSettings["API_TOKEN"] = "123456";
+    systemSettings["API_TOKEN"] = "";
     changed = true;
   }
 

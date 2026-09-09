@@ -16,8 +16,6 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
   } else {
     if (origin && ALLOWED_ORIGINS.includes(origin)) {
       res.header('Access-Control-Allow-Origin', origin);
-    } else {
-      res.header('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0]);
     }
   }
 

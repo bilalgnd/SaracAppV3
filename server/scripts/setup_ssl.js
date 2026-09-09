@@ -13,7 +13,9 @@ async function setupSSL() {
 
   const runCmd = async (cmd) => {
     console.log(`Running: ${cmd}`);
-    const res = await ssh.execCommand(`echo '${process.env.SSH_PASSWORD}' | sudo -S bash -c "${cmd.replace(/"/g, '\\"')}"`);
+    const res = await ssh.execCommand(`sudo -S bash -c "${cmd.replace(/"/g, '\\"')}"`, {
+      stdin: process.env.SSH_PASSWORD ? `${process.env.SSH_PASSWORD}\n` : undefined
+    });
     console.log(res.stdout);
     if (res.stderr) console.error(res.stderr);
     return res;

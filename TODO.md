@@ -16,9 +16,10 @@
 
 ---
 
-### 2. 🔐 Şifre Yönetimi (✅ Tamamlandı / Korundu)
-- [x] Admin Tools (`admintools.html`) üzerinde `plain_password` yöneticinin kolayca görebilmesi için maskeli/göz butonlu olarak korunmaktadır.
-- [x] Şifre güncellemelerinde hem `bcrypt` hash hem de `plain_password` eşzamanlı güncellenmektedir.
+### 2. 🔐 Şifre ve Oturum Güvenliği (✅ Tamamlandı / Sertleştirildi)
+- [x] Düz metin (`plain_password`) şifre saklama tamamen kaldırıldı. Tüm parolalar `bcrypt` ile tuzlanarak hash'lenmektedir.
+- [x] Şifre güncellemelerinde `tokenVersion` artırılarak eski oturumların otomatik iptal edilmesi sağlandı.
+- [x] Minimum parola uzunluğu en az 8 karakter olarak zorunlu kılındı.
 
 ---
 

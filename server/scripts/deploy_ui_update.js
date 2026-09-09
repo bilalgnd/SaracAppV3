@@ -1,3 +1,8 @@
+// ⚠️  UYARI — Bu script Saraçapp'a AİT DEĞİLDİR (Issue #15)
+// Bu script "myhealth" projesine aittir ve yanlışlıkla bu repoya eklenmiştir.
+// Saraçapp production ortamına karşı ÇALIŞTIRMAYIN.
+// Gerekirse myhealth projesinin kendi klasörüne taşıyın veya silin.
+
 require('dotenv').config({ path: 'C:\\Users\\bilal\\SARACAPP\\SARACAPPV3\\server\\.env' });
 const { NodeSSH } = require('node-ssh');
 const ssh = new NodeSSH();

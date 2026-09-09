@@ -17,22 +17,13 @@ export interface ParsedOrder {
     platform: 'trendyol' | 'yemeksepeti';
 }
 
-const dumpPath = path.join(os.homedir(), 'Documents', 'bot_payloads.txt');
-
 /**
  * Trendyol ağ trafiğinden gelen JSON paketini ayrıştırır.
- * Yarın dükkandaki canlı test sırasında bu fonksiyonun içi doldurulacak.
  */
 export function parseTrendyolPayload(payload: any): ParsedOrder | null {
     try {
         console.log("Trendyol JSON paketi alındı, yapı inceleniyor...");
-        const dumpData = "\n============== TRENDYOL HAM VERİ ==============\n" + 
-                         new Date().toLocaleString() + "\n" +
-                         JSON.stringify(payload, null, 2) + "\n===============================================\n";
-        console.log(dumpData);
-        try { fs.appendFileSync(dumpPath, dumpData, 'utf8'); } catch(e) {}
-        addSystemLog('BotService', 'info', `Trendyol paketi yakalandı ve Belgelerim'e kaydedildi. Uzunluk: ${JSON.stringify(payload).length}`);
-        // TODO: Yarın gerçek JSON yapısı buraya gelince alanları (field) eşleştireceğiz.
+        addSystemLog('BotService', 'info', `Trendyol paketi yakalandı. Uzunluk: ${JSON.stringify(payload).length}`);
         return null;
     } catch (error) {
         console.error("Trendyol verisi ayrıştırılırken hata:", error);
@@ -42,18 +33,11 @@ export function parseTrendyolPayload(payload: any): ParsedOrder | null {
 
 /**
  * Yemeksepeti ağ trafiğinden gelen JSON paketini ayrıştırır.
- * Yarın dükkandaki canlı test sırasında bu fonksiyonun içi doldurulacak.
  */
 export function parseYemeksepetiPayload(payload: any): ParsedOrder | null {
     try {
         console.log("Yemeksepeti JSON paketi alındı, yapı inceleniyor...");
-        const dumpData = "\n============ YEMEKSEPETİ HAM VERİ =============" + 
-                         new Date().toLocaleString() + "\n" +
-                         JSON.stringify(payload, null, 2) + "\n===============================================\n";
-        console.log(dumpData);
-        try { fs.appendFileSync(dumpPath, dumpData, 'utf8'); } catch(e) {}
-        addSystemLog('BotService', 'info', `Yemeksepeti paketi yakalandı ve Belgelerim'e kaydedildi. Uzunluk: ${JSON.stringify(payload).length}`);
-        // TODO: Yarın gerçek JSON yapısı buraya gelince alanları eşleştireceğiz.
+        addSystemLog('BotService', 'info', `Yemeksepeti paketi yakalandı. Uzunluk: ${JSON.stringify(payload).length}`);
         return null;
     } catch (error) {
         console.error("Yemeksepeti verisi ayrıştırılırken hata:", error);

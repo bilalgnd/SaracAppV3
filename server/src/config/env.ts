@@ -54,6 +54,11 @@ export const env = {
   SPOTIFY_CLIENT_ID: optionalEnv('SPOTIFY_CLIENT_ID'),
   SPOTIFY_CLIENT_SECRET: optionalEnv('SPOTIFY_CLIENT_SECRET'),
 
+  // Terminal WebSocket auth (Issue #3) — üretimde güçlü, rastgele bir değer set edin
+  TERMINAL_SECRET: isProduction
+    ? requireEnv('TERMINAL_SECRET')
+    : optionalEnv('TERMINAL_SECRET', ''),
+
   // Diğer
   SSH_PASSWORD: optionalEnv('SSH_PASSWORD'),
 } as const;

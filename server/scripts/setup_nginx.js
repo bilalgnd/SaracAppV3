@@ -13,7 +13,9 @@ async function setupNginx() {
 
   const runCmd = async (cmd) => {
     console.log(`Running: ${cmd}`);
-    const res = await ssh.execCommand(`echo '${process.env.SSH_PASSWORD}' | sudo -S bash -c "${cmd.replace(/"/g, '\\"')}"`);
+    const res = await ssh.execCommand(`sudo -S bash -c "${cmd.replace(/"/g, '\\"')}"`, {
+      stdin: process.env.SSH_PASSWORD ? `${process.env.SSH_PASSWORD}\n` : undefined
+    });
     console.log(res.stdout);
     if (res.stderr) console.error(res.stderr);
     return res;
@@ -36,7 +38,9 @@ server {
 `;
 
   // Write config
-  await ssh.execCommand(`echo '${process.env.SSH_PASSWORD}' | sudo -S bash -c "cat > /etc/nginx/sites-available/saracapp << 'EOF'\n${nginxConfig}\nEOF"`);
+  await ssh.execCommand(`sudo -S bash -c "cat > /etc/nginx/sites-available/saracapp << 'EOF'\n${nginxConfig}\nEOF"`, {
+    stdin: process.env.SSH_PASSWORD ? `${process.env.SSH_PASSWORD}\n` : undefined
+  });
 
   // Enable site
   await runCmd('ln -sf /etc/nginx/sites-available/saracapp /etc/nginx/sites-enabled/');

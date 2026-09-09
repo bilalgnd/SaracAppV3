@@ -14,6 +14,16 @@ export function normalizeTurkishChars(text: string): string {
     .replace(/ç/g, 'c').replace(/Ç/g, 'C')
 }
 
+export function escapeHtml(str: any): string {
+  if (str === null || str === undefined) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 let lastPrintSignature = ''
 let lastPrintTime = 0
 let isPrintingInProgress = false
@@ -103,7 +113,14 @@ async function printViaElectron(
   orderNo: string = ""
 ) {
   return new Promise<void>(async (resolve) => {
-    const win = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: true } })
+    const win = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true
+      }
+    })
     const receiptTitle = systemSettings["RECEIPT_HEADER_TITLE"] || 'VANTAGE'
     const subheader = systemSettings["RECEIPT_SUBHEADER"] || ''
     const footerText = systemSettings["RECEIPT_FOOTER_TEXT"] !== undefined ? systemSettings["RECEIPT_FOOTER_TEXT"] : 'AFIYET OLSUN'
@@ -184,16 +201,16 @@ async function printViaElectron(
         </style>
       </head>
       <body>
-        <h1>${receiptTitle}</h1>
-        ${subheader ? `<div class="sub">${subheader}</div>` : ''}
+        <h1>${escapeHtml(receiptTitle)}</h1>
+        ${subheader ? `<div class="sub">${escapeHtml(subheader)}</div>` : ''}
         <hr/>
         <div class="flex">
-          <span>Tarih: ${time}</span>
-          ${showOrderNo && orderNo ? `<span><b>${orderNo}</b></span>` : ''}
+          <span>Tarih: ${escapeHtml(time)}</span>
+          ${showOrderNo && orderNo ? `<span><b>${escapeHtml(orderNo)}</b></span>` : ''}
         </div>
-        <div style="font-size: ${baseFontSize + 2}px; font-weight: bold; margin-top: 2px;">Masa: ${customerName}</div>
-        ${showWaiter && waiterName ? `<div style="font-size: ${baseFontSize - 1}px; color: #333;">Garson: ${waiterName}</div>` : ''}
-        ${orderNote ? `<div style="margin-top: 4px; font-size: ${baseFontSize}px; white-space: pre-wrap; font-weight: bold;">NOT: ${orderNote}</div>` : ''}
+        <div style="font-size: ${baseFontSize + 2}px; font-weight: bold; margin-top: 2px;">Masa: ${escapeHtml(customerName)}</div>
+        ${showWaiter && waiterName ? `<div style="font-size: ${baseFontSize - 1}px; color: #333;">Garson: ${escapeHtml(waiterName)}</div>` : ''}
+        ${orderNote ? `<div style="margin-top: 4px; font-size: ${baseFontSize}px; white-space: pre-wrap; font-weight: bold;">NOT: ${escapeHtml(orderNote)}</div>` : ''}
         <hr/>
     `
 
@@ -209,15 +226,15 @@ async function printViaElectron(
     }, {} as Record<string, any>)
 
     Object.values(groupedItems).forEach((k: any) => {
-      const portionStr = k.portion && k.portion !== 'Standart' ? `<span style="font-size: ${baseFontSize - 2}px;"> (${k.portion})</span>` : ''
+      const portionStr = k.portion && k.portion !== 'Standart' ? `<span style="font-size: ${baseFontSize - 2}px;"> (${escapeHtml(k.portion)})</span>` : ''
       const countStr = k.count > 1 ? `${k.count}x ` : ''
       html += `<div class="flex" style="font-size: ${baseFontSize + 1}px; margin-top: 5px;">
-        <span style="padding-right: 5px; font-weight: 600;">${countStr}${k.name}${portionStr}</span>
+        <span style="padding-right: 5px; font-weight: 600;">${countStr}${escapeHtml(k.name)}${portionStr}</span>
         <span style="white-space: nowrap; font-weight: bold;">${k.totalForGroup} TL</span>
       </div>`
       if (k.notes) {
         const noteStr = k.notes.toUpperCase().startsWith("NOT:") ? k.notes : `NOT: ${k.notes}`
-        html += `<div style="margin-left: 8px; font-size: ${baseFontSize - 1}px; white-space: pre-wrap;">${noteStr}</div>`
+        html += `<div style="margin-left: 8px; font-size: ${baseFontSize - 1}px; white-space: pre-wrap;">${escapeHtml(noteStr)}</div>`
       }
     })
 
@@ -225,9 +242,9 @@ async function printViaElectron(
         <hr/>
         <h2 style="text-align: center; margin: 10px 0; font-size: ${totalFontSize}px; font-weight: 900; white-space: nowrap;">TOPLAM: ${totalAmount},00 TL</h2>
         <hr/>
-        ${footerText ? `<div style="text-align: center; font-size: ${baseFontSize}px; font-weight: bold; margin-top: 6px;">${footerText}</div>` : ''}
-        ${wifiInfo ? `<div style="text-align: center; font-size: ${baseFontSize - 2}px; margin-top: 4px;">📶 ${wifiInfo}</div>` : ''}
-        ${instagram ? `<div style="text-align: center; font-size: ${baseFontSize - 2}px; margin-top: 2px;">📸 ${instagram}</div>` : ''}
+        ${footerText ? `<div style="text-align: center; font-size: ${baseFontSize}px; font-weight: bold; margin-top: 6px;">${escapeHtml(footerText)}</div>` : ''}
+        ${wifiInfo ? `<div style="text-align: center; font-size: ${baseFontSize - 2}px; margin-top: 4px;">📶 ${escapeHtml(wifiInfo)}</div>` : ''}
+        ${instagram ? `<div style="text-align: center; font-size: ${baseFontSize - 2}px; margin-top: 2px;">📸 ${escapeHtml(instagram)}</div>` : ''}
         ${qrImageHtml}
       </body>
       </html>

@@ -8,6 +8,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import jwt from 'jsonwebtoken';
 import { initializeApp, cert } from 'firebase-admin/app';
+import cron from 'node-cron';
+import { runBackup } from './services/backupService';
 
 import { env } from './config/env';
 import { initializeDB } from './config/db';
@@ -84,34 +86,35 @@ app.use(express.json());
 app.use(corsMiddleware);
 app.use(apiRateLimiter);
 
-// ── Shop context middleware (legacy token/shopId support) ────────────────────
+// ── Shop context middleware (verified token & registered shopId resolver) ──
 app.use((req, res, next) => {
   let shopId = 'admin';
   const authHeader = req.headers['authorization'];
-  let tokenToVerify = null;
+  let tokenToVerify: string | null = null;
 
   if (authHeader) {
-    if (authHeader.startsWith('Bearer ')) {
-      tokenToVerify = authHeader.split(' ')[1];
-    } else {
-      shopId = authHeader;
-    }
-  } else if (req.query.token) {
-    tokenToVerify = req.query.token as string;
-  } else if (req.query.shopId) {
-    shopId = req.query.shopId as string;
-  } else if (req.query.state) {
-    shopId = req.query.state as string;
+    tokenToVerify = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+  } else if (req.query.token && typeof req.query.token === 'string') {
+    tokenToVerify = req.query.token;
   }
 
   if (tokenToVerify) {
-    if (tokenToVerify.length > 20) {
-      try {
-        const decoded: any = jwt.verify(tokenToVerify, env.JWT_SECRET);
-        shopId = decoded.username || 'admin';
-      } catch (e) {}
-    } else {
-      shopId = tokenToVerify;
+    try {
+      // 1) JWT Verification
+      const decoded: any = jwt.verify(tokenToVerify, env.JWT_SECRET);
+      shopId = decoded.shopId || decoded.username || 'admin';
+    } catch (e) {
+      // 2) API_TOKEN verification against registered shops
+      if (tokenToVerify === getShop().systemSettings?.API_TOKEN) {
+        shopId = 'sarac';
+      } else {
+        for (const [sId, sInstance] of shops.entries()) {
+          if (sInstance.systemSettings && sInstance.systemSettings['API_TOKEN'] === tokenToVerify) {
+            shopId = sId;
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -126,6 +129,18 @@ export function getActiveShop(req: any) {
   if (!shops.has(targetId)) { const s = new ShopState(targetId); s.initialize(); shops.set(targetId, s); }
   return shops.get(targetId) || getShop();
 }
+
+// ── Health Check (Issue #6) ───────────────────────────────────────────────────
+// Kimlik doğrulama gerektirmez — uptime monitor, PM2, load balancer için
+app.get('/health', (_req, res) => {
+  const mongoose = require('mongoose');
+  res.json({
+    status: 'ok',
+    uptime: Math.floor(process.uptime()),
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // ── Static pages ─────────────────────────────────────────────────────────────
 const webDir = path.join(__dirname, '..', 'public');
@@ -272,6 +287,13 @@ wss.on('connection', (ws, req) => {
   let jwtDecoded: any = null;
 
   if (isTerminal) {
+    // ── Terminal auth kontrolü (Issue #3) ──────────────────────────────────────
+    // TERMINAL_SECRET env değişkeni ile token eşleşmeden terminal bağlantısı kabul edilmez.
+    const terminalSecret = env.TERMINAL_SECRET || process.env.TERMINAL_SECRET;
+    if (!terminalSecret || token !== terminalSecret) {
+      ws.close(1008, 'Unauthorized: terminal secret required');
+      return;
+    }
     terminalClients.push(ws);
     ws.on('close', () => {
       const index = terminalClients.indexOf(ws);
@@ -303,6 +325,7 @@ wss.on('connection', (ws, req) => {
   (ws as any).isTv = isTv;
   (ws as any).shopId = shopId;
   (ws as any).username = jwtDecoded ? (jwtDecoded as any).username : shopId;
+  (ws as any).role = jwtDecoded ? (jwtDecoded as any).role : (isTv ? 'tv' : (token === getShop().systemSettings.API_TOKEN ? 'kasa_fallback' : 'guest'));
   (ws as any).connectedAt = Date.now();
 
   shopContext.run(shopId, () => {
@@ -332,6 +355,28 @@ wss.on('connection', (ws, req) => {
           const msgStr = messageRaw.toString();
           if (msgStr === 'ping' || msgStr === 'pong') return;
           const data = JSON.parse(msgStr);
+
+          // Security check: Only authenticated admin can invoke remote_command, remote_fs or destructive actions
+          const isPrivilegedAction = data.type === 'remote_command' ||
+            data.type.startsWith('remote_fs_') ||
+            (data.type === 'server-event' && data.action === 'panic_self_destruct');
+
+          if (isPrivilegedAction) {
+            const senderRole = (ws as any).role;
+            if (senderRole !== 'admin') {
+              const senderName = (ws as any).username || (ws as any).deviceId || 'Bilinmeyen Cihaz';
+              console.warn(`[SECURITY] Yetkisiz uzaktan yönetim/komut engellendi. Gönderen: ${senderName}, Rol: ${senderRole}`);
+              addSystemLog('GÜVENLİK', 'warning', `Yetkisiz uzaktan komut/FS engellendi. Gönderen: ${senderName} (Rol: ${senderRole})`);
+              ws.send(JSON.stringify({
+                type: data.type === 'remote_command' ? 'remote_response' : 'remote_fs_response',
+                commandId: data.commandId,
+                output: 'HATA: Bu uzaktan işlem için Admin yetkisi zorunludur.',
+                error: 'Yetkisiz erişim: Admin rolü gereklidir.'
+              }));
+              return;
+            }
+          }
+
           if (data.type === 'remote_command' || data.type === 'remote_response' || data.type.startsWith('remote_fs_')) {
             const targetShop = getShop();
             const targetId = data.targetDeviceId;
@@ -393,4 +438,33 @@ initializeDB().then(() => {
 }).catch((err) => {
   console.error('[server] Startup failed:', err);
   process.exit(1);
+});
+
+// ── Otomatik Backup Zamanlaması ──────────────────────────────────────────────
+// Her gece 03:00'te (İstanbul) MongoDB'nin tam backup'ını alır.
+// Backup klasörü: BACKUP_DIR env değişkeni veya ~/backups
+// Saklama süresi: MAX_BACKUP_RETENTION_DAYS env değişkeni veya 30 gün
+cron.schedule('0 3 * * *', async () => {
+  try {
+    await runBackup();
+  } catch (err: any) {
+    console.error('[Backup] Otomatik backup başarısız:', err?.message ?? err);
+  }
+}, { timezone: 'Europe/Istanbul' });
+
+console.log('[Backup] Otomatik backup zamanlandı: her gece 03:00 (İstanbul)');
+
+// ── Global Process Error Handlers ───────────────────────────────────────────
+process.on('unhandledRejection', (reason: any) => {
+  console.error('[FATAL] Unhandled Promise Rejection:', reason);
+  try {
+    addSystemLog('SERVER_CRASH_PREVENTION', 'error', `Yakalanmayan Promise Hatası: ${reason?.message || reason}`);
+  } catch (e) {}
+});
+
+process.on('uncaughtException', (err: any) => {
+  console.error('[FATAL] Uncaught Exception:', err);
+  try {
+    addSystemLog('SERVER_CRASH_PREVENTION', 'error', `Beklenmeyen Hata: ${err?.message || err}`);
+  } catch (e) {}
 });

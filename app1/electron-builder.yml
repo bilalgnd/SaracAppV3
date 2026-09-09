@@ -15,6 +15,8 @@ files:
 asarUnpack:
   - resources/**
 extraResources:
+  - from: "resources/web"
+    to: "web"
   - from: "resources/extension"
     to: "extension"
   - from: "bin"
