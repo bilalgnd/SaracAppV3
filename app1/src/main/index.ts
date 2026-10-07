@@ -120,8 +120,24 @@ export async function fetchCloudOrders() {
   try {
     const res = await axios.get(`${CLOUD_URL}/api/orders?shop=sarac`, { timeout: 4000 });
     if (Array.isArray(res.data)) {
-      activeOrders = res.data;
+      const cloudOrders: any[] = res.data;
+      // Lokal siparişleri cloud verisiyle birleştir (offline alınanlar kaybolmasın)
+      const mergedMap = new Map<string, any>();
+      cloudOrders.forEach(o => {
+        if (o && o.customer_name) mergedMap.set(o.customer_name, o);
+      });
+      // Lokaldeki siparişleri üzerine yaz veya ekle (lokal daha güncel olabilir)
+      activeOrders.forEach(localOrder => {
+        if (localOrder && localOrder.customer_name) {
+          mergedMap.set(localOrder.customer_name, localOrder);
+        }
+      });
+      activeOrders = Array.from(mergedMap.values());
       saveJson(storePaths.orders, activeOrders);
+
+      // Cloud'a lokaldeki birleştirilmiş güncel listeyi geri gönder
+      axios.post(`${CLOUD_URL}/api/sync_orders`, activeOrders, { timeout: 4000 }).catch(() => {});
+
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('server-event', { action: 'orders_update', data: activeOrders });
       }
@@ -158,6 +174,14 @@ function connectWebSocket() {
     const crypto = require('crypto')
     systemSettings.deviceId = 'PC-' + crypto.randomBytes(2).toString('hex').toUpperCase()
     saveSettings()
+  }
+
+  if (token) {
+    axios.post(`${CLOUD_URL}/api/shop/pair-code/sync`, {
+      code: systemSettings.PAIR_CODE || '123456',
+      token: token,
+      shopId: 'sarac'
+    }, { timeout: 3000 }).catch(() => {})
   }
   
   console.log('Connecting to WS with Device ID:', systemSettings.deviceId)
@@ -408,11 +432,16 @@ function connectWebSocket() {
         }
         if (parsed.action === 'orders_update') {
           if (Array.isArray(parsed.data)) {
-            activeOrders = parsed.data;
+            const mergedMap = new Map<string, any>();
+            parsed.data.forEach((o: any) => { if (o?.customer_name) mergedMap.set(o.customer_name, o); });
+            activeOrders.forEach(o => { if (o?.customer_name) mergedMap.set(o.customer_name, o); });
+            activeOrders = Array.from(mergedMap.values());
+            saveJson(storePaths.orders, activeOrders);
+            broadcastToLocalClients(activeOrders);
           } else {
             fetchCloudOrders();
           }
-        } else if (['order_received', 'update_status', 'request_update', 'order_status_change', 'siparis'].includes(parsed.action)) {
+        } else if (['order_received', 'update_status', 'request_update', 'order_status_change', 'siparis', 'new_order'].includes(parsed.action)) {
           fetchCloudOrders();
         }
 
@@ -421,10 +450,15 @@ function connectWebSocket() {
           mainWindow.webContents.send('server-event', { action: parsed.action || 'orders_update', data: eventData })
         }
       } else if (Array.isArray(parsed)) {
-        // It's the active orders array
-        activeOrders = parsed
+        // It's the active orders array from WS
+        const mergedMap = new Map<string, any>();
+        parsed.forEach((o: any) => { if (o?.customer_name) mergedMap.set(o.customer_name, o); });
+        activeOrders.forEach(o => { if (o?.customer_name) mergedMap.set(o.customer_name, o); });
+        activeOrders = Array.from(mergedMap.values());
+        saveJson(storePaths.orders, activeOrders)
+        broadcastToLocalClients(activeOrders)
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('server-event', { action: 'orders_update', data: parsed })
+          mainWindow.webContents.send('server-event', { action: 'orders_update', data: activeOrders })
         }
       }
     } catch (e) {
@@ -522,12 +556,24 @@ function startLocalApi() {
       const data = req.body;
       if (!data) return res.status(400).json({ error: 'Invalid order data' });
       let cname = data.customer_name ? data.customer_name.trim() : '';
-      if (!cname || cname === 'Yeni Adisyon' || cname === 'YeniSiparis' || cname.startsWith('Sıra ')) {
+      if (!cname || cname === 'Masa' || cname === 'Yeni Adisyon' || cname === 'YeniSiparis' || cname === 'Yeni Siparis' || cname.startsWith('Sıra ')) {
         let no = 1;
         while (activeOrders.some(o => o.customer_name === `Masa ${no}`)) no++;
         cname = `Masa ${no}`;
       }
-      const idx = activeOrders.findIndex(o => o.customer_name === cname);
+      const isExplicitUpdate = Boolean(data.is_updated || data.isUpdate || data.edit);
+      let idx = activeOrders.findIndex(o => o.customer_name === cname);
+
+      if (idx > -1 && !isExplicitUpdate) {
+        let counter = 2;
+        let uniqueName = `${cname} (${counter})`;
+        while (activeOrders.some(o => o.customer_name === uniqueName)) {
+          counter++;
+          uniqueName = `${cname} (${counter})`;
+        }
+        cname = uniqueName;
+        idx = -1;
+      }
       const newOrder = {
         customer_name: cname,
         order_note: data.order_note || '',
@@ -623,6 +669,24 @@ function startLocalApi() {
       }
       broadcastToLocalClients(activeOrders);
       axios.post(`${CLOUD_URL}/update_status`, req.body, { timeout: 4000 }).catch(() => {});
+    }
+    res.json({ success: true });
+  });
+
+  expressApp.post('/update_table_name', (req, res) => {
+    const cname = req.body?.customer_name;
+    const newName = req.body?.new_name;
+    if (cname && newName) {
+      const idx = activeOrders.findIndex(o => o.customer_name === cname);
+      if (idx > -1) {
+        activeOrders[idx].customer_name = newName;
+        saveJson(storePaths.orders, activeOrders);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('server-event', { action: 'orders_update', data: activeOrders });
+        }
+        broadcastToLocalClients(activeOrders);
+        axios.post(`${CLOUD_URL}/update_table_name`, req.body, { timeout: 4000 }).catch(() => {});
+      }
     }
     res.json({ success: true });
   });
@@ -837,11 +901,11 @@ async function createWindow(): Promise<void> {
   activeOrders = await loadJson<any[]>(storePaths.orders, []);
   fullMenu = await loadJson(storePaths.menu, null);
 
-  if (systemSettings.API_TOKEN && systemSettings.API_TOKEN !== '123456') {
+  if (systemSettings.API_TOKEN) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${systemSettings.API_TOKEN}`;
-    fetchInitialData();
-    connectWebSocket();
   }
+  fetchInitialData();
+  connectWebSocket();
 
 
 
@@ -1155,6 +1219,19 @@ app.whenReady().then(() => {
     }
   })
 
+  async function syncPairCodeToCloud(code: string, token: string) {
+    try {
+      await axios.post(`${CLOUD_URL}/api/shop/pair-code/sync`, {
+        code,
+        token,
+        shopId: 'sarac'
+      }, { timeout: 4000 })
+      console.log('[CloudSync] Pair code and token synced to cloud:', code)
+    } catch (err: any) {
+      console.warn('[CloudSync] Failed to sync pair code to cloud:', err.message)
+    }
+  }
+
   ipcMain.handle('get-pair-code', async () => {
     try {
       if (!systemSettings.PAIR_CODE) {
@@ -1164,13 +1241,14 @@ app.whenReady().then(() => {
       const code = systemSettings.PAIR_CODE
       const token = systemSettings.API_TOKEN || ''
       const localIp = getLocalIpAddress()
+      syncPairCodeToCloud(code, token)
       const qrData = JSON.stringify({
         app: 'saracapp',
         type: 'pair',
         code: code,
         token: token,
         shopId: 'sarac',
-        url: 'http://35.243.219.220:5000',
+        url: CLOUD_URL,
         localUrl: `http://${localIp}:3005`
       })
       return { success: true, code, qrData, shopId: 'sarac', localIp }
@@ -1186,16 +1264,17 @@ app.whenReady().then(() => {
       await saveSettings()
       const token = systemSettings.API_TOKEN || ''
       const localIp = getLocalIpAddress()
+      syncPairCodeToCloud(newCode, token)
       const qrData = JSON.stringify({
         app: 'saracapp',
         type: 'pair',
         code: newCode,
         token: token,
         shopId: 'sarac',
-        url: 'http://35.243.219.220:5000',
+        url: CLOUD_URL,
         localUrl: `http://${localIp}:3005`
       })
-      return { success: true, code: newCode, newCode, qrData, shopId: 'sarac', localIp }
+      return { success: true, code: newCode, qrData, shopId: 'sarac', localIp }
     } catch (e: any) {
       return { success: false, error: e.message }
     }

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
   Network Security Configuration - SaracApp
 
@@ -10,8 +10,8 @@
 -->
 <network-security-config>
 
-  <!-- Base config: HTTPS enforced for all domains by default -->
-  <base-config cleartextTrafficPermitted="false">
+  <!-- Base config: Cleartext permitted for local LAN / offline mode -->
+  <base-config cleartextTrafficPermitted="true">
     <trust-anchors>
       <certificates src="system" />
     </trust-anchors>

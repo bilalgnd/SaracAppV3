@@ -17,8 +17,8 @@ android {
         applicationId = "com.bilalgnd.saracapp"
         minSdk = 26
         targetSdk = 35
-        versionCode = 650000
-        versionName = "6.5.0"
+        versionCode = 650001
+        versionName = "6.5.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
