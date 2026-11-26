@@ -1,4 +1,4 @@
-package com.bilalgnd.saracapp
+﻿package com.bilalgnd.saracapp
 
 import android.content.Context
 import android.content.Intent
@@ -269,7 +269,7 @@ object ApiClient {
     private var cachedToken: String? = null
     private var cachedBaseUrl: String? = null
     fun getApi(ip: String, token: String = ""): KasaApi {
-        val temizIp = ip.trim().ifEmpty { "bilalgnd.shop" }
+        val temizIp = ip.trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
         val baseUrl = when {
             temizIp.startsWith("http://") || temizIp.startsWith("https://") -> {
                 if (!temizIp.endsWith("/")) "$temizIp/" else temizIp
@@ -318,7 +318,7 @@ fun sendLogToServer(context: Context, type: String, message: String) {
             val hY = HafizaYoneticisi(context)
             val token = hY.kasaTokenOku()
             if (token.isNotEmpty()) {
-                val api = ApiClient.getApi("bilalgnd.shop", token)
+                val api = ApiClient.getApi("https://hub.bilalgnd.shop/sarac", token)
                 api.sendLog(mapOf("source" to "App2", "type" to type, "message" to message))
             }
         } catch (e: Exception) {}
@@ -638,7 +638,7 @@ suspend fun senkronizeEtCevrimdisiEylemler(
         if (bekleyenEylemler.isEmpty()) return
 
         val normalizedLocal = normalizeLocalIp(localIp)
-        val normalizedCloud = cloudIp.trim().ifEmpty { "bilalgnd.shop" }
+        val normalizedCloud = cloudIp.trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
 
         val primaryIp = if (isLanMode && normalizedLocal.isNotBlank()) normalizedLocal else (if (normalizedLocal.isNotBlank()) normalizedLocal else normalizedCloud)
         val fallbackIp = if (primaryIp == normalizedLocal) normalizedCloud else (if (normalizedLocal.isNotBlank()) normalizedLocal else "")
@@ -755,7 +755,7 @@ fun LoginScreen(hafiza: HafizaYoneticisi, onLoginSuccess: () -> Unit) {
                     }
 
                     val finalShopId = shopIdToUse ?: "sarac"
-                    val finalUrl = urlToUse ?: "bilalgnd.shop"
+                    val finalUrl = urlToUse ?: "https://hub.bilalgnd.shop/sarac"
                     val finalLocalUrl = localUrlToUse ?: hafiza.kasaYerelIpOku()
 
                     girisYapiliyor = true
@@ -885,7 +885,7 @@ fun LoginScreen(hafiza: HafizaYoneticisi, onLoginSuccess: () -> Unit) {
                                                         put("localIp", lIp)
                                                     }.toString()
                                                     val reqBody = bodyJson.toRequestBody("application/json".toMediaTypeOrNull())
-                                                    val approveUrl = "https://bilalgnd.shop/api/tv/approve"
+                                                    val approveUrl = "https://hub.bilalgnd.shop/sarac/api/tv/approve"
                                                     val req = okhttp3.Request.Builder()
                                                         .url(approveUrl)
                                                         .post(reqBody)
@@ -910,7 +910,7 @@ fun LoginScreen(hafiza: HafizaYoneticisi, onLoginSuccess: () -> Unit) {
                                         parsedCode = json.optString("code", "")
                                         directToken = json.optString("token", "")
                                         shopId = json.optString("shopId", "sarac")
-                                        url = json.optString("url", "bilalgnd.shop")
+                                        url = json.optString("url", "https://hub.bilalgnd.shop/sarac")
                                         localUrl = json.optString("localUrl", "")
                                     }
                                 } catch (_: Exception) {}
@@ -993,13 +993,13 @@ fun LoginScreen(hafiza: HafizaYoneticisi, onLoginSuccess: () -> Unit) {
                         girisYapiliyor = true
                         CoroutineScope(Dispatchers.IO).launch {
                             try {
-                                val api = ApiClient.getApi("bilalgnd.shop", "")
+                                val api = ApiClient.getApi("https://hub.bilalgnd.shop/sarac", "")
                                 val res = api.login(mapOf("username" to yoneticiKullaniciAdi.trim(), "password" to yoneticiSifre))
                                 withContext(Dispatchers.Main) {
                                     girisYapiliyor = false
                                     if (res.isSuccessful && res.body()?.success == true) {
                                         val token = res.body()?.token ?: ""
-                                        hafiza.kasaIpKaydet("bilalgnd.shop")
+                                        hafiza.kasaIpKaydet("https://hub.bilalgnd.shop/sarac")
                                         hafiza.kasaKullaniciAdiKaydet(yoneticiKullaniciAdi.trim())
                                         hafiza.kasaSifreKaydet(yoneticiSifre)
                                         hafiza.kasaTokenKaydet(token)
@@ -1127,7 +1127,7 @@ fun AnaEkran() {
     // İlk açılışta menüyü anında çek
     LaunchedEffect(isLoggedIn) {
         if (!isLoggedIn) return@LaunchedEffect
-        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
         val rawLocalIp = hafiza.kasaYerelIpOku().trim()
         val localIp = normalizeLocalIp(rawLocalIp)
         val token = hafiza.kasaTokenOku().ifEmpty { "123456" }
@@ -1194,7 +1194,7 @@ fun AnaEkran() {
         var preferCloud = true
 
         while (true) {
-            val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+            val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
             val localIp = normalizeLocalIp(hafiza.kasaYerelIpOku())
             val tokenParam = hafiza.kasaTokenOku().ifEmpty { "123456" }
             val devId = hafiza.cihazIdOku()
@@ -1598,7 +1598,7 @@ fun AnaEkran() {
                                         hafiza.aktifMasalariKaydet(aktifSiparisler)
 
                                         val localIp = normalizeLocalIp(hafiza.kasaYerelIpOku())
-                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
                                         val token = hafiza.kasaTokenOku().ifEmpty { "123456" }
 
                                         val primaryIp = if (isLanMode && localIp.isNotBlank()) localIp else (if (localIp.isNotBlank()) localIp else cloudIp)
@@ -1733,7 +1733,7 @@ fun AnaEkran() {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     try {
                                         val localIp = normalizeLocalIp(hafiza.kasaYerelIpOku())
-                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
                                         val token = hafiza.kasaTokenOku().ifEmpty { "123456" }
                                         val primaryIp = if (isLanMode && localIp.isNotBlank()) localIp else (if (localIp.isNotBlank()) localIp else cloudIp)
                                         val fallbackIp = if (primaryIp == localIp) cloudIp else (if (localIp.isNotBlank()) localIp else "")
@@ -1764,7 +1764,7 @@ fun AnaEkran() {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     try {
                                         val localIp = normalizeLocalIp(hafiza.kasaYerelIpOku())
-                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
                                         val token = hafiza.kasaTokenOku().ifEmpty { "123456" }
                                         val primaryIp = if (isLanMode && localIp.isNotBlank()) localIp else (if (localIp.isNotBlank()) localIp else cloudIp)
                                         val fallbackIp = if (primaryIp == localIp) cloudIp else (if (localIp.isNotBlank()) localIp else "")
@@ -1802,7 +1802,7 @@ fun AnaEkran() {
                                         CoroutineScope(Dispatchers.IO).launch {
                                             try {
                                                 val localIp = normalizeLocalIp(hafiza.kasaYerelIpOku())
-                                                val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+                                                val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
                                                 val token = hafiza.kasaTokenOku().ifEmpty { "123456" }
                                                 val primaryIp = if (isLanMode && localIp.isNotBlank()) localIp else (if (localIp.isNotBlank()) localIp else cloudIp)
                                                 val fallbackIp = if (primaryIp == localIp) cloudIp else (if (localIp.isNotBlank()) localIp else "")
@@ -1828,7 +1828,7 @@ fun AnaEkran() {
                                         CoroutineScope(Dispatchers.IO).launch {
                                             try {
                                                 val localIp = normalizeLocalIp(hafiza.kasaYerelIpOku())
-                                                val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+                                                val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
                                                 val token = hafiza.kasaTokenOku().ifEmpty { "123456" }
                                                 val primaryIp = if (isLanMode && localIp.isNotBlank()) localIp else (if (localIp.isNotBlank()) localIp else cloudIp)
                                                 val fallbackIp = if (primaryIp == localIp) cloudIp else (if (localIp.isNotBlank()) localIp else "")
@@ -1856,7 +1856,7 @@ fun AnaEkran() {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     try {
                                         val localIp = normalizeLocalIp(hafiza.kasaYerelIpOku())
-                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
                                         val token = hafiza.kasaTokenOku().ifEmpty { "123456" }
                                         val primaryIp = if (isLanMode && localIp.isNotBlank()) localIp else (if (localIp.isNotBlank()) localIp else cloudIp)
                                         val fallbackIp = if (primaryIp == localIp) cloudIp else (if (localIp.isNotBlank()) localIp else "")
@@ -1881,7 +1881,7 @@ fun AnaEkran() {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     try {
                                         val localIp = normalizeLocalIp(hafiza.kasaYerelIpOku())
-                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
                                         val token = hafiza.kasaTokenOku().ifEmpty { "123456" }
                                         val primaryIp = if (isLanMode && localIp.isNotBlank()) localIp else cloudIp
                                         val fallbackIp = if (primaryIp == localIp) cloudIp else (if (localIp.isNotBlank()) localIp else "")
@@ -1925,7 +1925,7 @@ fun AnaEkran() {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     try {
                                         val localIp = normalizeLocalIp(hafiza.kasaYerelIpOku())
-                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
                                         val token = hafiza.kasaTokenOku().ifEmpty { "123456" }
                                         val primaryIp = if (isLanMode && localIp.isNotBlank()) localIp else (if (localIp.isNotBlank()) localIp else cloudIp)
                                         val fallbackIp = if (primaryIp == localIp) cloudIp else (if (localIp.isNotBlank()) localIp else "")
@@ -1982,7 +1982,7 @@ fun AnaEkran() {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     try {
                                         val localIp = normalizeLocalIp(hafiza.kasaYerelIpOku())
-                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+                                        val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
                                         val token = hafiza.kasaTokenOku().ifEmpty { "123456" }
                                         val primaryIp = if (isLanMode && localIp.isNotBlank()) localIp else (if (localIp.isNotBlank()) localIp else cloudIp)
                                         val fallbackIp = if (primaryIp == localIp) cloudIp else (if (localIp.isNotBlank()) localIp else "")
@@ -2037,7 +2037,7 @@ fun AnaEkran() {
                             CoroutineScope(Dispatchers.IO).launch {
                                 try {
                                     val localIp = normalizeLocalIp(hafiza.kasaYerelIpOku())
-                                    val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "bilalgnd.shop" }
+                                    val cloudIp = hafiza.kasaIpOku().trim().ifEmpty { "https://hub.bilalgnd.shop/sarac" }
                                     val token = hafiza.kasaTokenOku().ifEmpty { "123456" }
                                     val primaryIp = if (isLanMode && localIp.isNotBlank()) localIp else (if (localIp.isNotBlank()) localIp else cloudIp)
                                     val fallbackIp = if (primaryIp == localIp) cloudIp else (if (localIp.isNotBlank()) localIp else "")
@@ -2482,7 +2482,7 @@ fun AnaEkran() {
                                                                     put("localIp", lIp)
                                                                 }.toString()
                                                                 val reqBody = bodyJson.toRequestBody("application/json".toMediaTypeOrNull())
-                                                                val approveUrl = "https://bilalgnd.shop/api/tv/approve"
+                                                                val approveUrl = "https://hub.bilalgnd.shop/sarac/api/tv/approve"
                                                                 val req = okhttp3.Request.Builder()
                                                                     .url(approveUrl)
                                                                     .post(reqBody)
@@ -3735,7 +3735,7 @@ fun RemoteTerminalScreen(onBack: () -> Unit) {
             ip.replace("https://", "wss://") + (if (ip.endsWith("/")) "ws?token=$token&deviceId=$termDevId" else "/ws?token=$token&deviceId=$termDevId")
         } else if (ip.startsWith("http://")) {
             ip.replace("http://", "ws://") + (if (ip.endsWith("/")) "ws?token=$token&deviceId=$termDevId" else "/ws?token=$token&deviceId=$termDevId")
-        } else if (ip.contains("bilalgnd.shop")) {
+        } else if (ip.contains("https://hub.bilalgnd.shop/sarac")) {
             "wss://$ip/ws?token=$token&deviceId=$termDevId"
         } else {
             "ws://$ip/ws?token=$token&deviceId=$termDevId"
@@ -3914,7 +3914,7 @@ fun RemoteFileManagerScreen(onBack: () -> Unit) {
             ip.replace("https://", "wss://") + (if (ip.endsWith("/")) "ws?token=$token&deviceId=$termDevId" else "/ws?token=$token&deviceId=$termDevId")
         } else if (ip.startsWith("http://")) {
             ip.replace("http://", "ws://") + (if (ip.endsWith("/")) "ws?token=$token&deviceId=$termDevId" else "/ws?token=$token&deviceId=$termDevId")
-        } else if (ip.contains("bilalgnd.shop")) {
+        } else if (ip.contains("https://hub.bilalgnd.shop/sarac")) {
             "wss://$ip/ws?token=$token&deviceId=$termDevId"
         } else {
             "ws://$ip/ws?token=$token&deviceId=$termDevId"
@@ -4141,7 +4141,7 @@ fun SharedFilesScreen(onBack: () -> Unit) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val request = okhttp3.Request.Builder()
-                    .url("https://bilalgnd.shop/api/shared")
+                    .url("https://hub.bilalgnd.shop/sarac/api/shared")
                     .build()
                 val response = okhttp3.OkHttpClient().newCall(request).execute()
                 if (response.isSuccessful) {
@@ -4188,7 +4188,7 @@ fun SharedFilesScreen(onBack: () -> Unit) {
                             .build()
 
                         val request = okhttp3.Request.Builder()
-                            .url("https://bilalgnd.shop/api/shared/upload")
+                            .url("https://hub.bilalgnd.shop/sarac/api/shared/upload")
                             .post(requestBody)
                             .build()
 
@@ -4261,7 +4261,7 @@ fun SharedFilesScreen(onBack: () -> Unit) {
                         
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(8.dp).clickable {
-                                val url = "https://bilalgnd.shop/shared_files/$name"
+                                val url = "https://hub.bilalgnd.shop/sarac/shared_files/$name"
                                 val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
                                 context.startActivity(intent)
                             },
@@ -4278,7 +4278,7 @@ fun SharedFilesScreen(onBack: () -> Unit) {
                                     CoroutineScope(Dispatchers.IO).launch {
                                         try {
                                             val request = okhttp3.Request.Builder()
-                                                .url("https://bilalgnd.shop/api/shared/$name")
+                                                .url("https://hub.bilalgnd.shop/sarac/api/shared/$name")
                                                 .delete()
                                                 .build()
                                             okhttp3.OkHttpClient().newCall(request).execute()

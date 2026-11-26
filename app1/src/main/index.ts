@@ -74,8 +74,8 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
-const CLOUD_URL = 'http://35.243.219.220:5000'
-const WS_URL = 'ws://35.243.219.220:5000/ws'
+const CLOUD_URL = 'https://hub.bilalgnd.shop/sarac'
+const WS_URL = 'wss://hub.bilalgnd.shop/sarac/ws'
 
 let activeOrders: any[] = []
 let fullMenu: any = null
@@ -440,6 +440,24 @@ function connectWebSocket() {
             broadcastToLocalClients(activeOrders);
           } else {
             fetchCloudOrders();
+          }
+        } else if (parsed.action === 'order_deleted' && parsed.data?.customerName) {
+          const delName = parsed.data.customerName;
+          activeOrders = activeOrders.filter(o => o?.customer_name !== delName);
+          saveJson(storePaths.orders, activeOrders);
+          broadcastToLocalClients(activeOrders);
+        } else if (parsed.action === 'print_order' && parsed.data) {
+          const cname = parsed.data.customer_name || parsed.data.customerName;
+          const ord = activeOrders.find(o => o.customer_name === cname) || (parsed.data.items ? parsed.data : null);
+          if (ord) {
+            printReceipt(
+              ord.customer_name || ord.customerName || 'Masa',
+              ord.time || new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+              ord.items || [],
+              ord.total_amount || ord.totalAmount || 0,
+              ord.order_note || '',
+              ord.createdBy || ord.garson || ''
+            ).catch(() => {});
           }
         } else if (['order_received', 'update_status', 'request_update', 'order_status_change', 'siparis', 'new_order'].includes(parsed.action)) {
           fetchCloudOrders();
